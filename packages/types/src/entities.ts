@@ -31,7 +31,33 @@ export type TimelineEventType =
   | 'FOLLOW_UP_CREATED'
   | 'FOLLOW_UP_COMPLETED'
   | 'NOTE_ADDED'
+  | 'INTERVIEW_SCHEDULED'
+  | 'INTERVIEW_COMPLETED'
   | 'CUSTOM_EVENT';
+
+export type InterviewType =
+  | 'HR'
+  | 'RECRUITER'
+  | 'TECHNICAL'
+  | 'CODING_ASSESSMENT'
+  | 'SYSTEM_DESIGN'
+  | 'HIRING_MANAGER'
+  | 'FINAL'
+  | 'CLIENT'
+  | 'OTHER';
+
+export type InterviewStatus =
+  | 'SCHEDULED'
+  | 'COMPLETED'
+  | 'RESCHEDULED'
+  | 'CANCELLED'
+  | 'NO_SHOW';
+
+export type InterviewResult =
+  | 'PENDING'
+  | 'PASSED'
+  | 'FAILED'
+  | 'DID_NOT_HEAR_BACK';
 
 export interface UserDTO {
   id: string;
@@ -81,6 +107,7 @@ export interface ApplicationDTO {
   updatedAt: string;
   company?: CompanyDTO;
   job?: JobDTO;
+  interviews?: InterviewDTO[];
 }
 
 export interface TimelineEventDTO {
@@ -136,8 +163,51 @@ export interface WeeklyVelocityDTO {
   weeks: WeeklyVelocityItemDTO[];
 }
 
+export interface InterviewDTO {
+  id: string;
+  userId: string;
+  applicationId: string;
+  round: number;
+  type: InterviewType;
+  title?: string | null;
+  scheduledAt: string;
+  durationMinutes: number;
+  timezone?: string | null;
+  interviewerName?: string | null;
+  interviewerRole?: string | null;
+  meetingUrl?: string | null;
+  location?: string | null;
+  status: InterviewStatus;
+  result: InterviewResult;
+  notes?: string | null;
+  prepNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  application?: {
+    id: string;
+    company: { name: string };
+    job: { title: string };
+  };
+}
+
+export interface DashboardUpcomingInterviewDTO {
+  id: string;
+  applicationId?: string;
+  companyName: string;
+  roleTitle: string;
+  stage: string;
+  date: string;
+  location: string;
+  meetingUrl?: string | null;
+  interviewerName?: string | null;
+  prepDone: number;
+  prepTotal: number;
+}
+
 export interface DashboardAnalyticsDTO {
   summary: DashboardSummaryDTO;
   weeklyVelocity: WeeklyVelocityDTO;
   pipeline: Record<ApplicationStatus, number>;
+  upcomingInterviews?: DashboardUpcomingInterviewDTO[];
 }
+

@@ -1,7 +1,7 @@
-# Implementation Plan: Job Application Tracker (MVP)
+# Implementation Plan: Job Application Tracker
 
 ## Overview
-Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modular monolith (`apps/web` React + Vite, `apps/api` Express + Node.js, `packages/database` Prisma + PostgreSQL, `packages/validation` Zod, `packages/types`). The UI implements the **Marker** design system and exactly reproduces the layout and aesthetics of `app/Dashboard sample_ Job Application Tracker.html`.
+Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modular monolith (`apps/web` React + Vite, `apps/api` Express + Node.js, `packages/database` Prisma + PostgreSQL, `packages/validation` Zod, `packages/types`). The UI implements the **Marker** design system and reproduces the layout and aesthetics of `app/Dashboard sample_ Job Application Tracker.html` and `app/DESIGN.md`.
 
 ## Architecture Decisions
 - **Monorepo:** `pnpm` workspaces (`apps/web`, `apps/api`, `packages/database`, `packages/validation`, `packages/types`).
@@ -18,61 +18,133 @@ Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modu
 
 ## Phased Tasks
 
-### Phase 1: Foundation (`foundation`)
-- [ ] Task 1.1: Monorepo Workspace & Shared Tooling Setup
-- [ ] Task 1.2: Database Package with Prisma Schema & Seed Script
-- [ ] Task 1.3: Shared Types & Validation Packages
-- [ ] Task 1.4: Backend Express API Bootstrap & Health Endpoint
-- [ ] Task 1.5: Frontend Vite + React + Marker Design System Bootstrap
+### Phase 1: Foundation (`foundation`) [COMPLETED]
+- [x] Task 1.1: Monorepo Workspace & Shared Tooling Setup
+- [x] Task 1.2: Database Package with Prisma Schema & Seed Script
+- [x] Task 1.3: Shared Types & Validation Packages
+- [x] Task 1.4: Backend Express API Bootstrap & Health Endpoint
+- [x] Task 1.5: Frontend Vite + React + Marker Design System Bootstrap
 
-#### Checkpoint: Foundation
-- [ ] Monorepo builds cleanly (`pnpm build`)
-- [ ] PostgreSQL container runs via Docker Compose
-- [ ] Prisma migrations and seed script complete
-- [ ] Express API responds to `/api/v1/health`
-- [ ] Vite frontend renders Marker design system tokens & shell
-
----
-
-### Phase 2: Authentication & User Session (`auth`)
-- [ ] Task 2.1: Backend Auth Module (Register, Login, Logout, /me, Middleware)
-- [ ] Task 2.2: Frontend Auth State, API Client & Login/Register Pages
-
-#### Checkpoint: Authentication
-- [ ] User can register, log in, persist session on reload, and log out
-- [ ] Protected endpoints reject unauthenticated requests with 401
+#### Checkpoint: Foundation [PASSED]
+- [x] Monorepo builds cleanly (`pnpm build`)
+- [x] PostgreSQL container runs via Docker Compose
+- [x] Prisma migrations and seed script complete
+- [x] Express API responds to `/api/v1/health`
+- [x] Vite frontend renders Marker design system tokens & shell
 
 ---
 
-### Phase 3: Core Domain — Companies, Jobs & Applications (`companies-jobs`, `applications`)
-- [ ] Task 3.1: Backend Companies & Jobs Services & Endpoints
-- [ ] Task 3.2: Backend Applications CRUD & Filter Endpoints
-- [ ] Task 3.3: Frontend Application Components & List View
+### Phase 2: Authentication & User Session (`auth`) [COMPLETED]
+- [x] Task 2.1: Backend Auth Module (Register, Login, Logout, /me, Middleware)
+- [x] Task 2.2: Frontend Auth State, API Client & Login/Register Pages
+
+#### Checkpoint: Authentication [PASSED]
+- [x] User can register, log in, persist session on reload, and log out
+- [x] Protected endpoints reject unauthenticated requests with 401
 
 ---
 
-### Phase 4: Lifecycle & Actionability — Timeline & Follow-ups (`timeline`, `follow-ups`)
-- [ ] Task 4.1: Status Transitions & Activity Timeline
-- [ ] Task 4.2: Follow-up Tasks & Reminders
-
-#### Checkpoint: Core Applications & Actionability
-- [ ] Application creation automatically creates Company, Job, and TimelineEvent
-- [ ] Moving status records chronological timeline event
-- [ ] Follow-ups can be created and completed
+### Phase 3: Core Domain — Companies, Jobs & Applications (`companies-jobs`, `applications`) [COMPLETED]
+- [x] Task 3.1: Backend Companies & Jobs Services & Endpoints
+- [x] Task 3.2: Backend Applications CRUD & Filter Endpoints
+- [x] Task 3.3: Frontend Application Components & List View
 
 ---
 
-### Phase 5: Dashboard & Visual Experience (`dashboard-analytics`, `kanban-pipeline`)
-- [ ] Task 5.1: Backend Dashboard Analytics Aggregator Endpoint
-- [ ] Task 5.2: Frontend Dashboard Page (1:1 with `Dashboard sample_ Job Application Tracker.html`)
-- [ ] Task 5.3: Kanban Status Pipeline Board with Optimistic Mutations
+### Phase 4: Lifecycle & Actionability — Timeline & Follow-ups (`timeline`, `follow-ups`) [COMPLETED]
+- [x] Task 4.1: Status Transitions & Activity Timeline
+- [x] Task 4.2: Follow-up Tasks & Reminders
+
+#### Checkpoint: Core Applications & Actionability [PASSED]
+- [x] Application creation automatically creates Company, Job, and TimelineEvent
+- [x] Moving status records chronological timeline event
+- [x] Follow-ups can be created and completed
 
 ---
 
-### Phase 6: Polish, Accessibility & Verification
-- [ ] Task 6.1: Theme Audit (Paper & Night Pine) and Mobile Responsiveness (360px)
-- [ ] Task 6.2: Automated Integration & End-to-End Test Suite Verification
+### Phase 5: Dashboard & Visual Experience (`dashboard-analytics`, `kanban-pipeline`) [COMPLETED]
+- [x] Task 5.1: Backend Dashboard Analytics Aggregator Endpoint
+- [x] Task 5.2: Frontend Dashboard Page (1:1 with `Dashboard sample_ Job Application Tracker.html`)
+- [x] Task 5.3: Kanban Status Pipeline Board with Optimistic Mutations
 
-#### Checkpoint: Production Readiness
-- [ ] All automated tests pass with zero failures
-- [ ] 100% of Definition of Done criteria met
+---
+
+### Phase 6: Polish, Accessibility & Verification [COMPLETED]
+- [x] Task 6.1: Theme Audit (Paper & Night Pine) and Mobile Responsiveness (360px)
+- [x] Task 6.2: Automated Integration & End-to-End Test Suite Verification
+
+---
+
+## Phase 7: Multi-Stage Interview Management (`interviews`) [COMPLETED]
+
+### Task 7.1: Prisma Schema & Migration + Shared Types & Validation [COMPLETED]
+- **Description:** Define the `Interview` model, `InterviewType`, `InterviewStatus`, and `InterviewResult` enums in Prisma. Run migration. Define TypeScript interfaces in `packages/types` and Zod validation schemas in `packages/validation`.
+- **Acceptance:**
+  - `Interview` table exists in PostgreSQL with foreign keys to `User` and `Application`.
+  - `packages/types` exports `Interview`, `InterviewType`, `InterviewStatus`, `InterviewResult`.
+  - `packages/validation` exports `createInterviewSchema` and `updateInterviewSchema`.
+- **Verify:** `pnpm --filter @tracker/database prisma migrate dev && pnpm --filter @tracker/types build && pnpm --filter @tracker/validation build`
+- **Files:**
+  - `packages/database/prisma/schema.prisma`
+  - `packages/types/src/entities.ts`
+  - `packages/validation/src/interview.schema.ts`
+  - `packages/validation/src/index.ts`
+
+### Task 7.2: Backend API Endpoints, Service & Timeline Integration [COMPLETED]
+- **Description:** Implement repository, service, controller, and routes for interviews (`/api/v1/interviews` and `/api/v1/applications/:id/interviews`). Automatically log `TimelineEvent` on scheduling and completion. Update dashboard analytics service to include live upcoming interviews.
+- **Acceptance:**
+  - `POST /api/v1/interviews` creates interview and writes a timeline event.
+  - `GET /api/v1/interviews` supports filtering by `upcoming`, `applicationId`, and `status`.
+  - `PATCH /api/v1/interviews/:id` and `PATCH /api/v1/interviews/:id/status` update interview and record milestones.
+  - `DELETE /api/v1/interviews/:id` deletes interview.
+  - `GET /api/v1/analytics/dashboard` returns real upcoming interviews.
+  - Integration tests in `apps/api/tests/interviews.test.ts` pass with 100% tenant isolation.
+- **Verify:** `pnpm --filter @tracker/api test`
+- **Files:**
+  - `apps/api/src/modules/interviews/interview.repository.ts`
+  - `apps/api/src/modules/interviews/interview.service.ts`
+  - `apps/api/src/modules/interviews/interview.controller.ts`
+  - `apps/api/src/modules/interviews/interview.routes.ts`
+  - `apps/api/src/modules/analytics/analytics.service.ts`
+  - `apps/api/src/app.ts`
+  - `apps/api/tests/interviews.test.ts`
+
+### Task 7.3: Frontend Interviews Hub (`/interviews`) [COMPLETED]
+- **Description:** Build the dedicated `/interviews` page with Marker design aesthetics: view toggle (Upcoming vs Past), date grouping, StageRing indicators, meeting URL links, and an accessible schedule/edit dialog.
+- **Acceptance:**
+  - Route `/interviews` is registered and functional in desktop sidebar and mobile tab bar.
+  - Interviews render cleanly with company, role, round, scheduled time, duration, and platform link.
+  - "Schedule interview" modal permits selecting an application and entering interview details.
+  - Quick action to mark an interview as completed or cancelled.
+- **Verify:** `pnpm --filter @tracker/web build`
+- **Files:**
+  - `apps/web/src/features/interviews/api/interview-api.ts`
+  - `apps/web/src/features/interviews/components/interview-card.tsx`
+  - `apps/web/src/features/interviews/components/schedule-interview-modal.tsx`
+  - `apps/web/src/features/interviews/pages/interviews-page.tsx`
+  - `apps/web/src/app/router.tsx`
+
+### Task 7.4: Application Detail Interviews Tab & Dynamic Dashboard Feed [COMPLETED]
+- **Description:** Embed the multi-round interview tracker directly inside `ApplicationDetailPage` (`/applications/:id`) and connect the dashboard's "Upcoming interviews" card to real API data.
+- **Acceptance:**
+  - Users can view and schedule rounds directly from the application details view.
+  - Dashboard's "Upcoming interviews" widget displays live interviews, formatted with date/time, company name, and meeting platform.
+- **Verify:** `pnpm --filter @tracker/web build`
+- **Files:**
+  - `apps/web/src/features/applications/components/application-interviews-tab.tsx`
+  - `apps/web/src/features/applications/pages/application-detail-page.tsx`
+  - `apps/web/src/features/dashboard/components/upcoming-interviews.tsx`
+
+### Task 7.5: Full Verification & Polish [COMPLETED]
+- **Description:** Run full test suite, verify WCAG AA accessibility, inspect UI in light and dark mode, and verify zero build warnings or regressions.
+- **Acceptance:**
+  - `pnpm test` passes across all workspace packages.
+  - `pnpm build` completes with zero errors.
+- **Verify:** `pnpm test && pnpm build`
+
+#### Checkpoint: Phase 2 Interviews Complete [PASSED]
+- [x] Database schema migrated
+- [x] Endpoints tested with Supertest
+- [x] Interviews hub live and accessible
+- [x] Application detail tab integrated
+- [x] Dashboard upcoming interviews live

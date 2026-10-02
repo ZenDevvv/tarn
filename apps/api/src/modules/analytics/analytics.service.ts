@@ -34,6 +34,7 @@ export const analyticsService = {
       allApplications,
       pendingFollowUps,
       recentApplications,
+      realUpcomingInterviews,
     ] = await Promise.all([
       // 1. All non-archived applications for user
       prisma.application.findMany({
@@ -61,6 +62,26 @@ export const analyticsService = {
         include: { company: true, job: true },
         orderBy: { appliedAt: 'desc' },
         take: 6,
+      }),
+
+      // 4. Real scheduled upcoming interviews
+      prisma.interview.findMany({
+        where: {
+          userId,
+          status: 'SCHEDULED',
+          scheduledAt: { gte: now },
+          application: { archivedAt: null },
+        },
+        include: {
+          application: {
+            include: {
+              company: { select: { name: true } },
+              job: { select: { title: true } },
+            },
+          },
+        },
+        orderBy: { scheduledAt: 'asc' },
+        take: 3,
       }),
     ]);
 
@@ -129,30 +150,49 @@ export const analyticsService = {
     const averagePerWeek = Math.round((totalIn8Weeks / 8) * 10) / 10;
     const currentWeekLabel = weeks[weeks.length - 1]?.weekLabel || 'Current week';
 
-    // Upcoming interview items (mocked from interview applications or timeline)
-    const upcomingInterviews = interviewApps.slice(0, 3).map((app, index) => {
-      const interviewDate = new Date();
-      interviewDate.setDate(interviewDate.getDate() + (index === 0 ? 1 : index === 1 ? 4 : 7));
-      interviewDate.setHours(10 + index * 3, 0, 0, 0);
+    // Upcoming interview items: prefer real scheduled interviews, fall back to stage apps
+    const upcomingInterviews = realUpcomingInterviews.length > 0
+      ? realUpcomingInterviews.map((iv) => ({
+          id: iv.id,
+          applicationId: iv.applicationId,
+          companyName: iv.application.company.name,
+          roleTitle: iv.application.job.title,
+          stage: iv.title || iv.type.replace(/_/g, ' ').toLowerCase(),
+          date: iv.scheduledAt.toISOString(),
+          location: iv.location || (iv.meetingUrl ? 'Online Meeting' : 'Remote'),
+          meetingUrl: iv.meetingUrl,
+          interviewerName: iv.interviewerName,
+          prepDone: iv.prepNotes ? 1 : 0,
+          prepTotal: 1,
+        }))
+      : interviewApps.slice(0, 3).map((app, index) => {
+          const interviewDate = new Date();
+          interviewDate.setDate(interviewDate.getDate() + (index === 0 ? 1 : index === 1 ? 4 : 7));
+          interviewDate.setHours(10 + index * 3, 0, 0, 0);
 
-      return {
-        id: app.id,
-        companyName: app.company.name,
-        roleTitle: app.job.title,
-        stage: app.status.replace(/_/g, ' ').toLowerCase(),
-        date: interviewDate.toISOString(),
-        location: app.job.workSetup === 'REMOTE' ? 'Google Meet' : app.job.location || 'Zoom',
-        prepDone: 2,
-        prepTotal: 5,
-      };
-    });
+          return {
+            id: app.id,
+            applicationId: app.id,
+            companyName: app.company.name,
+            roleTitle: app.job.title,
+            stage: app.status.replace(/_/g, ' ').toLowerCase(),
+            date: interviewDate.toISOString(),
+            location: app.job.workSetup === 'REMOTE' ? 'Google Meet' : app.job.location || 'Zoom',
+            meetingUrl: null as string | null,
+            interviewerName: null as string | null,
+            prepDone: 2,
+            prepTotal: 5,
+          };
+        });
+
+    const totalInterviewsCount = Math.max(interviewApps.length, realUpcomingInterviews.length);
 
     return {
       summary: {
         activeApplications: activeApps.length,
         activeDeltaNote: '2 more than last week',
-        interviewCount: interviewApps.length,
-        interviewDeltaNote: interviewApps.length > 0 ? 'Next one is tomorrow' : 'None scheduled',
+        interviewCount: totalInterviewsCount,
+        interviewDeltaNote: totalInterviewsCount > 0 ? 'Next one is upcoming' : 'None scheduled',
         followUpsDue: followUpsDue.length,
         followUpsOverdueCount: followUpsOverdue.length,
         appliedThisWeek,

@@ -1,4 +1,15 @@
-import { PrismaClient, ApplicationStatus, Priority, WorkSetup, EmploymentType, FollowUpStatus, TimelineEventType } from '@prisma/client';
+import {
+  PrismaClient,
+  ApplicationStatus,
+  Priority,
+  WorkSetup,
+  EmploymentType,
+  FollowUpStatus,
+  TimelineEventType,
+  InterviewType,
+  InterviewStatus,
+  InterviewResult,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -7,6 +18,7 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // Clean existing records
+  await prisma.interview.deleteMany();
   await prisma.followUp.deleteMany();
   await prisma.timelineEvent.deleteMany();
   await prisma.application.deleteMany();
@@ -197,6 +209,75 @@ async function main() {
           dueAt: item.nextActionDueAt,
           priority: item.priority,
           status: FollowUpStatus.PENDING,
+        },
+      });
+    }
+
+    // Seed Interviews for active interview stages
+    if (item.company === 'Halcyon Labs') {
+      const tomorrow1030 = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      tomorrow1030.setHours(10, 30, 0, 0);
+
+      await prisma.interview.create({
+        data: {
+          userId: user.id,
+          applicationId: app.id,
+          round: 2,
+          type: InterviewType.TECHNICAL,
+          title: 'Technical Deep Dive',
+          scheduledAt: tomorrow1030,
+          durationMinutes: 60,
+          interviewerName: 'Dana Reyes',
+          interviewerRole: 'Engineering Lead',
+          meetingUrl: 'https://meet.google.com/abc-defg-hij',
+          location: 'Google Meet',
+          status: InterviewStatus.SCHEDULED,
+          result: InterviewResult.PENDING,
+          notes: 'Focus on TypeScript, React architecture, and performance.',
+          prepNotes: 'Review React 19 server components, concurrent rendering, and state management.',
+        },
+      });
+
+      await prisma.timelineEvent.create({
+        data: {
+          applicationId: app.id,
+          type: TimelineEventType.INTERVIEW_SCHEDULED,
+          title: 'Technical interview scheduled',
+          description: 'Scheduled with Dana Reyes for tomorrow at 10:30 AM',
+          occurredAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+        },
+      });
+    } else if (item.company === 'Northbeam') {
+      const inThreeDays1400 = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+      inThreeDays1400.setHours(14, 0, 0, 0);
+
+      await prisma.interview.create({
+        data: {
+          userId: user.id,
+          applicationId: app.id,
+          round: 1,
+          type: InterviewType.HR,
+          title: 'HR Cultural Fit',
+          scheduledAt: inThreeDays1400,
+          durationMinutes: 45,
+          interviewerName: 'Liam Gomez',
+          interviewerRole: 'Talent Partner',
+          meetingUrl: 'https://zoom.us/j/1234567890',
+          location: 'Zoom',
+          status: InterviewStatus.SCHEDULED,
+          result: InterviewResult.PENDING,
+          notes: 'Discuss previous remote team experience and salary expectations.',
+          prepNotes: 'Prepare elevator pitch and questions about team workflow.',
+        },
+      });
+
+      await prisma.timelineEvent.create({
+        data: {
+          applicationId: app.id,
+          type: TimelineEventType.INTERVIEW_SCHEDULED,
+          title: 'HR interview scheduled',
+          description: 'Scheduled with Liam Gomez on Zoom',
+          occurredAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
         },
       });
     }

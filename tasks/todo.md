@@ -135,3 +135,42 @@
   - **Acceptance:** Full test suite passes across all workspace packages with 80%+ coverage on services and validation.
   - **Verify:** `pnpm test && pnpm build`
   - **Files:** Workspace test files
+
+---
+
+## Phase 7: Multi-Stage Interview Management (`interviews`)
+
+- [x] **Task 7.1: Prisma Schema & Migration + Shared Types & Validation**
+  - **Acceptance:** `Interview` model, `InterviewType`, `InterviewStatus`, and `InterviewResult` enums defined in Prisma. Migration generated and applied. Types and Zod schemas exported from `@tracker/types` and `@tracker/validation`.
+  - **Verify:** `pnpm --filter @tracker/database prisma migrate dev && pnpm --filter @tracker/types build && pnpm --filter @tracker/validation build`
+  - **Files:** `packages/database/prisma/schema.prisma`, `packages/types/src/entities.ts`, `packages/validation/src/interview.schema.ts`, `packages/validation/src/index.ts`
+
+- [x] **Task 7.2: Backend API Endpoints, Service & Timeline Integration**
+  - **Acceptance:** Full interview CRUD endpoints (`/api/v1/interviews` and `/api/v1/applications/:id/interviews`) with multi-tenant `userId` isolation. Timeline events recorded when interviews are scheduled or completed. Dashboard analytics service returning real upcoming interviews. Comprehensive integration tests in Vitest.
+  - **Verify:** `pnpm --filter @tracker/api test`
+  - **Files:** `apps/api/src/modules/interviews/interview.repository.ts`, `apps/api/src/modules/interviews/interview.service.ts`, `apps/api/src/modules/interviews/interview.controller.ts`, `apps/api/src/modules/interviews/interview.routes.ts`, `apps/api/src/modules/analytics/analytics.service.ts`, `apps/api/src/app.ts`, `apps/api/tests/interviews.test.ts`
+
+- [x] **Task 7.3: Frontend Interviews Hub (`/interviews`)**
+  - **Acceptance:** Dedicated `/interviews` page matching Marker design system. Filters for Upcoming vs. Past, StageRing stage badges, one-click meeting join links, accessible modal to schedule or edit interviews, and quick-action completion.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/interviews/api/interview-api.ts`, `apps/web/src/features/interviews/components/interview-card.tsx`, `apps/web/src/features/interviews/components/schedule-interview-modal.tsx`, `apps/web/src/features/interviews/pages/interviews-page.tsx`, `apps/web/src/app/router.tsx`
+
+- [x] **Task 7.4: Application Detail Interviews Tab & Dynamic Dashboard Feed**
+  - **Acceptance:** Application details page has an active "Interviews" tab allowing users to see and schedule interviews directly for that application. Dashboard "Upcoming interviews" card connects to real API data.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/applications/components/application-interviews-tab.tsx`, `apps/web/src/features/applications/pages/application-detail-page.tsx`, `apps/web/src/features/dashboard/components/upcoming-interviews.tsx`
+
+- [x] **Task 7.5: Full Verification & Polish**
+  - **Acceptance:** Full test suite passes across all workspace packages with 0 errors. Build succeeds cleanly. UI looks sharp in light ("paper") and dark ("night pine") modes.
+  - **Verify:** `pnpm test && pnpm build`
+  - **Files:** Workspace test and UI files
+
+---
+
+### Checkpoint: Multi-Stage Interview Management Complete
+- [x] Database schema migrated & seeded
+- [x] Backend API tests pass with 100% tenant isolation
+- [x] /interviews page functional and accessible
+- [x] Application detail interviews tab integrated
+- [x] Dashboard displays live upcoming interviews
+

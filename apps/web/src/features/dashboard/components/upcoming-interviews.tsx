@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
+import { Video, ExternalLink } from 'lucide-react';
 
 interface InterviewItem {
   id: string;
+  applicationId?: string;
   companyName: string;
   roleTitle: string;
   stage: string;
   date: string;
   location: string;
+  meetingUrl?: string | null;
   prepDone: number;
   prepTotal: number;
 }
@@ -23,8 +26,8 @@ export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
           Upcoming interviews
         </h2>
         <Link
-          to="/applications?status=TECHNICAL_INTERVIEW"
-          className="text-[13px] text-muted-foreground hover:text-foreground hover:underline no-underline"
+          to="/interviews"
+          className="text-[13px] text-muted-foreground hover:text-foreground hover:underline no-underline transition-colors"
         >
           View all
         </Link>
@@ -32,7 +35,10 @@ export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
 
       {interviews.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground text-small border border-dashed border-border rounded-lg">
-          No interviews scheduled yet.
+          No interviews scheduled yet.{' '}
+          <Link to="/interviews" className="text-primary hover:underline font-medium ml-1">
+            Schedule one
+          </Link>
         </div>
       ) : (
         <ul className="divide-y divide-border">
@@ -63,9 +69,33 @@ export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
                 </div>
 
                 <div className="min-w-0">
-                  <div className="font-semibold text-foreground capitalize">
-                    {iv.stage}
+                  <div className="flex items-center justify-between gap-2">
+                    {iv.applicationId ? (
+                      <Link
+                        to={`/applications/${iv.applicationId}`}
+                        className="font-semibold text-foreground capitalize hover:text-primary transition-colors no-underline"
+                      >
+                        {iv.stage}
+                      </Link>
+                    ) : (
+                      <div className="font-semibold text-foreground capitalize">
+                        {iv.stage}
+                      </div>
+                    )}
+
+                    {iv.meetingUrl && (
+                      <a
+                        href={iv.meetingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-caption text-primary hover:underline font-medium"
+                      >
+                        <span>Join</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
                   </div>
+
                   <div className="flex flex-wrap gap-x-3.5 gap-y-0.5 text-[13px] text-muted-foreground mt-0.5">
                     <span>{timeStr}</span>
                     <span className="font-medium text-foreground">{iv.companyName}</span>
@@ -82,7 +112,7 @@ export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
                     <span>
                       {iv.prepDone > 0
                         ? `${iv.prepDone} of ${iv.prepTotal} prep items done`
-                        : 'Not started'}
+                        : 'Prep not started'}
                     </span>
                   </div>
                 </div>

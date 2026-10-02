@@ -7,6 +7,7 @@ import { ApplicationsPage } from '@/features/applications/pages/applications-pag
 import { CreateApplicationPage } from '@/features/applications/pages/create-application-page';
 
 import { ApplicationDetailPage } from '@/features/applications/pages/application-detail-page';
+import { InterviewsPage } from '@/features/interviews/pages/interviews-page';
 
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
 
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
           {
             path: '/applications/:id',
             element: <ApplicationDetailPage />,
+          },
+          {
+            path: '/interviews',
+            element: <InterviewsPage />,
           },
         ],
       },

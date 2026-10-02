@@ -13,6 +13,7 @@ import { applicationApi } from '../api/application-api';
 import { ApplicationStatusBadge, STATUS_CONFIG } from '../components/application-status-badge';
 import { PriorityGlyph } from '../components/priority-glyph';
 import { ApplicationTimeline } from '../components/application-timeline';
+import { ApplicationInterviewsTab } from '../components/application-interviews-tab';
 import { FollowUpItem } from '@/features/follow-ups/components/follow-up-item';
 import { apiClient } from '@/lib/api-client';
 import { ApplicationStatus } from '@tracker/types';
@@ -232,6 +233,13 @@ export function ApplicationDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Interview Rounds Tracker */}
+          <ApplicationInterviewsTab
+            applicationId={application.id}
+            companyName={company?.name || ''}
+            jobTitle={job?.title || ''}
+          />
 
           {/* Follow-up Tasks */}
           <div className="bg-card border border-border rounded-lg p-5">
