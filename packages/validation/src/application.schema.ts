@@ -44,7 +44,7 @@ export const createApplicationSchema = z.object({
   employmentType: employmentTypeEnum.optional().nullable(),
   salaryMin: z.coerce.number().int().nonnegative().optional().nullable(),
   salaryMax: z.coerce.number().int().nonnegative().optional().nullable(),
-  currency: z.string().trim().default('USD'),
+  currency: z.string().trim().optional().default('USD'),
   appliedAt: z.string().datetime().optional().nullable(),
   nextAction: z.string().trim().optional().nullable(),
   nextActionDueAt: z.string().datetime().optional().nullable(),

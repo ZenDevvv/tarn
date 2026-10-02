@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 import { StageRing } from '@/features/applications/components/application-status-badge';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { useTheme } from '@/app/providers';
@@ -48,13 +50,23 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const { data: analytics } = useQuery({
+    queryKey: ['dashboard-analytics'],
+    queryFn: () => apiClient.get<any>('/analytics/dashboard'),
+    staleTime: 30000,
+  });
+
+  const savedCount = analytics?.pipeline?.SAVED ?? 0;
+  const activeCount = analytics?.summary?.activeApplications ?? 0;
+  const interviewsCount = analytics?.summary?.interviewCount ?? 0;
+
   const navItems: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: <Home size={16} strokeWidth={1.5} /> },
-    { to: '/applications', label: 'Applications', icon: <Briefcase size={16} strokeWidth={1.5} /> },
-    { to: '/saved-jobs', label: 'Saved jobs', icon: <Bookmark size={16} strokeWidth={1.5} /> },
+    { to: '/applications', label: 'Applications', icon: <Briefcase size={16} strokeWidth={1.5} />, count: activeCount > 0 ? activeCount : undefined },
+    { to: '/saved-jobs', label: 'Saved jobs', icon: <Bookmark size={16} strokeWidth={1.5} />, count: savedCount > 0 ? savedCount : undefined },
     { to: '/companies', label: 'Companies', icon: <Building2 size={16} strokeWidth={1.5} /> },
     { to: '/contacts', label: 'Contacts', icon: <Users size={16} strokeWidth={1.5} /> },
-    { to: '/interviews', label: 'Interviews', icon: <Calendar size={16} strokeWidth={1.5} /> },
+    { to: '/interviews', label: 'Interviews', icon: <Calendar size={16} strokeWidth={1.5} />, count: interviewsCount > 0 ? interviewsCount : undefined },
     { to: '/resumes', label: 'Resumes', icon: <FileText size={16} strokeWidth={1.5} /> },
     { to: '/analytics', label: 'Analytics', icon: <BarChart2 size={16} strokeWidth={1.5} /> },
     { to: '/settings', label: 'Settings', icon: <Settings size={16} strokeWidth={1.5} /> },

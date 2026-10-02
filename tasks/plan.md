@@ -148,3 +148,49 @@ Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modu
 - [x] Interviews hub live and accessible
 - [x] Application detail tab integrated
 - [x] Dashboard upcoming interviews live
+
+---
+
+## Phase 8: Saved Jobs & Opportunity Wishlist (`saved-jobs`)
+
+### Task 8.1: Saved Jobs Components (`SavedJobCard`, `QuickSaveModal`) [COMPLETED]
+- **Description:** Build `SavedJobCard` to render saved positions with company, role, platform, work setup, salary, date saved, 1-click "Mark as applied" button, and external link. Build `QuickSaveModal` to easily bookmark opportunities with `status: 'SAVED'`.
+- **Acceptance:**
+  - `SavedJobCard` matches Marker design aesthetic with StageRing `SAVED` indicator and action triggers.
+  - `QuickSaveModal` saves positions directly into the native ATS pipeline with default `USD` currency.
+- **Verify:** `pnpm --filter @tracker/web build`
+- **Files:**
+  - `apps/web/src/features/saved-jobs/components/saved-job-card.tsx`
+  - `apps/web/src/features/saved-jobs/components/quick-save-modal.tsx`
+
+### Task 8.2: Saved Jobs Hub Page & Router Registration (`/saved-jobs`) [COMPLETED]
+- **Description:** Implement `SavedJobsPage` with search, work setup filter, stats ribbon, and quick-save modal trigger. Register route in router.
+- **Acceptance:**
+  - Navigating to `/saved-jobs` displays the wishlist hub.
+  - Users can search, filter, and 1-click convert saved jobs to `APPLIED`.
+- **Verify:** `pnpm --filter @tracker/web build`
+- **Files:**
+  - `apps/web/src/features/saved-jobs/pages/saved-jobs-page.tsx`
+  - `apps/web/src/app/router.tsx`
+
+### Task 8.3: Live Dynamic Count Badge in App Shell Navigation [COMPLETED]
+- **Description:** Wire dynamic count badge for Saved jobs, Applications, and Interviews in primary navigation.
+- **Acceptance:**
+  - Sidebar reflects live saved count from analytics endpoint.
+- **Verify:** `pnpm --filter @tracker/web build`
+- **Files:**
+  - `apps/web/src/layouts/app-layout.tsx`
+
+### Task 8.4: Full Verification & Polish [COMPLETED]
+- **Description:** Run full test suite, verify WCAG AA accessibility, inspect UI in light and dark mode, and verify zero build warnings or regressions.
+- **Acceptance:**
+  - `pnpm test` passes across all workspace packages.
+  - `pnpm build` completes with zero errors.
+- **Verify:** `pnpm test && pnpm build`
+
+#### Checkpoint: Phase 8 Saved Jobs Complete [PASSED]
+- [x] /saved-jobs page live and accessible from sidebar
+- [x] Users can bookmark jobs and convert to applied with one click
+- [x] Sidebar displays live count of saved jobs
+- [x] Full build and test suite passing cleanly
+

@@ -20,6 +20,7 @@
 | `dashboard-analytics` | Aggregated dashboard stats, "Needs you today" widget, active funnel metrics, recent applications table | Server-side SQL aggregations, dashboard sections | `applications`, `follow-ups` |
 | `kanban-pipeline` | Kanban board with status columns, stage transitions, keyboard controls, optimistic UI updates | Multi-column board (`rounded-xl`), stage rings, drag tilt & drop slot | `applications`, `timeline` |
 | `interviews` | Multi-stage interview scheduling, rounds (HR, Tech, Behavioral, Final), preparation notes, meeting links, timeline events, and dynamic dashboard feed | `Interview` model, `apps/api/src/modules/interviews`, `apps/web/src/features/interviews` | `applications`, `timeline` |
+| `saved-jobs` | Dedicated pre-application opportunity bookmarking, quick-save modal, 1-click conversion to applied, platform filtering | `apps/web/src/features/saved-jobs`, `SavedJobCard`, `QuickSaveModal` | `applications` |
 
 ---
 

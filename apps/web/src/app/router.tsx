@@ -8,6 +8,7 @@ import { CreateApplicationPage } from '@/features/applications/pages/create-appl
 
 import { ApplicationDetailPage } from '@/features/applications/pages/application-detail-page';
 import { InterviewsPage } from '@/features/interviews/pages/interviews-page';
+import { SavedJobsPage } from '@/features/saved-jobs/pages/saved-jobs-page';
 
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
 
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
           {
             path: '/interviews',
             element: <InterviewsPage />,
+          },
+          {
+            path: '/saved-jobs',
+            element: <SavedJobsPage />,
           },
         ],
       },

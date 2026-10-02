@@ -174,3 +174,36 @@
 - [x] Application detail interviews tab integrated
 - [x] Dashboard displays live upcoming interviews
 
+---
+
+## Phase 8: Saved Jobs & Opportunity Wishlist (`saved-jobs`)
+
+- [x] **Task 8.1: Saved Jobs Components (`SavedJobCard`, `QuickSaveModal`)**
+  - **Acceptance:** `SavedJobCard` renders saved job opportunity with company, role, platform, work setup, salary, date saved, 1-click "Mark as applied" button, and external link. `QuickSaveModal` provides a fast form to save positions with `status: 'SAVED'`.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/saved-jobs/components/saved-job-card.tsx`, `apps/web/src/features/saved-jobs/components/quick-save-modal.tsx`
+
+- [x] **Task 8.2: Saved Jobs Hub Page & Router Registration (`/saved-jobs`)**
+  - **Acceptance:** `/saved-jobs` route renders `SavedJobsPage` with search, platform filter, stats, empty state, and 1-click conversion to applied status.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/saved-jobs/pages/saved-jobs-page.tsx`, `apps/web/src/app/router.tsx`
+
+- [x] **Task 8.3: Live Dynamic Count Badge in App Shell Navigation**
+  - **Acceptance:** App layout navigation queries live pipeline counts and displays active saved jobs count on the `Saved jobs` item.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/layouts/app-layout.tsx`
+
+- [x] **Task 8.4: Full Verification & Polish**
+  - **Acceptance:** Full test suite and build pass with 0 errors.
+  - **Verify:** `pnpm test && pnpm build`
+  - **Files:** Workspace test and UI files
+
+---
+
+### Checkpoint: Saved Jobs Complete
+- [x] /saved-jobs page live and accessible from sidebar
+- [x] Users can bookmark jobs and convert to applied with one click
+- [x] Sidebar displays live count of saved jobs
+- [x] Full build and test suite passing cleanly
+
+
