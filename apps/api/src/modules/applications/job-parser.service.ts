@@ -142,6 +142,17 @@ export class JobParserService {
       });
 
       if (!response.ok) {
+        if (response.status === 403 || response.status === 429) {
+          return {
+            url: urlString,
+            companyName: companyFromSlug,
+            source,
+            isBotProtected: true,
+            botPlatform: source,
+            extractedVia: 'bot_protected',
+            message: `${source} protects job postings with Cloudflare bot verification which blocks direct server access. Paste the job text or snippet below to auto-fill instantly!`,
+          };
+        }
         return fallbackResult;
       }
 
@@ -152,6 +163,24 @@ export class JobParserService {
 
       // Read max 1MB
       const html = await response.text();
+
+      // Check if response contains Cloudflare challenge page
+      if (
+        html.includes('challenges.cloudflare.com') ||
+        html.includes('<title>Just a moment...</title>') ||
+        html.includes('Attention Required! | Cloudflare')
+      ) {
+        return {
+          url: urlString,
+          companyName: companyFromSlug,
+          source,
+          isBotProtected: true,
+          botPlatform: source,
+          extractedVia: 'bot_protected',
+          message: `${source} protects job postings with Cloudflare bot verification. Paste the job text or snippet below to auto-fill instantly!`,
+        };
+      }
+
       const parsedMetadata = this.extractMetadataFromHtml(html, parsedUrl);
 
       return {
@@ -172,6 +201,121 @@ export class JobParserService {
       return fallbackResult;
     }
   }
+
+  /**
+   * Parse job details directly from pasted text or job description snippet.
+   */
+  public parseJobText(text: string, sourceUrl?: string): ParsedJobMetadataDTO {
+    const trimmed = text.trim();
+    const lines = trimmed
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    let position = '';
+    let companyName = '';
+    let location = '';
+    let workSetup: WorkSetup = 'ONSITE';
+    let salaryMin: number | undefined;
+    let salaryMax: number | undefined;
+    let currency = 'USD';
+
+    // 1. Work setup detection
+    if (/\b(remote|work from home|wfh|anywhere)\b/i.test(trimmed)) {
+      workSetup = 'REMOTE';
+    } else if (/\bhybrid\b/i.test(trimmed)) {
+      workSetup = 'HYBRID';
+    }
+
+    // 2. Salary extraction: handles PHP, ₱, $, USD, EUR, GBP, monthly and yearly
+    const salaryRegex =
+      /(?:(PHP|₱|\$|USD|EUR|€|£|GBP)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)\s*(?:-|to|–|—)\s*(?:(PHP|₱|\$|USD|EUR|€|£|GBP)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)(?:\s*(?:a|per|\/)\s*(month|mo|year|yr|annum))?/i;
+    const salaryMatch = trimmed.match(salaryRegex);
+
+    if (salaryMatch) {
+      const rawCurr = (salaryMatch[1] || salaryMatch[3] || '').toUpperCase();
+      if (rawCurr.includes('PHP') || rawCurr.includes('₱') || /PHP|₱/i.test(trimmed)) {
+        currency = 'PHP';
+      } else if (rawCurr.includes('EUR') || rawCurr.includes('€')) {
+        currency = 'EUR';
+      } else if (rawCurr.includes('GBP') || rawCurr.includes('£')) {
+        currency = 'GBP';
+      } else {
+        currency = 'USD';
+      }
+
+      const parseNum = (str: string): number => {
+        const cleaned = str.replace(/,/g, '').toLowerCase();
+        if (cleaned.endsWith('k')) return parseFloat(cleaned) * 1000;
+        return parseFloat(cleaned);
+      };
+
+      salaryMin = parseNum(salaryMatch[2]);
+      salaryMax = parseNum(salaryMatch[4]);
+    }
+
+    // 3. Location detection (PH & Global cities)
+    const locMatch = trimmed.match(
+      /\b(Taguig|BGC|Makati|Quezon City|Manila|Cebu|Pasig|Mandaluyong|Pasay|Ortigas|Alabang|Clark|Davao|Iloilo|Angeles|Baguio|Cavite|Laguna|Philippines|San Francisco|New York|London|Singapore|Sydney|Toronto|Tokyo|Berlin|Paris|Amsterdam|Dublin|Austin|Seattle)\b(?:[^\n,]*)/i
+    );
+    if (locMatch) {
+      location = locMatch[0].trim();
+    }
+
+    // 4. Role & Company line heuristics
+    if (lines.length > 0) {
+      let roleIdx = 0;
+      while (
+        roleIdx < lines.length &&
+        /^(jobstreet|indeed|linkedin|apply|quick apply|save job|posted|view job|overview)/i.test(lines[roleIdx])
+      ) {
+        roleIdx++;
+      }
+
+      if (roleIdx < lines.length) {
+        position = lines[roleIdx].replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
+      }
+
+      const compIdx = roleIdx + 1;
+      if (compIdx < lines.length) {
+        const line = lines[compIdx];
+        if (!/[₱$€£]/.test(line) && !/^\d\.\d\s*★?/.test(line) && line.length < 80) {
+          companyName = line.replace(/^\d\.\d\s*★?\s*/, '').trim();
+        }
+      }
+    }
+
+    // 5. Source detection from sourceUrl if provided, or from text
+    let source = 'Other';
+    if (sourceUrl) {
+      try {
+        const parsed = new URL(sourceUrl);
+        source = this.extractSourcePlatform(parsed);
+      } catch {
+        // fallback
+      }
+    } else {
+      if (/jobstreet/i.test(trimmed)) source = 'Jobstreet';
+      else if (/linkedin/i.test(trimmed)) source = 'LinkedIn';
+      else if (/indeed/i.test(trimmed)) source = 'Indeed';
+      else if (/glassdoor/i.test(trimmed)) source = 'Glassdoor';
+    }
+
+    return {
+      url: sourceUrl || undefined,
+      companyName: companyName || undefined,
+      position: position || undefined,
+      source,
+      location: location || undefined,
+      workSetup,
+      salaryMin,
+      salaryMax,
+      currency,
+      description: trimmed.slice(0, 2500),
+      extractedVia: 'text_snippet',
+    };
+  }
+
 
   /**
    * Extract metadata from HTML content using JSON-LD, OpenGraph, and heuristic regex.

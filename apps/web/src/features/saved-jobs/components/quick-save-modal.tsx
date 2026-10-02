@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CreateApplicationInput } from '@tracker/validation';
 import { applicationApi } from '@/features/applications/api/application-api';
-import { X, Bookmark, Link2, Sparkles, Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  X,
+  Bookmark,
+  Link2,
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 interface QuickSaveModalProps {
   isOpen: boolean;
@@ -18,20 +30,29 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
   const [workSetup, setWorkSetup] = useState<'REMOTE' | 'HYBRID' | 'ONSITE'>('REMOTE');
   const [salaryMin, setSalaryMin] = useState<string>('');
   const [salaryMax, setSalaryMax] = useState<string>('');
+  const [currency, setCurrency] = useState('USD');
   const [priority, setPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM');
   const [notes, setNotes] = useState('');
   const [description, setDescription] = useState('');
 
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [extractNotice, setExtractNotice] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
+  // Auto-fill state
+  const [isExtractingUrl, setIsExtractingUrl] = useState(false);
+  const [isExtractingText, setIsExtractingText] = useState(false);
+  const [showSnippetBox, setShowSnippetBox] = useState(false);
+  const [snippetText, setSnippetText] = useState('');
+  const [extractNotice, setExtractNotice] = useState<{
+    type: 'success' | 'warning' | 'info' | 'error';
+    message: string;
+  } | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const urlInputRef = useRef<HTMLInputElement>(null);
+  const snippetInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Auto-focus the URL input as the primary first action
       setTimeout(() => {
         urlInputRef.current?.focus();
       }, 50);
@@ -45,12 +66,16 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
       setWorkSetup('REMOTE');
       setSalaryMin('');
       setSalaryMax('');
+      setCurrency('USD');
       setPriority('MEDIUM');
       setNotes('');
       setDescription('');
+      setShowSnippetBox(false);
+      setSnippetText('');
       setExtractNotice(null);
       setError(null);
-      setIsExtracting(false);
+      setIsExtractingUrl(false);
+      setIsExtractingText(false);
     }
   }, [isOpen]);
 
@@ -76,7 +101,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
       return;
     }
 
-    setIsExtracting(true);
+    setIsExtractingUrl(true);
     setExtractNotice(null);
     setError(null);
 
@@ -84,40 +109,99 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
       const meta = await applicationApi.parseJobUrl(targetUrl);
 
       if (meta) {
+        if (meta.source) setSource(meta.source);
         if (meta.companyName) setCompanyName(meta.companyName);
         if (meta.position) setPosition(meta.position);
-        if (meta.source) setSource(meta.source);
         if (meta.location) setLocation(meta.location);
         if (meta.workSetup) setWorkSetup(meta.workSetup);
         if (meta.salaryMin) setSalaryMin(String(meta.salaryMin));
         if (meta.salaryMax) setSalaryMax(String(meta.salaryMax));
+        if (meta.currency) setCurrency(meta.currency);
         if (meta.description) setDescription(meta.description);
 
-        const method = meta.extractedVia;
-        if (method === 'json-ld' || method === 'opengraph') {
+        if (meta.isBotProtected) {
+          setShowSnippetBox(true);
+          setExtractNotice({
+            type: 'warning',
+            message: `🛡️ ${meta.botPlatform || 'This site'} protects postings with Cloudflare bot verification. Simply paste any text or snippet from the job page into the text box below to auto-fill immediately!`,
+          });
+          setTimeout(() => {
+            snippetInputRef.current?.focus();
+          }, 100);
+        } else if (meta.extractedVia === 'json-ld' || meta.extractedVia === 'opengraph') {
           setExtractNotice({
             type: 'success',
             message: `✨ Auto-filled from ${meta.source || 'posting'}! Review the details below.`,
           });
-        } else if (meta.companyName || meta.source) {
+        } else if (meta.companyName || meta.position) {
           setExtractNotice({
-            type: 'info',
-            message: `Identified platform as ${meta.source || 'source'}. Review and confirm details below.`,
+            type: 'success',
+            message: `✨ Extracted role info from link! Review and customize below.`,
           });
         } else {
+          // If no fields could be scraped, suggest pasting text snippet
+          setShowSnippetBox(true);
           setExtractNotice({
-            type: 'info',
-            message: 'Posting fetched. You can review and adjust any field below.',
+            type: 'warning',
+            message: `Identified platform as ${meta.source || 'source'}, but the page content could not be read directly. Paste any text from the job page into the snippet box below to auto-fill instantly!`,
           });
         }
       }
     } catch (err: any) {
+      setShowSnippetBox(true);
       setExtractNotice({
-        type: 'info',
-        message: 'Could not auto-scrape this page directly. You can fill or edit the fields manually.',
+        type: 'warning',
+        message: 'Could not auto-scrape this page directly. Paste any text snippet from the job page below to auto-fill!',
       });
     } finally {
-      setIsExtracting(false);
+      setIsExtractingUrl(false);
+    }
+  };
+
+  const handleExtractFromSnippet = async (textOverride?: string) => {
+    const targetText = (textOverride || snippetText).trim();
+    if (!targetText) {
+      setExtractNotice({ type: 'info', message: 'Paste some text from the job posting first.' });
+      return;
+    }
+
+    setIsExtractingText(true);
+    setExtractNotice(null);
+    setError(null);
+
+    try {
+      const meta = await applicationApi.parseJobText(targetText, sourceUrl);
+      if (meta) {
+        if (meta.position) setPosition(meta.position);
+        if (meta.companyName) setCompanyName(meta.companyName);
+        if (meta.location) setLocation(meta.location);
+        if (meta.workSetup) setWorkSetup(meta.workSetup);
+        if (meta.salaryMin) setSalaryMin(String(meta.salaryMin));
+        if (meta.salaryMax) setSalaryMax(String(meta.salaryMax));
+        if (meta.currency) setCurrency(meta.currency);
+        if (meta.description && !description) setDescription(meta.description);
+        if (meta.source && meta.source !== 'Other') setSource(meta.source);
+
+        const filledCount = [
+          meta.position,
+          meta.companyName,
+          meta.location,
+          meta.salaryMin,
+          meta.workSetup,
+        ].filter(Boolean).length;
+
+        setExtractNotice({
+          type: 'success',
+          message: `✨ Auto-filled ${filledCount} fields from snippet! Review details below.`,
+        });
+      }
+    } catch (err: any) {
+      setExtractNotice({
+        type: 'error',
+        message: 'Could not parse text snippet. You can fill the fields manually below.',
+      });
+    } finally {
+      setIsExtractingText(false);
     }
   };
 
@@ -131,10 +215,13 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
     }
   };
 
-  const handleUrlKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleExtractFromUrl();
+  const handleSnippetPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasted = e.clipboardData.getData('text').trim();
+    if (pasted.length > 5) {
+      setSnippetText(pasted);
+      setTimeout(() => {
+        handleExtractFromSnippet(pasted);
+      }, 30);
     }
   };
 
@@ -154,7 +241,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
         workSetup,
         salaryMin: salaryMin ? Number(salaryMin) : undefined,
         salaryMax: salaryMax ? Number(salaryMax) : undefined,
-        currency: 'USD',
+        currency: currency || 'USD',
         priority,
         notes: notes.trim() || undefined,
         description: description.trim() || undefined,
@@ -184,7 +271,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
                 Save Job Opportunity
               </h2>
               <p className="text-caption text-muted-foreground">
-                Paste a link to auto-fill details, or enter manually
+                Paste link or job text snippet to auto-fill details
               </p>
             </div>
           </div>
@@ -207,7 +294,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
           )}
 
           {/* FIRST ACTION: Job Posting URL Hero Input */}
-          <div className="p-3.5 rounded-lg bg-secondary/50 border border-primary/20 space-y-2">
+          <div className="p-3.5 rounded-lg bg-secondary/50 border border-primary/20 space-y-2.5">
             <div className="flex items-center justify-between">
               <label htmlFor="job-url" className="text-small font-semibold text-foreground flex items-center gap-1.5">
                 <Link2 size={15} className="text-primary" />
@@ -224,22 +311,27 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
                   ref={urlInputRef}
                   id="job-url"
                   type="url"
-                  placeholder="Paste link (LinkedIn, Greenhouse, Lever, Ashby, Indeed...)"
+                  placeholder="Paste link (LinkedIn, JobStreet, Greenhouse, Lever, Indeed...)"
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
                   onPaste={handleUrlPaste}
-                  onKeyDown={handleUrlKeyDown}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleExtractFromUrl();
+                    }
+                  }}
                   className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary font-mono text-small"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleExtractFromUrl()}
-                disabled={isExtracting || !sourceUrl.trim()}
+                disabled={isExtractingUrl || !sourceUrl.trim()}
                 title="Fetch and auto-fill role details"
                 className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-hover text-primary-foreground rounded-md text-small font-medium transition-colors disabled:opacity-50"
               >
-                {isExtracting ? (
+                {isExtractingUrl ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
                     <span>Extracting...</span>
@@ -254,31 +346,89 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
             </div>
 
             {/* Parsing State & Feedback */}
-            {isExtracting && (
-              <div className="flex items-center gap-2 text-small text-primary animate-pulse pt-1">
+            {isExtractingUrl && (
+              <div className="flex items-center gap-2 text-small text-primary animate-pulse pt-0.5">
                 <Loader2 size={13} className="animate-spin" />
-                <span>Extracting company, title, salary & location from posting...</span>
+                <span>Extracting company, title, salary & location from link...</span>
               </div>
             )}
 
-            {!isExtracting && extractNotice && (
+            {/* Smart Notice Banner */}
+            {!isExtractingUrl && extractNotice && (
               <div
-                className={`flex items-start gap-2 text-small p-2 rounded border text-left ${
+                className={`flex items-start gap-2 text-small p-2.5 rounded border text-left leading-relaxed ${
                   extractNotice.type === 'success'
                     ? 'bg-primary/10 border-primary/20 text-primary'
-                    : extractNotice.type === 'error'
-                      ? 'bg-destructive/10 border-destructive/20 text-destructive'
-                      : 'bg-secondary border-border text-foreground'
+                    : extractNotice.type === 'warning'
+                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                      : extractNotice.type === 'error'
+                        ? 'bg-destructive/10 border-destructive/20 text-destructive'
+                        : 'bg-secondary border-border text-foreground'
                 }`}
               >
                 {extractNotice.type === 'success' ? (
                   <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
+                ) : extractNotice.type === 'warning' ? (
+                  <ShieldAlert size={15} className="shrink-0 mt-0.5" />
                 ) : (
                   <AlertCircle size={15} className="shrink-0 mt-0.5" />
                 )}
-                <span>{extractNotice.message}</span>
+                <div className="flex-1">{extractNotice.message}</div>
               </div>
             )}
+
+            {/* Toggle / Quick Snippet Box for Cloudflare/Protected Sites */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowSnippetBox(!showSnippetBox)}
+                className="text-caption font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+              >
+                <FileText size={12} />
+                <span>
+                  {showSnippetBox ? 'Hide job text snippet parser' : 'Paste job text / description instead'}
+                </span>
+                {showSnippetBox ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+
+              {showSnippetBox && (
+                <div className="mt-2 p-2.5 rounded bg-background border border-border space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between text-caption text-muted-foreground">
+                    <span className="font-medium text-foreground">Paste Job Snippet or Description:</span>
+                    <span>Auto-extracts role, company, salary & location</span>
+                  </div>
+                  <textarea
+                    ref={snippetInputRef}
+                    rows={3}
+                    placeholder="Copy and paste text from the job page here (e.g. title, company name, salary range, location)..."
+                    value={snippetText}
+                    onChange={(e) => setSnippetText(e.target.value)}
+                    onPaste={handleSnippetPaste}
+                    className="w-full bg-secondary/40 border border-border rounded px-2.5 py-1.5 text-small text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary font-sans resize-y"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleExtractFromSnippet()}
+                      disabled={isExtractingText || !snippetText.trim()}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground border border-border rounded text-caption font-medium transition-colors disabled:opacity-50"
+                    >
+                      {isExtractingText ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          <span>Parsing text...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={12} className="text-primary" />
+                          <span>Auto-fill from snippet</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="text-caption uppercase tracking-wider text-muted-foreground font-mono font-medium pt-1">
@@ -295,7 +445,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
                 id="company-name"
                 type="text"
                 required
-                placeholder="e.g. Linear, Stripe"
+                placeholder="e.g. Linear, Globe Telecom, Accenture"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all"
@@ -309,7 +459,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
                 id="position-title"
                 type="text"
                 required
-                placeholder="e.g. Staff Frontend Engineer"
+                placeholder="e.g. Senior Software Engineer"
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all"
@@ -326,7 +476,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
               <input
                 id="job-source"
                 type="text"
-                placeholder="Greenhouse, LinkedIn, Lever"
+                placeholder="JobStreet, LinkedIn, Indeed, Referral"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -358,7 +508,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
               <input
                 id="job-location"
                 type="text"
-                placeholder="e.g. San Francisco, CA"
+                placeholder="e.g. Taguig, BGC, Makati, Manila, Remote"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -381,16 +531,34 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
             </div>
           </div>
 
-          {/* Salary Min / Max */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Salary Min / Max & Currency */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="salary-currency" className="block text-small font-medium text-foreground mb-1">
+                Currency
+              </label>
+              <select
+                id="salary-currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="PHP">PHP (₱)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="SGD">SGD (S$)</option>
+                <option value="AUD">AUD (A$)</option>
+              </select>
+            </div>
             <div>
               <label htmlFor="salary-min" className="block text-small font-medium text-foreground mb-1">
-                Salary Min ($)
+                Salary Min
               </label>
               <input
                 id="salary-min"
                 type="number"
-                placeholder="140000"
+                placeholder="50000"
                 value={salaryMin}
                 onChange={(e) => setSalaryMin(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -398,12 +566,12 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
             </div>
             <div>
               <label htmlFor="salary-max" className="block text-small font-medium text-foreground mb-1">
-                Salary Max ($)
+                Salary Max
               </label>
               <input
                 id="salary-max"
                 type="number"
-                placeholder="185000"
+                placeholder="80000"
                 value={salaryMax}
                 onChange={(e) => setSalaryMax(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -419,7 +587,7 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
             <input
               id="save-notes"
               type="text"
-              placeholder="e.g. Excellent fit for TypeScript skills, mutual connection at company"
+              placeholder="e.g. Good stack alignment, flexible hybrid policy"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -429,12 +597,12 @@ export function QuickSaveModal({ isOpen, onClose, onSubmit }: QuickSaveModalProp
           {/* Paste Job Description */}
           <div>
             <label htmlFor="save-description" className="block text-small font-medium text-foreground mb-1">
-              Job Description / Role Snippet <span className="text-muted-foreground font-normal">(auto-filled or paste raw)</span>
+              Job Description / Role Snippet <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <textarea
               id="save-description"
               rows={3}
-              placeholder="Full role description extracted from link..."
+              placeholder="Paste raw JD or summary here to preserve it..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-y font-sans text-small"

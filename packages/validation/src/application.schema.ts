@@ -85,3 +85,11 @@ export const parseJobUrlSchema = z.object({
 
 export type ParseJobUrlInput = z.infer<typeof parseJobUrlSchema>;
 
+export const parseJobTextSchema = z.object({
+  text: z.string().trim().min(3, 'Please paste at least a snippet of the job post'),
+  sourceUrl: z.string().trim().optional(),
+});
+
+export type ParseJobTextInput = z.infer<typeof parseJobTextSchema>;
+
+

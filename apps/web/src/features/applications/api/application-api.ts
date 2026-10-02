@@ -30,6 +30,11 @@ export const applicationApi = {
     return apiClient.post<ParsedJobMetadataDTO>('/applications/parse-job-url', { url });
   },
 
+  async parseJobText(text: string, sourceUrl?: string) {
+    return apiClient.post<ParsedJobMetadataDTO>('/applications/parse-job-text', { text, sourceUrl });
+  },
+
+
   async getApplication(id: string) {
     return apiClient.get<ApplicationDTO>(`/applications/${id}`);
   },

@@ -176,6 +176,68 @@ describe('JobParserService', () => {
       expect(res.body.data.source).toBe('Greenhouse');
       expect(res.body.data.companyName).toBe('Figma');
     });
+
+    it('identifies bot-protected sites (e.g. JobStreet 403)', async () => {
+      const res = await request(app)
+        .post('/api/v1/applications/parse-job-url')
+        .set('Cookie', authCookie)
+        .send({ url: 'https://ph.jobstreet.com/job/94515945' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.source).toBe('Jobstreet');
+      expect(res.body.data.isBotProtected).toBe(true);
+      expect(res.body.data.extractedVia).toBe('bot_protected');
+      expect(res.body.data.message).toContain('Cloudflare bot verification');
+    });
+  });
+
+  describe('parseJobText Snippet Extraction', () => {
+    it('parses role, company, PH location, PHP salary, and hybrid setup from text snippet', () => {
+      const text = `
+        Senior Full Stack Engineer
+        Globe Telecom
+        Taguig, National Capital Region, Philippines
+        PHP 95,000 - PHP 140,000 a month
+        Hybrid working environment with great benefits.
+      `;
+
+      const result = jobParserService.parseJobText(text, 'https://ph.jobstreet.com/job/94515945');
+      expect(result.position).toBe('Senior Full Stack Engineer');
+      expect(result.companyName).toBe('Globe Telecom');
+      expect(result.location).toContain('Taguig');
+      expect(result.workSetup).toBe('HYBRID');
+      expect(result.salaryMin).toBe(95000);
+      expect(result.salaryMax).toBe(140000);
+      expect(result.currency).toBe('PHP');
+      expect(result.source).toBe('Jobstreet');
+      expect(result.extractedVia).toBe('text_snippet');
+    });
+
+    it('POST /api/v1/applications/parse-job-text integration endpoint works', async () => {
+      const loginRes = await request(app)
+        .post('/api/v1/auth/register')
+        .send({
+          email: `text_parser_${Date.now()}@example.com`,
+          password: 'password123',
+          name: 'Text Parser Tester',
+        });
+      const cookie = loginRes.headers['set-cookie'];
+
+      const res = await request(app)
+        .post('/api/v1/applications/parse-job-text')
+        .set('Cookie', cookie)
+        .send({
+          text: 'Frontend Developer\nAccenture\nMakati City\nPHP 60,000 - 90,000\nRemote setup',
+          sourceUrl: 'https://ph.jobstreet.com/job/12345',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.position).toBe('Frontend Developer');
+      expect(res.body.data.companyName).toBe('Accenture');
+      expect(res.body.data.workSetup).toBe('REMOTE');
+      expect(res.body.data.currency).toBe('PHP');
+    });
   });
 });
+
 

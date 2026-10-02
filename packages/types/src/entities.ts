@@ -212,7 +212,7 @@ export interface DashboardAnalyticsDTO {
 }
 
 export interface ParsedJobMetadataDTO {
-  url: string;
+  url?: string;
   companyName?: string;
   position?: string;
   source?: string;
@@ -222,7 +222,11 @@ export interface ParsedJobMetadataDTO {
   salaryMax?: number;
   currency?: string;
   description?: string;
-  extractedVia?: 'json-ld' | 'opengraph' | 'heuristic' | 'url';
+  extractedVia?: 'json-ld' | 'opengraph' | 'heuristic' | 'url' | 'text_snippet' | 'bot_protected';
+  isBotProtected?: boolean;
+  botPlatform?: string;
+  message?: string;
 }
+
 
 

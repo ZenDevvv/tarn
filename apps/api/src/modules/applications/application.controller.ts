@@ -21,6 +21,16 @@ export const applicationController = {
     }
   },
 
+  parseJobText(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = jobParserService.parseJobText(req.body.text, req.body.sourceUrl);
+      return res.status(200).json({ data: result });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+
   async list(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await applicationService.getApplications(req.user!.id, req.query as any);

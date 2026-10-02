@@ -5,6 +5,7 @@ import {
   updateStatusSchema,
   applicationFiltersSchema,
   parseJobUrlSchema,
+  parseJobTextSchema,
 } from '@tracker/validation';
 import { applicationController } from './application.controller';
 import { timelineRouter } from '../timeline/timeline.routes';
@@ -17,7 +18,9 @@ export const applicationRouter = Router();
 applicationRouter.use(authenticate);
 
 applicationRouter.post('/parse-job-url', validateBody(parseJobUrlSchema), applicationController.parseJobUrl);
+applicationRouter.post('/parse-job-text', validateBody(parseJobTextSchema), applicationController.parseJobText);
 applicationRouter.post('/', validateBody(createApplicationSchema), applicationController.create);
+
 
 applicationRouter.get('/', validateQuery(applicationFiltersSchema), applicationController.list);
 applicationRouter.get('/:id', applicationController.getById);
