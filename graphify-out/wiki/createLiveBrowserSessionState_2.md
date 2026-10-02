@@ -1,0 +1,42 @@
+# createLiveBrowserSessionState
+
+> 18 nodes · cohesion 0.22
+
+## Key Concepts
+
+- **createLiveBrowserSessionState()** (17 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **readHandledIds()** (5 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **safeWrite()** (5 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **clearHandled()** (4 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **loadSession()** (4 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **safeRead()** (4 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **safeRemove()** (4 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **saveSession()** (4 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **markHandled()** (3 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **nextCheckpointRevision()** (3 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **clearScrollY()** (2 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **clearSession()** (2 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **isHandled()** (2 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **readScrollY()** (2 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **writeScrollY()** (2 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **.cursor/skills/impeccable/scripts/live-browser-session.js** (1 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **currentCheckpointRevision()** (1 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+- **seedCheckpointRevision()** (1 connections) — `.cursor/skills/impeccable/scripts/live-browser-session.js`
+
+## Relationships
+
+- No strong cross-community connections detected
+
+## Source Files
+
+- `.cursor/skills/impeccable/scripts/live-browser-session.js`
+
+## Audit Trail
+
+- EXTRACTED: 20 (61%)
+- INFERRED: 13 (39%)
+- AMBIGUOUS: 0 (0%)
+
+---
+
+*Part of the graphify knowledge wiki. See [index](index.md) to navigate.*
