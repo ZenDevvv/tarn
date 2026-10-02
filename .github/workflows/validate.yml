@@ -1,0 +1,33 @@
+what name: Validate template
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Bash syntax
+        run: bash -n .template/setup.sh
+      - name: Validate PowerShell syntax and dry runs
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path .template/setup.ps1), [ref]$null, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count) { $errors | ForEach-Object Message; exit 1 }
+          foreach ($profile in 'motion', 'frontend', 'minimal', 'custom') {
+            & ./.template/setup.ps1 -DryRun -DesignProfile $profile | Out-Null
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Reject machine-specific documentation links
+        shell: pwsh
+        run: |
+          $matches = rg -n 'file:///|C:/Users/|c:/Users/' . --glob '*.md' --glob '*.mdc'
+          if ($LASTEXITCODE -eq 0) { $matches; exit 1 }

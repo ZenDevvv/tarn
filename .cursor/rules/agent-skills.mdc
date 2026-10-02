@@ -1,0 +1,15 @@
+---
+description: Production-grade SDLC lifecycle gates from Addy Osmani's Agent Skills
+globs: *
+alwaysApply: true
+---
+
+# Agent Skills Engineering Lifecycle
+
+Follow Addy Osmani's 6-phase engineering lifecycle:
+1. DEFINE (/spec): Clarify goals, constraints, and acceptance criteria before writing code. If vague, ask one question at a time.
+2. PLAN (/plan): Break down PRDs into small, atomic tasks with dependency order.
+3. BUILD (/build): Implement thin vertical slices (~100 lines). Enforce Red-Green-Refactor TDD. Never silence failing tests.
+4. VERIFY (/test): Prove functionality with unit tests, integration tests, or browser DevTools.
+5. REVIEW (/review): Senior Staff 5-axis review (Correctness, Security, Performance, Maintainability, Simplicity). Apply /code-simplify to reduce complexity.
+6. SHIP (/ship): Atomic commits, safe rollbacks, clean release notes.

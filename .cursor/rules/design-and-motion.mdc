@@ -1,0 +1,29 @@
+---
+description: Frontend design quality, anti-slop art direction, and fluid motion physics
+globs: **/*.{tsx,jsx,html,vue,svelte,css,scss}
+alwaysApply: true
+---
+
+# Frontend Design, Anti-Slop & Motion Craft
+
+Apply the Design Trifecta (Impeccable + Taste Skill + Emil Kowalski):
+
+## 1. Zero-Token Quality & Anti-Patterns (Impeccable)
+- Never use generic default fonts (Inter, Arial, system defaults) without explicit brand justification.
+- Never use pure black (#000000) or untinted gray; subtly tint neutrals with the brand temperature.
+- Never place low-contrast gray text on saturated backgrounds.
+- Never nest cards inside other cards; use whitespace, typography hierarchy, and subtle dividers.
+- Run `/impeccable audit` for zero-token deterministic checks.
+
+## 2. Aesthetic Dials & Art Direction (Taste Skill)
+- `DESIGN_VARIANCE` (1-10): Balanced asymmetrical layouts over generic cookie-cutter templates.
+- `MOTION_INTENSITY` (1-10): Thoughtful micro-interactions up to smooth GSAP scroll timelines.
+- `VISUAL_DENSITY` (1-10): Calibrate whitespace for landing pages vs. high-density dashboards.
+- Use distinct aesthetic genres: Luxury Soft, Minimalist Editorial, or Technical Swiss.
+
+## 3. Motion Physics & Mobile-Native Polish (Emil Kowalski)
+- Easing: Never use `ease-in` on enter animations. Always decelerate into place with `cubic-bezier(0.16, 1, 0.3, 1)` or `ease-out`.
+- Durations: Keep interface interactions fast and snappy (150ms–300ms).
+- Performance: Animate ONLY `transform` and `opacity` to keep motion off the main thread.
+- Shadows: Use multi-layered ambient occlusion shadows instead of solid 1px borders.
+- Mobile Web: Use `height: 100dvh`, `@media (hover: hover)` to stop sticky hovers, `16px` font on inputs to prevent iOS zoom, and `padding-bottom: env(safe-area-inset-bottom)`.

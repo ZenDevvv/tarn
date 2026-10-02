@@ -1,0 +1,21 @@
+---
+description: Ponytail anti-overengineering rule enforcing the 7-rung simplicity ladder and YAGNI
+globs: *
+alwaysApply: true
+---
+
+# Ponytail Simplicity Rule
+
+"The best code is the code you never wrote."
+
+Before writing any code, stop at the first rung that holds:
+1. Does this need to exist? -> NO: skip it (YAGNI).
+2. Already in this codebase? -> Reuse it, do not rewrite.
+3. Stdlib does it? -> Use standard library.
+4. Native platform feature? -> Use browser/OS native built-ins (e.g., <input type="date">, CSS grid, <dialog>).
+5. Installed dependency? -> Use what is already in package.json / requirements.txt.
+6. One line? -> Write one line.
+7. Only then: The minimum necessary code that works.
+
+Preserve all safety guards: never cut trust boundaries, input validation, error handling, or accessibility (WCAG AA).
+Aggressively eliminate unnecessary dependencies, custom component wrappers, and redundant state abstractions.

@@ -1,0 +1,13 @@
+---
+description: Codebase knowledge graph navigation and dependency tracing via Graphify
+globs: *
+alwaysApply: true
+---
+
+# Graphify Architectural Context Rule
+
+Before designing features or refactoring cross-module code:
+1. Check if `graphify-out/GRAPH_REPORT.md` or `graphify-out/wiki/index.md` exists.
+2. Review God Nodes and surprising connections in `GRAPH_REPORT.md` to prevent unintended regressions across modules.
+3. For multi-module questions, run `/graphify query "<question>"` or `/graphify path "<from>" "<to>"` to trace call paths.
+4. Keep the knowledge graph fresh using `/graphify . --update` or after major commits.
