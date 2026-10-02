@@ -1,0 +1,23 @@
+{
+  "name": "@tracker/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/client.ts",
+  "types": "./src/client.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "seed": "tsx prisma/seed.ts",
+    "studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.1"
+  },
+  "devDependencies": {
+    "bcryptjs": "^2.4.3",
+    "@types/bcryptjs": "^2.4.6",
+    "prisma": "^5.19.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

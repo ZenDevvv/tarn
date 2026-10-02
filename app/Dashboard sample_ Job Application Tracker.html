@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard: Job Application Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F5F2; --raised:#FFFFFF; --sunken:#E9ECE6; --hover:#DDE3D6; --line:#DADFD6; --control:#7C867F;
+  --ink:#16251F; --ink-2:#5A665F;
+  --brand:#1F4A3B; --brand-hover:#173B2F; --on-brand:#F4F5F2;
+  --marker:#D6F04F; --on-marker:#16251F;
+  --brick:#B0342D; --brick-tint:#F6DEDB;
+  --pine-tint:#DCE8E1; --closed:#7C867F;
+  --float:0 1px 2px rgb(22 37 31 / .08), 0 8px 24px -6px rgb(22 37 31 / .18);
+  --font-ui:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-display:"Bricolage Grotesque","Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  box-sizing:border-box;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1714; --raised:#15201C; --sunken:#1B2A24; --hover:#22332C; --line:#263630; --control:#6C7C72;
+    --ink:#E8EDE6; --ink-2:#93A197; --brand:#C6E0D0; --brand-hover:#DDEEE4; --on-brand:#0E1714; --on-marker:#0E1714;
+    --brick:#E5786F; --brick-tint:#3A1F1D; --pine-tint:#1D3329; --closed:#6C7C72;
+    --float:0 1px 2px rgb(0 0 0 / .4), 0 8px 24px -6px rgb(0 0 0 / .6); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1714; --raised:#15201C; --sunken:#1B2A24; --hover:#22332C; --line:#263630; --control:#6C7C72;
+  --ink:#E8EDE6; --ink-2:#93A197; --brand:#C6E0D0; --brand-hover:#DDEEE4; --on-brand:#0E1714; --on-marker:#0E1714;
+  --brick:#E5786F; --brick-tint:#3A1F1D; --pine-tint:#1D3329; --closed:#6C7C72;
+  --float:0 1px 2px rgb(0 0 0 / .4), 0 8px 24px -6px rgb(0 0 0 / .6); color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font:400 14px/22px var(--font-ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,p,ul,ol{margin:0}ul,ol{padding:0;list-style:none}
+button,input{font:inherit;color:inherit}
+svg{display:block}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+::selection{background:var(--marker);color:var(--on-marker)}
+a{color:inherit}
+.muted{color:var(--ink-2)}
+.ring{width:16px;height:16px;flex:none;color:var(--brand)}
+.ring.closed{color:var(--closed)}.ring.rejected{color:var(--brick)}
+.marker{background:linear-gradient(var(--marker),var(--marker)) 0 50%/100% 100% no-repeat;color:var(--on-marker);padding:.05em .35em;margin-inline:-.35em;border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.marker.sweep{animation:sweep .5s var(--ease) both}
+@keyframes sweep{from{background-size:0% 100%}to{background-size:100% 100%}}
+
+/* shell */
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.side{position:sticky;top:0;height:100vh;height:100dvh;border-right:1px solid var(--line);padding:calc(18px + env(safe-area-inset-top,0px)) 14px 16px;display:flex;flex-direction:column;gap:18px}
+.logo{display:flex;align-items:center;gap:10px;padding:2px 8px;font:600 16px/1 var(--font-display);letter-spacing:-.01em;text-decoration:none}
+.logo .ring{width:22px;height:22px}
+.side nav{display:flex;flex-direction:column;gap:1px}
+.side nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;text-decoration:none;color:var(--ink-2);font-weight:500}
+.side nav a svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.side nav a:hover{background:var(--sunken);color:var(--ink)}
+.side nav a[aria-current]{background:var(--sunken);color:var(--ink)}
+.side nav a[aria-current] svg{color:var(--brand)}
+.side nav .n{margin-left:auto;font-size:12px;color:var(--ink-2)}
+.side .spacer{flex:1}
+.me{display:flex;align-items:center;gap:10px;padding:8px;border-top:1px solid var(--line);margin:0 -4px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--pine-tint);color:var(--brand);display:grid;place-items:center;font-weight:600;font-size:13px;flex:none}
+.me b{display:block;font-weight:500;line-height:18px}.me span{font-size:12px;line-height:16px;color:var(--ink-2)}
+
+.main{padding:calc(28px + env(safe-area-inset-top,0px)) 40px 64px;min-width:0}
+.page{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;border:1px solid transparent;font-weight:500;cursor:pointer;white-space:nowrap;transition:background-color .12s var(--ease),border-color .12s var(--ease)}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.btn.primary{background:var(--brand);color:var(--on-brand)}.btn.primary:hover{background:var(--brand-hover)}
+.btn.secondary{background:var(--raised);border-color:var(--control)}.btn.secondary:hover{background:var(--sunken)}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}
+.iconbtn{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--raised);display:grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn:hover{background:var(--sunken)}
+.search{position:relative;width:min(300px,100%)}
+.search svg{position:absolute;left:11px;top:10px;width:16px;height:16px;stroke:var(--ink-2);fill:none;stroke-width:1.5;stroke-linecap:round}
+.input{width:100%;height:36px;padding:0 44px 0 34px;border-radius:8px;border:1px solid var(--control);background:var(--raised)}
+.input::placeholder{color:var(--ink-2);opacity:.85}
+.input:focus-visible{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.kbd{position:absolute;right:8px;top:7px;font-size:11px;line-height:20px;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--ink-2);background:var(--paper)}
+
+/* header */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.head .date{font-size:13px;color:var(--ink-2);margin-bottom:4px}
+.head h1{font:600 40px/44px var(--font-display);letter-spacing:-.025em}
+.head .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.sh h2{font:600 20px/26px var(--font-display);letter-spacing:-.01em}
+.sh a,.sh span{font-size:13px;color:var(--ink-2);text-decoration:none}
+.sh a:hover{color:var(--ink);text-decoration:underline}
+
+/* today */
+.today{background:var(--raised);border:1px solid var(--line);border-radius:20px;padding:6px 22px}
+.today li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:14px;align-items:start;padding:16px 0;border-top:1px solid var(--line);transition:opacity .2s var(--ease)}
+.today li:first-child{border-top:0}
+.today .t{font-size:15px;line-height:22px}
+.today .who{font-size:13px;line-height:18px;color:var(--ink-2);margin-top:2px}
+.today .due{font-size:13px;line-height:22px;color:var(--ink-2);white-space:nowrap;text-align:right}
+.today .due.late{color:var(--brick);font-weight:500}
+.cb{appearance:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--control);background:var(--raised);margin:1px 0 0;cursor:pointer;display:grid;place-items:center;transition:background-color .12s var(--ease)}
+.cb:hover{border-color:var(--brand)}
+.cb:checked{background:var(--brand);border-color:var(--brand)}
+.cb:checked::after{content:"";width:9px;height:5px;border-left:1.6px solid var(--on-brand);border-bottom:1.6px solid var(--on-brand);transform:translateY(-1px) rotate(-45deg)}
+.today li.done{opacity:.6}
+.today li.done .t span{background:none!important;color:var(--ink-2);text-decoration:line-through;text-decoration-thickness:1px}
+.today .none{padding:22px 0;color:var(--ink-2)}
+
+/* stats */
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-block:1px solid var(--line)}
+.strip>div{padding:20px 0 20px 24px;border-left:1px solid var(--line)}
+.strip>div:first-child{border-left:0;padding-left:0}
+.strip .v{font:600 40px/44px var(--font-display);letter-spacing:-.03em}
+.strip .l{font-size:13px;color:var(--ink-2)}
+.strip .d{font-size:12px;line-height:16px;color:var(--ink-2);margin-top:6px}
+
+/* two col */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px}
+.iv li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+.iv li:first-child{border-top:0;padding-top:0}
+.iv .day{font:600 28px/30px var(--font-display);letter-spacing:-.02em}
+.iv .mon{font-size:12px;line-height:16px;color:var(--ink-2)}
+.iv b{font-weight:600}
+.iv .meta{display:flex;flex-wrap:wrap;gap:0 14px;font-size:13px;color:var(--ink-2);margin-top:2px}
+.prep{display:inline-flex;align-items:center;gap:8px;margin-top:8px;font-size:13px}
+.prep .track{width:72px;height:4px;border-radius:2px;background:var(--sunken);overflow:hidden}
+.prep .track i{display:block;height:100%;background:var(--brand)}
+
+.week{display:flex;align-items:flex-end;gap:10px;height:132px;border-bottom:1px solid var(--control)}
+.week div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;font-size:12px;color:var(--ink-2)}
+.week i{display:block;width:100%;background:var(--brand);border-radius:4px 4px 0 0}
+.week div:last-child i{background:var(--marker);outline:1px solid var(--control);outline-offset:-1px}
+.wl{display:flex;gap:10px;margin-top:6px;font-size:12px;color:var(--ink-2)}.wl span{flex:1;text-align:center}
+.chartnote{font-size:13px;color:var(--ink-2);margin-top:14px}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(9,minmax(0,1fr))}
+.pipe>div{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:2px 8px 2px 0}
+.pipe .ring{width:22px;height:22px}
+.pipe .v{font:600 24px/28px var(--font-display);letter-spacing:-.02em}
+.pipe .l{font-size:12px;line-height:15px;color:var(--ink-2)}
+.pipe .zero .v{color:var(--ink-2);font-weight:500}
+.pipeline-closed{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:13px}
+.pipeline-closed span{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2)}
+.pipeline-closed b{color:var(--ink);font-weight:600}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:12px;font-weight:500;color:var(--ink-2);text-align:left;padding:0 16px 10px 12px;border-bottom:1px solid var(--line)}
+.tbl td{padding:14px 16px 14px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover td{background:var(--sunken)}
+.tbl td:first-child,.tbl th:first-child{padding-left:12px}
+.tbl .co{font:600 15px/20px var(--font-display);letter-spacing:-.005em}
+.tbl .role{font-size:13px;line-height:18px;color:var(--ink-2)}
+.st{display:inline-flex;align-items:center;gap:8px;font-weight:500;white-space:nowrap}
+.nx{font-size:13px;line-height:18px}
+.nx small{display:block;color:var(--ink-2);font-size:12px}
+.prio{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.prio i{width:3px;border-radius:1px;background:var(--line)}
+.prio i:nth-child(1){height:6px}.prio i:nth-child(2){height:10px}.prio i:nth-child(3){height:14px}
+.prio[data-n="1"] i:nth-child(-n+1),.prio[data-n="2"] i:nth-child(-n+2),.prio[data-n="3"] i:nth-child(-n+3){background:var(--ink)}
+.scroll{overflow-x:auto}
+
+/* mobile tab bar */
+.tabbar{display:none}
+@media (max-width:1023px){
+  .shell{grid-template-columns:64px minmax(0,1fr)}
+  .side{padding-inline:10px;align-items:center}
+  .side .logo span,.side nav a span,.side nav .n,.side .me div,.side .btn span{display:none}
+  .side nav a{justify-content:center;padding:9px}
+  .side .btn{width:40px;padding:0}
+  .main{padding-inline:28px}
+  .two{grid-template-columns:1fr;gap:40px}
+}
+@media (max-width:719px){
+  .shell{grid-template-columns:1fr}
+  .side{display:none}
+  .main{padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(96px + env(safe-area-inset-bottom,0px))}
+  .page{gap:32px}
+  .head h1{font-size:32px;line-height:36px}
+  .head .tools .btn.primary{display:none}
+  .search{width:100%}
+  .today{padding:2px 16px;border-radius:12px}
+  .today li{grid-template-columns:22px minmax(0,1fr)}
+  .today .due{grid-column:2;text-align:left;margin-top:-4px;font-size:12px}
+  .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .strip>div:nth-child(3){border-left:0;padding-left:0}
+  .strip>div:nth-child(n+3){border-top:1px solid var(--line)}
+  .strip .v{font-size:32px;line-height:36px}
+  .pipe{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 0}
+  .tbl .hide-s{display:none}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--raised);border-top:1px solid var(--line);padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px));text-align:center;font-size:11px;color:var(--ink-2)}
+  .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none}
+  .tabbar svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .tabbar .on{color:var(--ink);font-weight:600}.tabbar .on svg{color:var(--brand)}
+  .fab{width:46px;height:46px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;margin-top:-20px;border:3px solid var(--paper)}
+  .fab svg{stroke:var(--on-brand)}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <a class="logo" href="#"><svg class="ring" viewBox="0 0 16 16" data-ring="offer" aria-hidden="true"></svg><span>Tracker</span></a>
+    <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add application</span></button>
+    <nav id="nav" aria-label="Primary"></nav>
+    <div class="spacer"></div>
+    <div class="me"><div class="av" aria-hidden="true">M</div><div><b>Mika Santos</b><span>Imus, PH</span></div></div>
+  </aside>
+
+  <main class="main">
+    <div class="page">
+
+      <header class="head">
+        <div>
+          <div class="date">Thursday, October 1</div>
+          <h1>Good morning, Mika</h1>
+        </div>
+        <div class="tools">
+          <div class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input" id="q" placeholder="Search everything" aria-label="Search everything"><span class="kbd" aria-hidden="true">/</span></div>
+          <button class="iconbtn" id="themeBtn" type="button" aria-label="Switch to dark theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
+          <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add application</button>
+        </div>
+      </header>
+
+      <section aria-labelledby="h-today">
+        <div class="sh"><h2 id="h-today">Needs you today</h2><span id="todayCount">4 items</span></div>
+        <div class="today"><ul id="todoList">
+          <li><input class="cb" type="checkbox" aria-label="Mark done: Follow up with recruiter"><div><div class="t"><span class="marker">Follow up with recruiter</span></div><div class="who">Northbeam, React Engineer</div></div><span class="due">Today</span></li>
+          <li><input class="cb" type="checkbox" aria-label="Mark done: Prepare for technical interview"><div><div class="t"><span class="marker">Prepare for technical interview</span></div><div class="who">Halcyon Labs, Frontend Developer. Interview is tomorrow.</div></div><span class="due">Today</span></li>
+          <li><input class="cb" type="checkbox" aria-label="Mark done: Send portfolio"><div><div class="t"><span class="marker">Send portfolio</span></div><div class="who">Kite &amp; Compass, Full Stack Developer</div></div><span class="due late">Overdue 2 days</span></li>
+          <li><input class="cb" type="checkbox" aria-label="Mark done: Check application status"><div><div class="t"><span>Check application status</span></div><div class="who">Pageturn, Frontend Developer</div></div><span class="due">Oct 3</span></li>
+        </ul></div>
+      </section>
+
+      <section class="strip" aria-label="Summary">
+        <div><div class="v">14</div><div class="l">Active applications</div><div class="d">2 more than last week</div></div>
+        <div><div class="v">3</div><div class="l">Interviews</div><div class="d">Next one is tomorrow</div></div>
+        <div><div class="v" id="fuCount">3</div><div class="l">Follow-ups due</div><div class="d">Includes 1 overdue</div></div>
+        <div><div class="v">6</div><div class="l">Applied this week</div><div class="d">24 this month</div></div>
+      </section>
+
+      <div class="two">
+        <section aria-labelledby="h-iv">
+          <div class="sh"><h2 id="h-iv">Upcoming interviews</h2><a href="#">View all</a></div>
+          <ul class="iv">
+            <li><div><div class="day">2</div><div class="mon">Fri, Oct</div></div>
+              <div><b>Technical interview</b><div class="meta"><span>10:30 AM</span><span>Halcyon Labs</span><span>Google Meet</span></div>
+              <div class="prep"><span class="track" aria-hidden="true"><i style="width:40%"></i></span>2 of 5 prep items done</div></div></li>
+            <li><div><div class="day">5</div><div class="mon">Mon, Oct</div></div>
+              <div><b>HR interview</b><div class="meta"><span>2:00 PM</span><span>Northbeam</span><span>Zoom</span></div>
+              <div class="prep"><span class="track" aria-hidden="true"><i style="width:0%"></i></span>Not started</div></div></li>
+            <li><div><div class="day">9</div><div class="mon">Fri, Oct</div></div>
+              <div><b>Coding assessment</b><div class="meta"><span>Due 11:59 PM</span><span>Orbit Freight</span></div></div></li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="h-act">
+          <div class="sh"><h2 id="h-act">Applications per week</h2><span>Last 8 weeks</span></div>
+          <div class="week" role="img" aria-label="Applications per week: 4, 7, 5, 9, 6, 8, 3, 6. The current week is still in progress.">
+            <div><span>4</span><i style="height:36%"></i></div><div><span>7</span><i style="height:62%"></i></div><div><span>5</span><i style="height:45%"></i></div><div><span>9</span><i style="height:80%"></i></div>
+            <div><span>6</span><i style="height:54%"></i></div><div><span>8</span><i style="height:72%"></i></div><div><span>3</span><i style="height:27%"></i></div><div><span>6</span><i style="height:54%"></i></div>
+          </div>
+          <div class="wl" aria-hidden="true"><span>Aug 10</span><span>Aug 17</span><span>Aug 24</span><span>Aug 31</span><span>Sep 7</span><span>Sep 14</span><span>Sep 21</span><span>Sep 28</span></div>
+          <p class="chartnote">You averaged 6 applications a week. The week of Sep 28 is still in progress.</p>
+        </section>
+      </div>
+
+      <section aria-labelledby="h-pipe">
+        <div class="sh"><h2 id="h-pipe">Pipeline</h2><a href="#">Open board</a></div>
+        <div class="pipe" id="pipe"></div>
+        <div class="pipeline-closed">
+          <span><svg class="ring rejected" viewBox="0 0 16 16" data-ring="rejected" aria-hidden="true"></svg><b>5</b> Rejected</span>
+          <span><svg class="ring closed" viewBox="0 0 16 16" data-ring="withdrawn" aria-hidden="true"></svg><b>1</b> Withdrawn</span>
+          <span><svg class="ring closed" viewBox="0 0 16 16" data-ring="noresp" aria-hidden="true"></svg><b>7</b> No response</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="h-rec">
+        <div class="sh"><h2 id="h-rec">Recent applications</h2><a href="#">View all 38</a></div>
+        <div class="scroll"><table class="tbl">
+          <thead><tr><th>Company</th><th>Status</th><th>Next action</th><th class="hide-s">Platform</th><th class="hide-s">Applied</th><th class="hide-s"><span class="sr" style="position:absolute;left:-9999px">Priority</span></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<nav class="tabbar" aria-label="Primary" id="tabbar"></nav>
+
+<script>
+var C=2*Math.PI*2.25;
+var S={saved:[0,"p","Saved"],applied:[1/8,"p","Applied"],viewed:[2/8,"p","Application viewed"],recruiter:[3/8,"p","Recruiter contacted"],hr:[4/8,"p","HR interview"],tech:[5/8,"p","Technical interview"],final:[6/8,"p","Final interview"],offer:[7/8,"p","Offer"],accepted:[1,"done","Accepted"],rejected:[0,"rejected","Rejected"],withdrawn:[0,"withdrawn","Withdrawn"],noresp:[0,"noresp","No response"]};
+function ring(el){
+  var k=el.getAttribute("data-ring"),s=S[k];if(!s)return;
+  var f=s[0],kind=s[1];
+  var dash=kind==="withdrawn"?' stroke-dasharray="3 2.4"':kind==="noresp"?' stroke-dasharray="0.01 3.4"':'';
+  var h='<circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="'+(kind==="noresp"?1.8:1.5)+'" stroke-linecap="round" fill="none"'+dash+'/>';
+  if((kind==="p"||kind==="done")&&f>0)h+='<circle cx="8" cy="8" r="2.25" stroke="currentColor" stroke-width="4.5" fill="none" stroke-dasharray="'+(f*C).toFixed(3)+' '+C.toFixed(3)+'" transform="rotate(-90 8 8)"/>';
+  if(kind==="done")h+='<circle cx="8" cy="8" r="1.5" fill="var(--marker)"/>';
+  if(kind==="rejected")h+='<path d="M5.75 5.75l4.5 4.5M10.25 5.75l-4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>';
+  el.setAttribute("viewBox","0 0 16 16");el.setAttribute("fill","none");el.innerHTML=h;
+}
+function paint(root){(root||document).querySelectorAll("svg[data-ring]").forEach(ring)}
+
+var I={
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9z"/>',
+ brief:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+ bookmark:'<path d="M6 4h12v17l-6-4-6 4V4z"/>',
+ building:'<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+ cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+ file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/>',
+ chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'
+};
+function ic(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+I[n]+'</svg>'}
+
+document.getElementById("nav").innerHTML=[
+ ["home","Dashboard","",1],["brief","Applications","38"],["bookmark","Saved jobs","5"],["building","Companies","21"],["user","Contacts","8"],["cal","Interviews","3"],["file","Resumes",""],["chart","Analytics",""],["gear","Settings",""]
+].map(function(i){return '<a href="#"'+(i[3]?' aria-current="page"':'')+' aria-label="'+i[1]+'">'+ic(i[0])+'<span>'+i[1]+'</span>'+(i[2]?'<span class="n">'+i[2]+'</span>':'')+'</a>'}).join("");
+
+document.getElementById("tabbar").innerHTML=
+ '<a class="on" href="#">'+ic("home")+'Home</a><a href="#">'+ic("brief")+'Applications</a><a href="#" aria-label="Add application"><span class="fab">'+ic("plus")+'</span></a><a href="#">'+ic("cal")+'Interviews</a><a href="#">'+ic("more")+'More</a>';
+
+var counts=[["saved",5],["applied",6],["viewed",2],["recruiter",1],["hr",2],["tech",1],["final",0],["offer",0],["accepted",0]];
+document.getElementById("pipe").innerHTML=counts.map(function(c){
+  return '<div class="'+(c[1]?'':'zero')+'"><svg class="ring" viewBox="0 0 16 16" data-ring="'+c[0]+'" aria-hidden="true"></svg><span class="v">'+c[1]+'</span><span class="l">'+S[c[0]][2]+'</span></div>';
+}).join("");
+
+var rows=[
+ ["Halcyon Labs","Frontend Developer","tech","Prepare for technical interview","Today","Hybrid","₱50k–₱70k","LinkedIn","Sep 28",3,true],
+ ["Northbeam","React Engineer","hr","Follow up with recruiter","Today","Remote","₱70k–₱90k","JobStreet","Sep 24",2,true],
+ ["Kite & Compass","Full Stack Developer","applied","Send portfolio","Overdue 2 days","Remote","₱80k–₱100k","OnlineJobsPH","Sep 26",2,true],
+ ["Pageturn","Frontend Developer","applied","Check application status","Oct 3","Hybrid","₱45k–₱60k","Indeed","Sep 25",1,false],
+ ["Orbit Freight","QA Engineer","rejected","","","On-site","₱35k–₱45k","JobStreet","Sep 12",1,false],
+ ["Lumen Health","Full Stack Developer","offer","Review offer","Oct 6","Hybrid","₱90k–₱110k","Referral","Sep 8",3,false]
+];
+document.getElementById("rows").innerHTML=rows.map(function(r){
+  var nx=r[3]?'<div class="nx">'+(r[10]?'<span class="marker">'+r[3]+'</span>':r[3])+'<small'+(r[4].indexOf("Overdue")===0?' style="color:var(--brick);font-weight:500"':'')+'>'+r[4]+'</small></div>':'<span class="muted">No next action</span>';
+  return '<tr><td><div class="co">'+r[0].replace("&","&amp;")+'</div><div class="role">'+r[1]+'</div></td>'
+   +'<td><span class="st"><svg class="ring" viewBox="0 0 16 16" data-ring="'+r[2]+'" aria-hidden="true"></svg>'+S[r[2]][2]+'</span></td>'
+   +'<td>'+nx+'</td><td class="hide-s muted">'+r[7]+'</td><td class="hide-s muted">'+r[8]+'</td>'
+   +'<td class="hide-s"><span class="prio" data-n="'+r[9]+'" role="img" aria-label="'+["","Low","Medium","High"][r[9]]+' priority"><i></i><i></i><i></i></span></td></tr>';
+}).join("");
+
+paint();
+
+/* completing an item */
+(function(){
+  var list=document.getElementById("todoList"),cnt=document.getElementById("todayCount"),fu=document.getElementById("fuCount");
+  function update(){
+    var open=list.querySelectorAll(".cb:not(:checked)").length;
+    cnt.textContent=open===0?"All done":open+(open===1?" item":" items");
+    fu.textContent=Math.max(open-1,0);
+    var none=document.getElementById("none");
+    if(open===0&&!none){var d=document.createElement("div");d.id="none";d.className="none";d.textContent="Nothing due today. Nice and quiet.";list.parentNode.appendChild(d)}
+    if(open>0&&none)none.remove();
+  }
+  list.addEventListener("change",function(e){
+    if(!e.target.classList.contains("cb"))return;
+    e.target.closest("li").classList.toggle("done",e.target.checked);update();
+  });
+  update();
+})();
+
+/* slash focuses search */
+document.addEventListener("keydown",function(e){
+  if(e.key==="/"&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();document.getElementById("q").focus()}
+});
+
+/* theme */
+(function(){
+  var root=document.documentElement,btn=document.getElementById("themeBtn");
+  function eff(){var t=root.getAttribute("data-theme");return t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}
+  function lab(){btn.setAttribute("aria-label","Switch to "+(eff()==="dark"?"light":"dark")+" theme")}
+  try{var s=localStorage.getItem("marker-theme");if(s)root.setAttribute("data-theme",s)}catch(e){}
+  lab();
+  btn.addEventListener("click",function(){var n=eff()==="dark"?"light":"dark";root.setAttribute("data-theme",n);try{localStorage.setItem("marker-theme",n)}catch(e){}lab()});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "job-application-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal Job Application Tracker with Marker design system",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"@tracker/*\" dev",
+    "dev:api": "pnpm --filter @tracker/api dev",
+    "dev:web": "pnpm --filter @tracker/web dev",
+    "build": "pnpm --recursive --filter \"./packages/*\" --filter \"./apps/*\" build",
+    "test": "pnpm --recursive --filter \"./packages/*\" --filter \"./apps/*\" test",
+    "lint": "pnpm --recursive --filter \"./packages/*\" --filter \"./apps/*\" lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @tracker/database prisma migrate dev",
+    "db:seed": "pnpm --filter @tracker/database prisma db seed",
+    "db:studio": "pnpm --filter @tracker/database prisma studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  }
+}

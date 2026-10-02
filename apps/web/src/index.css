@@ -1,0 +1,252 @@
+/* ==========================================================================
+   Marker design system: Job Application Tracker
+   apps/web/src/index.css  (Tailwind CSS v4 + shadcn/ui)
+   ========================================================================== */
+
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/instrument-sans";
+
+@custom-variant dark (&:is(.dark *));
+
+/* --------------------------------------------------------------------------
+   1. Tokens: light ("paper")
+   shadcn names are kept so generated components work untouched.
+   -------------------------------------------------------------------------- */
+:root {
+  /* Surfaces: separate by tone + hairline, not by shadow */
+  --background: #f4f5f2;            /* paper   */
+  --card: #ffffff;                  /* raised  */
+  --popover: #ffffff;
+  --secondary: #e9ece6;             /* sunken  */
+  --muted: #e9ece6;
+  --accent: #dde3d6;                /* hover fill for rows / menu items */
+  --border: #dadfd6;                /* hairline */
+  --input: #7c867f;                 /* control edge, 3:1 vs paper (WCAG 1.4.11) */
+
+  /* Ink */
+  --foreground: #16251f;
+  --card-foreground: #16251f;
+  --popover-foreground: #16251f;
+  --secondary-foreground: #16251f;
+  --accent-foreground: #16251f;
+  --muted-foreground: #5a665f;      /* 5.5:1 on paper */
+
+  /* Brand: pine */
+  --primary: #1f4a3b;
+  --primary-hover: #173b2f;
+  --primary-foreground: #f4f5f2;
+  --ring: #1f4a3b;
+
+  /* The marker: "yours to do now". Never a fill for chrome. */
+  --marker: #d6f04f;
+  --marker-foreground: #16251f;
+
+  /* Signals (text-safe on paper; each has a tint for alert backgrounds) */
+  --destructive: #b0342d;
+  --destructive-foreground: #ffffff;
+  --destructive-tint: #f6dedb;
+  --warning: #8a5300;
+  --warning-tint: #f3e4c4;
+  --info: #33608f;
+  --info-tint: #dce6f1;
+  --success: #1f4a3b;               /* success == brand on purpose */
+  --success-tint: #dce8e1;
+
+  /* Stage ring colours */
+  --stage-active: var(--primary);
+  --stage-closed: #7c867f;          /* withdrawn / no response */
+  --stage-rejected: var(--destructive);
+
+  /* Charts (Recharts): one hue for magnitude, others for categories */
+  --chart-1: #1f4a3b;
+  --chart-2: #4c78a8;
+  --chart-3: #c98a1b;
+  --chart-4: #b0342d;
+  --chart-5: #9aa39b;
+
+  /* Elevation: only for things that float above the page */
+  --elevation-float: 0 1px 2px rgb(22 37 31 / 0.08), 0 8px 24px -6px rgb(22 37 31 / 0.18);
+
+  --radius: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   2. Tokens: dark ("night pine")
+   -------------------------------------------------------------------------- */
+.dark {
+  --background: #0e1714;
+  --card: #15201c;
+  --popover: #15201c;
+  --secondary: #1b2a24;
+  --muted: #1b2a24;
+  --accent: #22332c;
+  --border: #263630;
+  --input: #6c7c72;
+
+  --foreground: #e8ede6;
+  --card-foreground: #e8ede6;
+  --popover-foreground: #e8ede6;
+  --secondary-foreground: #e8ede6;
+  --accent-foreground: #e8ede6;
+  --muted-foreground: #93a197;
+
+  --primary: #c6e0d0;
+  --primary-hover: #ddeee4;
+  --primary-foreground: #0e1714;
+  --ring: #c6e0d0;
+
+  --marker: #d6f04f;
+  --marker-foreground: #0e1714;
+
+  --destructive: #e5786f;
+  --destructive-foreground: #0e1714;
+  --destructive-tint: #3a1f1d;
+  --warning: #e3b25b;
+  --warning-tint: #3a2e14;
+  --info: #7fa9d6;
+  --info-tint: #1b2b3c;
+  --success: #c6e0d0;
+  --success-tint: #1d3329;
+
+  --stage-closed: #6c7c72;
+
+  --chart-1: #c6e0d0;
+  --chart-2: #7fa9d6;
+  --chart-3: #e3b25b;
+  --chart-4: #e5786f;
+  --chart-5: #6c7c72;
+
+  --elevation-float: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -6px rgb(0 0 0 / 0.6);
+}
+
+/* --------------------------------------------------------------------------
+   3. Tailwind theme bridge
+   -------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-tint: var(--destructive-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-marker: var(--marker);
+  --color-marker-foreground: var(--marker-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-stage-active: var(--stage-active);
+  --color-stage-closed: var(--stage-closed);
+  --color-stage-rejected: var(--stage-rejected);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+
+  --shadow-float: var(--elevation-float);
+
+  --font-sans: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 0.75rem;    --text-caption--line-height: 1rem;
+  --text-small: 0.8125rem;    --text-small--line-height: 1.125rem;
+  --text-body: 0.875rem;      --text-body--line-height: 1.375rem;
+  --text-reading: 0.9375rem;  --text-reading--line-height: 1.625rem;
+  --text-subheading: 1rem;    --text-subheading--line-height: 1.375rem;
+  --text-heading: 1.25rem;    --text-heading--line-height: 1.625rem;
+  --text-title: 1.75rem;      --text-title--line-height: 2.125rem;
+  --text-display: 2.5rem;     --text-display--line-height: 2.75rem;
+
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* --------------------------------------------------------------------------
+   4. Base
+   -------------------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--marker);
+    color: var(--marker-foreground);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. The marker
+   -------------------------------------------------------------------------- */
+@utility marker {
+  background: linear-gradient(var(--marker), var(--marker)) 0 50% / 100% 100% no-repeat;
+  color: var(--marker-foreground);
+  padding: 0.05em 0.35em;
+  margin-inline: -0.35em;
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+@keyframes marker-sweep {
+  from { background-size: 0% 100%; }
+  to   { background-size: 100% 100%; }
+}
+@utility marker-sweep {
+  animation: marker-sweep 500ms var(--ease-out-soft) both;
+}
+
+/* --------------------------------------------------------------------------
+   6. Motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

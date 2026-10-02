@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marker: design system for Job Application Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F5F2; --raised:#FFFFFF; --sunken:#E9ECE6; --hover:#DDE3D6; --line:#DADFD6; --control:#7C867F;
+  --ink:#16251F; --ink-2:#5A665F;
+  --brand:#1F4A3B; --brand-hover:#173B2F; --on-brand:#F4F5F2;
+  --marker:#D6F04F; --on-marker:#16251F;
+  --brick:#B0342D; --brick-tint:#F6DEDB;
+  --amber:#8A5300; --amber-tint:#F3E4C4;
+  --steel:#33608F; --steel-tint:#DCE6F1;
+  --pine-tint:#DCE8E1;
+  --closed:#7C867F;
+  --float:0 1px 2px rgb(22 37 31 / .08), 0 8px 24px -6px rgb(22 37 31 / .18);
+  --font-ui:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-display:"Bricolage Grotesque","Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1714; --raised:#15201C; --sunken:#1B2A24; --hover:#22332C; --line:#263630; --control:#6C7C72;
+    --ink:#E8EDE6; --ink-2:#93A197;
+    --brand:#C6E0D0; --brand-hover:#DDEEE4; --on-brand:#0E1714;
+    --on-marker:#0E1714;
+    --brick:#E5786F; --brick-tint:#3A1F1D;
+    --amber:#E3B25B; --amber-tint:#3A2E14;
+    --steel:#7FA9D6; --steel-tint:#1B2B3C;
+    --pine-tint:#1D3329;
+    --closed:#6C7C72;
+    --float:0 1px 2px rgb(0 0 0 / .4), 0 8px 24px -6px rgb(0 0 0 / .6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1714; --raised:#15201C; --sunken:#1B2A24; --hover:#22332C; --line:#263630; --control:#6C7C72;
+  --ink:#E8EDE6; --ink-2:#93A197;
+  --brand:#C6E0D0; --brand-hover:#DDEEE4; --on-brand:#0E1714;
+  --on-marker:#0E1714;
+  --brick:#E5786F; --brick-tint:#3A1F1D;
+  --amber:#E3B25B; --amber-tint:#3A2E14;
+  --steel:#7FA9D6; --steel-tint:#1B2B3C;
+  --pine-tint:#1D3329;
+  --closed:#6C7C72;
+  --float:0 1px 2px rgb(0 0 0 / .4), 0 8px 24px -6px rgb(0 0 0 / .6);
+  color-scheme:dark;
+}
+html{height:100%;scroll-padding-top:calc(env(safe-area-inset-top,0px) + 72px);-webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;min-height:100%;background:var(--paper);color:var(--ink);
+  font:400 14px/22px var(--font-ui);font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p,ul,ol,dl,dd,figure{margin:0}
+ul,ol{padding:0;list-style:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+::selection{background:var(--marker);color:var(--on-marker)}
+a{color:inherit}
+svg{display:block}
+
+/* ---------- primitives that mirror the real system ---------- */
+.ring{width:16px;height:16px;flex:none;color:var(--brand)}
+.ring.closed{color:var(--closed)} .ring.rejected{color:var(--brick)}
+.ring.lg{width:24px;height:24px}
+.marker{
+  background:linear-gradient(var(--marker),var(--marker)) 0 50%/100% 100% no-repeat;
+  color:var(--on-marker);padding:.05em .35em;margin-inline:-.35em;border-radius:3px;
+  -webkit-box-decoration-break:clone;box-decoration-break:clone;
+}
+.marker.sweep{animation:sweep .5s var(--ease) both}
+@keyframes sweep{from{background-size:0% 100%}to{background-size:100% 100%}}
+.muted{color:var(--ink-2)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- guide chrome ---------- */
+.bar{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:20;
+  background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.bar-in{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:20px}
+.brandmark{display:flex;align-items:center;gap:8px;font:600 17px/1 var(--font-display);letter-spacing:-.01em;text-decoration:none}
+.toc{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.toc::-webkit-scrollbar{display:none}
+.toc a{padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--ink-2);white-space:nowrap;font-size:13px}
+.toc a:hover{background:var(--sunken);color:var(--ink)}
+.iconbtn{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--raised);display:grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn:hover{background:var(--sunken)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+section.sec{padding:72px 0 8px;border-top:1px solid var(--line);margin-top:72px}
+section.sec:first-of-type{margin-top:0}
+.sec-head{display:grid;grid-template-columns:240px 1fr;gap:32px;margin-bottom:40px}
+.sec-head h2{font:600 28px/34px var(--font-display);letter-spacing:-.02em}
+.sec-head p{max-width:62ch;font-size:15px;line-height:26px;color:var(--ink-2)}
+.row{display:grid;grid-template-columns:240px 1fr;gap:32px;padding:28px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0;padding-top:0}
+.row > .cap h3{font:600 16px/22px var(--font-ui);margin-bottom:6px}
+.row > .cap p{font-size:13px;line-height:19px;color:var(--ink-2)}
+.row > .cap p + p{margin-top:8px}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+.flex{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.label{font-size:12px;line-height:16px;color:var(--ink-2)}
+code,.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+pre.code{background:var(--sunken);border-radius:12px;padding:16px 18px;overflow-x:auto;line-height:19px;margin:0}
+.inl{background:var(--sunken);padding:1px 6px;border-radius:4px}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 0}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:56px;align-items:center}
+.hero h1{font:600 clamp(48px,8vw,88px)/.95 var(--font-display);letter-spacing:-.035em}
+.hero .lede{margin-top:24px;font-size:17px;line-height:28px;max-width:44ch;color:var(--ink-2)}
+.ringline{margin-top:56px;display:flex;align-items:center;gap:0}
+.ringline .ring{width:28px;height:28px}
+.ringline .seg{flex:1;height:1px;background:var(--line);min-width:6px}
+.ringcap{display:flex;justify-content:space-between;margin-top:10px}
+
+/* ---------- swatches ---------- */
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.sw{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sw-chip{height:72px;border-radius:12px;border:1px solid var(--line);display:flex;align-items:flex-end;padding:8px 10px;font-size:12px}
+.sw b{font-weight:600;font-size:13px;display:block}
+.sw small{display:block;color:var(--ink-2);font-size:12px;line-height:16px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-weight:500;text-align:left;color:var(--ink-2);padding:8px 12px 8px 0;border-bottom:1px solid var(--line)}
+.tbl td{padding:10px 12px 10px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.pass{color:var(--brand);font-weight:600}
+
+/* ---------- type ---------- */
+.tspec{display:grid;grid-template-columns:150px 1fr;gap:20px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)}
+.tspec:last-child{border-bottom:0}
+.tspec .meta{font-size:12px;line-height:16px;color:var(--ink-2)}
+.t-display{font:600 40px/44px var(--font-display);letter-spacing:-.025em}
+.t-title{font:600 28px/34px var(--font-display);letter-spacing:-.02em}
+.t-heading{font:600 20px/26px var(--font-display);letter-spacing:-.01em}
+.t-sub{font:600 16px/22px var(--font-ui)}
+.t-body{font:400 14px/22px var(--font-ui)}
+.t-small{font:400 13px/18px var(--font-ui)}
+.t-cap{font:400 12px/16px var(--font-ui)}
+.t-read{font:400 15px/26px var(--font-ui);max-width:68ch}
+.fontcard{display:flex;flex-direction:column;gap:6px}
+.fontcard .big{font-size:56px;line-height:1;letter-spacing:-.03em}
+
+/* ---------- shape ---------- */
+.radii{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end}
+.rad{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--ink-2)}
+.rad i{display:block;width:88px;height:64px;background:var(--sunken);border:1px solid var(--control)}
+.space{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.space div{display:flex;flex-direction:column;gap:6px;align-items:flex-start;font-size:12px;color:var(--ink-2)}
+.space i{display:block;background:var(--brand);height:12px;border-radius:2px}
+.elev{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.elev > div{border-radius:12px;padding:16px;min-height:96px;font-size:13px}
+.e0{background:var(--paper);border:1px solid var(--line)}
+.e1{background:var(--raised);border:1px solid var(--line)}
+.e2{background:var(--raised);border:1px solid var(--line);box-shadow:var(--float)}
+
+/* ---------- stage table ---------- */
+.stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
+.stg{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.stg .ring{width:22px;height:22px}
+.stg b{font-weight:500;flex:1}
+.stg code{color:var(--ink-2)}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 14px;
+  border-radius:8px;border:1px solid transparent;font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap;
+  transition:background-color .12s var(--ease),border-color .12s var(--ease);
+}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}
+.btn.lg{height:42px;padding:0 18px;font-size:15px}
+.btn.primary{background:var(--brand);color:var(--on-brand)}
+.btn.primary:hover{background:var(--brand-hover)}
+.btn.secondary{background:var(--raised);border-color:var(--control);color:var(--ink)}
+.btn.secondary:hover{background:var(--sunken)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--sunken)}
+.btn.danger{background:var(--brick);color:#fff}
+[data-theme="dark"] .btn.danger{color:#0E1714}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.icon{width:36px;padding:0}
+.btn.sm.icon{width:30px}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-weight:500;font-size:13px}
+.field .hint{font-size:12px;line-height:16px;color:var(--ink-2)}
+.field .err{font-size:12px;line-height:16px;color:var(--brick);display:flex;gap:6px;align-items:flex-start}
+.field .err svg{width:14px;height:14px;flex:none;margin-top:1px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
+.input,.select,.textarea{
+  width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--control);
+  background:var(--raised);color:var(--ink);
+}
+.input::placeholder,.textarea::placeholder{color:var(--ink-2);opacity:.8}
+.input:hover,.select:hover,.textarea:hover{border-color:var(--ink-2)}
+.input:focus-visible,.select:focus-visible,.textarea:focus-visible{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.input[aria-invalid="true"]{border-color:var(--brick);box-shadow:inset 0 0 0 1px var(--brick)}
+.textarea{height:auto;min-height:88px;padding:10px 12px;resize:vertical;line-height:22px}
+.select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237C867F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:34px}
+.search{position:relative}
+.search svg{position:absolute;left:11px;top:10px;width:16px;height:16px;stroke:var(--ink-2);fill:none;stroke-width:1.5;stroke-linecap:round}
+.search .input{padding-left:34px;padding-right:44px}
+.kbd{position:absolute;right:8px;top:7px;font-size:11px;line-height:20px;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--ink-2);background:var(--paper)}
+.check{display:inline-flex;align-items:center;gap:10px;cursor:pointer}
+.check input{appearance:none;width:18px;height:18px;border-radius:4px;border:1px solid var(--control);background:var(--raised);display:grid;place-items:center;margin:0;cursor:pointer}
+.check input:checked{background:var(--brand);border-color:var(--brand)}
+.check input:checked::after{content:"";width:9px;height:5px;border-left:1.6px solid var(--on-brand);border-bottom:1.6px solid var(--on-brand);transform:translateY(-1px) rotate(-45deg)}
+
+/* ---------- chips / tags / priority ---------- */
+.tag{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:4px;background:var(--sunken);font-size:12px;font-weight:500}
+.tag.line{background:transparent;border:1px solid var(--line)}
+.fu{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid var(--line);color:var(--ink)}
+.fu svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.fu.today{background:var(--marker);color:var(--on-marker);border-color:transparent}
+.fu.over{background:var(--brick-tint);color:var(--brick);border-color:transparent}
+.fu.done{color:var(--brand);border-color:transparent;background:var(--pine-tint)}
+.fu.done span{text-decoration:line-through;text-decoration-thickness:1px}
+.fu.snooze{color:var(--ink-2);border-style:dashed}
+.prio{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.prio i{width:3px;border-radius:1px;background:var(--line)}
+.prio i:nth-child(1){height:6px}.prio i:nth-child(2){height:10px}.prio i:nth-child(3){height:14px}
+.prio[data-n="1"] i:nth-child(-n+1),.prio[data-n="2"] i:nth-child(-n+2),.prio[data-n="3"] i:nth-child(-n+3){background:var(--ink)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;padding:9px 12px;color:var(--ink-2);cursor:pointer;position:relative;font-weight:500;border-radius:8px 8px 0 0}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--brand);border-radius:2px}
+
+/* ---------- application card ---------- */
+.acard{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.acard:hover{border-color:var(--control)}
+.acard .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.acard .st{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.acard h4{font:600 16px/22px var(--font-display);letter-spacing:-.01em;margin:0}
+.acard .role{color:var(--ink-2)}
+.facts{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:13px;color:var(--ink-2)}
+.facts span{white-space:nowrap}
+.acard .next{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:20px}
+.acard .next .when{color:var(--ink-2);font-size:12px}
+.acard.dragging{box-shadow:var(--float);transform:rotate(1.2deg) scale(1.015);border-color:var(--control)}
+
+/* ---------- kanban ---------- */
+.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.col{background:var(--sunken);border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.col-h{display:flex;align-items:center;gap:8px;padding:6px 6px 4px;font-weight:600;font-size:13px}
+.col-h .count{margin-left:auto;color:var(--ink-2);font-weight:500}
+.dropslot{border:1px dashed var(--control);border-radius:12px;height:64px;display:grid;place-items:center;font-size:12px;color:var(--ink-2)}
+
+/* ---------- timeline ---------- */
+.tl{position:relative;display:flex;flex-direction:column}
+.tl li{display:grid;grid-template-columns:72px 20px 1fr;gap:12px;padding-bottom:18px;position:relative}
+.tl li:last-child{padding-bottom:0}
+.tl .d{font-size:12px;line-height:20px;color:var(--ink-2);text-align:right}
+.tl .n{position:relative;display:flex;justify-content:center}
+.tl .n::before{content:"";position:absolute;top:22px;bottom:-18px;width:1px;background:var(--line)}
+.tl li:last-child .n::before{display:none}
+.tl .dot{width:7px;height:7px;border-radius:50%;background:var(--control);margin-top:7px}
+.tl .ring{width:16px;height:16px;margin-top:2px;background:var(--paper)}
+.tl .t{font-weight:500;line-height:20px}
+.tl .s{font-size:12px;line-height:18px;color:var(--ink-2)}
+.tl li.new{animation:in .28s var(--ease) both}
+@keyframes in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* ---------- feedback ---------- */
+.panel{background:var(--raised);border:1px solid var(--line);border-radius:20px;padding:24px}
+.dialog{background:var(--raised);border:1px solid var(--line);border-radius:12px;box-shadow:var(--float);padding:20px;max-width:420px}
+.dialog h4{font:600 18px/24px var(--font-display);margin-bottom:6px}
+.dialog .ex{margin:14px 0;padding:12px;background:var(--sunken);border-radius:8px;display:flex;gap:10px;align-items:flex-start}
+.dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.toast{display:inline-flex;align-items:center;gap:14px;background:var(--ink);color:var(--paper);padding:10px 10px 10px 16px;border-radius:12px;box-shadow:var(--float)}
+.toast button{background:none;border:0;color:var(--marker);font-weight:600;cursor:pointer;padding:4px 8px;border-radius:6px}
+.toast button:hover{background:rgb(255 255 255 / .1)}
+.banner{display:flex;gap:12px;padding:12px 14px;border-radius:12px;background:var(--brick-tint);color:var(--ink);align-items:flex-start}
+.banner svg{width:18px;height:18px;flex:none;stroke:var(--brick);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.banner b{display:block;font-weight:600}
+.skel{display:flex;flex-direction:column;gap:8px}
+.skel i{display:block;height:12px;border-radius:6px;background:var(--sunken);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.5}}
+.empty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:8px 0}
+.empty .ring{width:44px;height:44px}
+.empty h4{font:600 20px/26px var(--font-display);letter-spacing:-.01em}
+.empty p{max-width:40ch;color:var(--ink-2)}
+
+/* ---------- dashboard demo ---------- */
+.app{border:1px solid var(--line);border-radius:20px;overflow:hidden;display:grid;grid-template-columns:208px minmax(0,1fr);background:var(--paper)}
+.side{border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:14px;background:var(--paper)}
+.side .brandmark{padding:2px 8px;font-size:15px}
+.side nav{display:flex;flex-direction:column;gap:1px}
+.side nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;text-decoration:none;color:var(--ink-2);font-weight:500}
+.side nav a svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.side nav a:hover{background:var(--sunken);color:var(--ink)}
+.side nav a[aria-current]{background:var(--sunken);color:var(--ink)}
+.side nav a[aria-current] svg{color:var(--brand)}
+.side nav .badge{margin-left:auto;font-size:12px;color:var(--ink-2)}
+.main{padding:24px 28px 28px;display:flex;flex-direction:column;gap:28px;min-width:0}
+.main-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.main-h h3{font:600 28px/34px var(--font-display);letter-spacing:-.02em}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-block:1px solid var(--line)}
+.strip > div{padding:16px 0 16px 20px;border-left:1px solid var(--line)}
+.strip > div:first-child{border-left:0;padding-left:0}
+.strip .v{font:600 32px/36px var(--font-display);letter-spacing:-.025em}
+.strip .l{font-size:13px;color:var(--ink-2)}
+.pipe{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0}
+.pipe > div{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding-right:6px}
+.pipe .ring{width:20px;height:20px}
+.pipe .v{font:600 20px/24px var(--font-display)}
+.pipe .l{font-size:12px;line-height:15px;color:var(--ink-2)}
+.h-sm{font:600 16px/22px var(--font-ui);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+.h-sm a{font-size:13px;font-weight:400;color:var(--ink-2)}
+.todo li{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
+.todo li:first-child{border-top:0;padding-top:0}
+.todo .who{font-size:12px;line-height:18px;color:var(--ink-2)}
+.todo .due{font-size:12px;line-height:20px;color:var(--ink-2);text-align:right;white-space:nowrap}
+.todo .due.late{color:var(--brick);font-weight:500}
+.cbx{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--control);margin-top:1px;background:var(--raised)}
+.ttable{width:100%;border-collapse:collapse}
+.ttable th{font-size:12px;font-weight:500;color:var(--ink-2);text-align:left;padding:0 12px 8px 0;border-bottom:1px solid var(--line)}
+.ttable td{padding:11px 12px 11px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+.ttable tr:hover td{background:var(--sunken)}
+.ttable td:first-child,.ttable th:first-child{padding-left:8px}
+.ttable .co{font-weight:600}
+.split{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:32px}
+
+/* mobile bottom nav mock */
+.phone{width:300px;border:1px solid var(--line);border-radius:28px;overflow:hidden;background:var(--paper)}
+.phone .scr{padding:18px 16px;display:flex;flex-direction:column;gap:12px;min-height:200px}
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--raised);padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px));text-align:center;font-size:11px;color:var(--ink-2)}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tabbar .on{color:var(--ink);font-weight:600}
+.tabbar .on svg{color:var(--brand)}
+.fab{width:44px;height:44px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;margin-top:-18px;border:3px solid var(--paper)}
+.fab svg{stroke:var(--on-brand)}
+
+/* ---------- data viz ---------- */
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar-r{display:grid;grid-template-columns:132px minmax(0,1fr) 88px;gap:12px;align-items:center;font-size:13px}
+.bar-r .track{height:20px;border-radius:4px;position:relative}
+.bar-r .fill{height:100%;border-radius:4px;background:var(--brand)}
+.bar-r .val{text-align:right;color:var(--ink-2)}
+.week{display:flex;align-items:flex-end;gap:10px;height:120px;border-bottom:1px solid var(--control);padding-bottom:0}
+.week div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;font-size:12px;color:var(--ink-2)}
+.week i{display:block;width:100%;background:var(--brand);border-radius:4px 4px 0 0}
+.week div:last-child i{background:var(--marker);outline:1px solid var(--control);outline-offset:-1px}
+.weeklabels{display:flex;gap:10px;margin-top:6px;font-size:12px;color:var(--ink-2)}
+.weeklabels span{flex:1;text-align:center}
+.cats{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px}
+.cats span{display:inline-flex;align-items:center;gap:8px}
+.cats i{width:10px;height:10px;border-radius:2px}
+
+/* ---------- voice ---------- */
+.say{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.say > div{padding:12px 0;border-bottom:1px solid var(--line)}
+.say .h{font-size:12px;color:var(--ink-2);font-weight:500;padding:0 0 8px}
+.say .no{color:var(--ink-2);text-decoration:line-through;text-decoration-color:var(--control)}
+
+/* ---------- responsive ---------- */
+@media (max-width:920px){
+  .sec-head,.row{grid-template-columns:1fr;gap:16px}
+  .hero-grid{grid-template-columns:1fr;gap:40px}
+  .app{grid-template-columns:1fr}
+  .side{display:none}
+  .split{grid-template-columns:1fr}
+  .kanban{grid-template-columns:1fr}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .stages{grid-template-columns:1fr}
+  .elev{grid-template-columns:1fr}
+  .say{grid-template-columns:1fr}
+  .pipe{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 0}
+}
+@media (max-width:640px){
+  .wrap,.bar-in{padding-left:16px;padding-right:16px}
+  .main{padding:20px 16px}
+  .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .strip > div:nth-child(3){border-left:0;padding-left:0}
+  .strip > div:nth-child(n+3){border-top:1px solid var(--line)}
+  .tspec{grid-template-columns:1fr;gap:4px}
+  .t-display{font-size:32px;line-height:36px}
+  .bar-r{grid-template-columns:104px minmax(0,1fr) 64px}
+  .ttable .hide-s{display:none}
+  .brand-word{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brandmark" href="#top" aria-label="Marker design system, top of page">
+      <svg class="ring" viewBox="0 0 16 16" aria-hidden="true" data-ring="offer" style="width:20px;height:20px"></svg>
+      <span class="brand-word">Marker</span>
+    </a>
+    <nav class="toc" aria-label="Sections">
+      <a href="#principles">Principles</a>
+      <a href="#color">Color</a>
+      <a href="#type">Type</a>
+      <a href="#shape">Shape</a>
+      <a href="#stage">Stage ring</a>
+      <a href="#components">Components</a>
+      <a href="#patterns">Patterns</a>
+      <a href="#data">Data</a>
+      <a href="#voice">Voice</a>
+      <a href="#access">Access</a>
+      <a href="#build">Build</a>
+    </nav>
+    <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" title="Toggle theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap">
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <div class="hero-grid">
+    <div>
+      <h1>Marker</h1>
+      <p class="lede">The design system for Job Application Tracker. Pine ink on cool paper, one highlighter, and status you can read by shape.</p>
+    </div>
+    <div class="acard" id="heroCard" style="box-shadow:none">
+      <div class="top">
+        <span class="st"><svg class="ring" viewBox="0 0 16 16" data-ring="tech" aria-hidden="true"></svg>Technical interview</span>
+        <span class="prio" data-n="3" role="img" aria-label="High priority"><i></i><i></i><i></i></span>
+      </div>
+      <div>
+        <h4>Halcyon Labs</h4>
+        <div class="role">Frontend Developer</div>
+      </div>
+      <div class="facts"><span>Hybrid</span><span>₱50k–₱70k</span><span>Applied Sep 28</span><span>LinkedIn</span></div>
+      <div class="next">
+        <span><span class="marker">Prepare for technical interview</span></span>
+        <span class="when">Today, 4:00 PM</span>
+      </div>
+    </div>
+  </div>
+  <div class="ringline" aria-hidden="true" id="ringline"></div>
+  <div class="ringcap label"><span>Saved</span><span>Accepted</span></div>
+</div>
+
+<!-- ================= PRINCIPLES ================= -->
+<section class="sec" id="principles" style="margin-top:72px">
+  <div class="sec-head">
+    <h2>Principles</h2>
+    <p>The PRD asks for something clean, modern, minimal, and personal rather than corporate. These four decisions turn that into rules a component can be checked against.</p>
+  </div>
+  <div class="row"><div class="cap"><h3>Next action first</h3></div>
+    <p class="muted" style="max-width:62ch;font-size:15px;line-height:26px">Every active application answers "what do I do now?" The one accent color in the system exists to answer it. If a screen has no marker on it, nothing is due, and that is a good state to be in.</p></div>
+  <div class="row"><div class="cap"><h3>Progress is shape, not color</h3></div>
+    <p class="muted" style="max-width:62ch;font-size:15px;line-height:26px">Twelve statuses would need twelve colors, and that is how tools end up looking like enterprise HR software. Instead a ring fills as an application advances. Color is left for the few things that need it: due, overdue, rejected, error.</p></div>
+  <div class="row"><div class="cap"><h3>Quiet until it matters</h3></div>
+    <p class="muted" style="max-width:62ch;font-size:15px;line-height:26px">Surfaces are separated by tone and hairlines. Shadows exist only for things that float: menus, dialogs, a card mid-drag. Numbers get the size, labels stay small and plain.</p></div>
+  <div class="row"><div class="cap"><h3>Personal, not corporate</h3></div>
+    <p class="muted" style="max-width:62ch;font-size:15px;line-height:26px">A pine and paper palette with a slightly opinionated display face reads like a well-kept notebook rather than a dashboard from a vendor. Copy is plain, second-person, and never cheerful for its own sake.</p></div>
+</section>
+
+<!-- ================= COLOR ================= -->
+<section class="sec" id="color">
+  <div class="sec-head">
+    <h2>Color</h2>
+    <p>Neutrals carry about 90% of every screen. Pine is the single brand color and the primary action. The marker is a second, much rarer accent. Hex values below are light / dark; the swatches show the theme you are viewing.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>Surfaces</h3><p>Layer by tone: paper, then raised, with sunken for wells and columns. A hairline does the rest.</p></div>
+    <div class="sw-grid" id="sw-surface"></div></div>
+
+  <div class="row"><div class="cap"><h3>Ink and brand</h3><p>Ink is a deep pine-black, not pure black. Buttons use pine. In dark mode pine flips to a pale sage so the primary button stays the loudest thing on screen.</p></div>
+    <div class="sw-grid" id="sw-ink"></div></div>
+
+  <div class="row"><div class="cap"><h3>The marker</h3><p>Highlighter lime, always with ink text on top. It is used for the text of a next action that is due today or overdue, and for the "Due today" chip. Not for buttons, nav, headings, or decoration.</p>
+    <p><button class="btn secondary sm" id="replay">Replay the sweep</button></p></div>
+    <div class="stack">
+      <div class="sw-grid" id="sw-marker" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"></div>
+      <div class="grid2">
+        <div class="panel" style="padding:18px">
+          <div class="label" style="margin-bottom:8px">Right</div>
+          <div class="todo"><ul><li style="border:0;padding:0"><span class="cbx"></span><div><span class="marker" id="demoMarker">Follow up with recruiter</span><div class="who" style="margin-top:2px">Northbeam, React Engineer</div></div><span class="due">Today</span></li></ul></div>
+        </div>
+        <div class="panel" style="padding:18px">
+          <div class="label" style="margin-bottom:8px">Wrong: marker as decoration</div>
+          <div class="t-heading" style="margin-bottom:8px"><span class="marker">Your applications</span></div>
+          <div class="flex"><span class="marker" style="padding:.25em .8em;border-radius:8px;margin:0">Save filters</span></div>
+        </div>
+      </div>
+      <p class="label" style="max-width:62ch">Guardrail: at most two or three markers per screen region. If everything is highlighted, nothing is. Future actions stay plain text until their day arrives.</p>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Signals</h3><p>Every signal has a text-safe color and a tint for backgrounds. Success reuses pine, so a finished thing feels like part of the brand rather than a separate green.</p></div>
+    <div class="sw-grid" id="sw-signal"></div></div>
+
+  <div class="row"><div class="cap"><h3>Contrast</h3><p>Measured against WCAG 2.2. Body text needs 4.5:1, control edges and meaningful graphics 3:1.</p></div>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th>Pair</th><th>Ratio</th><th>Use</th></tr></thead>
+      <tbody id="contrast"></tbody></table></div></div>
+</section>
+
+<!-- ================= TYPE ================= -->
+<section class="sec" id="type">
+  <div class="sec-head">
+    <h2>Typography</h2>
+    <p>Two families with clearly different jobs. Bricolage Grotesque gives headings and big numbers a slightly humanist, opinionated voice. Instrument Sans stays out of the way for data-dense UI at 14px. Everything is sentence case. No all-caps labels, no letter-spaced eyebrows.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>Families</h3><p>Both are free on Google Fonts and Fontsource. Peso sign (₱) support should be checked in your build; the fallback stack covers it if a subset drops the glyph.</p></div>
+    <div class="grid2">
+      <div class="fontcard"><div class="big" style="font-family:var(--font-display);font-weight:600">Aa 0123</div><b>Bricolage Grotesque</b><span class="label">Headings, company names, big numbers. 500 to 700, optical sizing on.</span></div>
+      <div class="fontcard"><div class="big" style="font-family:var(--font-ui);font-weight:500">Aa 0123</div><b>Instrument Sans</b><span class="label">Body, forms, tables, buttons. 400, 500, 600. Tabular figures on.</span></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Scale</h3><p>Size / line-height in px. Tailwind utilities: <span class="inl code">text-display</span> through <span class="inl code">text-caption</span>. 12px is the floor.</p></div>
+    <div>
+      <div class="tspec"><div class="meta">Display<br>40/44, 600, −2.5%</div><div class="t-display">Good morning, Mika</div></div>
+      <div class="tspec"><div class="meta">Title<br>28/34, 600, −2%</div><div class="t-title">Applications</div></div>
+      <div class="tspec"><div class="meta">Heading<br>20/26, 600, −1%</div><div class="t-heading">Needs you today</div></div>
+      <div class="tspec"><div class="meta">Subheading<br>16/22, 600</div><div class="t-sub">Job description</div></div>
+      <div class="tspec"><div class="meta">Body<br>14/22, 400 / 500</div><div class="t-body">Halcyon Labs viewed your application on Sep 29 and moved it to recruiter review.</div></div>
+      <div class="tspec"><div class="meta">Small<br>13/18</div><div class="t-small muted">Applied Sep 28 on LinkedIn</div></div>
+      <div class="tspec"><div class="meta">Caption<br>12/16</div><div class="t-cap muted">Updated 2 hours ago</div></div>
+      <div class="tspec"><div class="meta">Reading<br>15/26, max 68ch</div><div class="t-read">For long pasted job descriptions. Slightly larger and looser than UI text, held to a comfortable measure so a saved posting is pleasant to reread before an interview.</div></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Numbers</h3><p>Tabular figures everywhere so salaries, dates, and counts align in columns. Currency uses the ₱ sign with a thin range dash.</p></div>
+    <div class="flex" style="gap:32px">
+      <div><div class="t-title">₱50k–₱70k</div><div class="label">Salary range</div></div>
+      <div><div class="t-title">APP-2026-0042</div><div class="label">Application ID</div></div>
+      <div><div class="t-title">Oct 2, 10:30 AM</div><div class="label">Date and time</div></div>
+    </div></div>
+</section>
+
+<!-- ================= SHAPE ================= -->
+<section class="sec" id="shape">
+  <div class="sec-head">
+    <h2>Shape, space, and elevation</h2>
+    <p>Radius follows nesting: the more a thing contains, the rounder it is. Space runs on a 4px grid. Only floating layers get a shadow.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>Radius</h3><p>shadcn defaults land correctly: buttons and inputs use <span class="inl code">rounded-md</span>, dialogs and cards use <span class="inl code">rounded-lg</span>.</p></div>
+    <div class="radii">
+      <div class="rad"><i style="border-radius:4px"></i><span><b style="color:var(--ink)">4</b> xs: tags, checkboxes</span></div>
+      <div class="rad"><i style="border-radius:8px"></i><span><b style="color:var(--ink)">8</b> md: buttons, inputs</span></div>
+      <div class="rad"><i style="border-radius:12px"></i><span><b style="color:var(--ink)">12</b> lg: cards, dialogs</span></div>
+      <div class="rad"><i style="border-radius:20px"></i><span><b style="color:var(--ink)">20</b> xl: panels, columns</span></div>
+      <div class="rad"><i style="border-radius:999px;width:64px;height:28px"></i><span><b style="color:var(--ink)">full</b> chips, avatars</span></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Spacing</h3><p>Inside a card use 16 (14 vertical). Between cards use 8 to 12. Between page sections use 28 to 40.</p></div>
+    <div class="space">
+      <div><i style="width:4px"></i>4</div><div><i style="width:8px"></i>8</div><div><i style="width:12px"></i>12</div><div><i style="width:16px"></i>16</div>
+      <div><i style="width:20px"></i>20</div><div><i style="width:24px"></i>24</div><div><i style="width:32px"></i>32</div><div><i style="width:40px"></i>40</div><div><i style="width:56px"></i>56</div><div><i style="width:72px"></i>72</div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Elevation</h3><p>Three levels. Level 2 is reserved for menus, popovers, dialogs, toasts, and a Kanban card while it is being dragged.</p></div>
+    <div class="elev">
+      <div class="e0"><b>Paper</b><br><span class="muted">Page background. No border on its own.</span></div>
+      <div class="e1"><b>Raised</b><br><span class="muted">Cards and tables: 1px hairline, no shadow.</span></div>
+      <div class="e2"><b>Floating</b><br><span class="muted">Hairline plus one soft shadow.</span></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Layout</h3><p>Content max width 1200. Sidebar 208 (64 collapsed). Kanban columns 288 wide and scroll horizontally. Reading panes and forms cap at 68ch or 640.</p></div>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th>Breakpoint</th><th>Navigation</th><th>Pipeline</th></tr></thead>
+      <tbody>
+        <tr><td>Under 640</td><td>Bottom tab bar, centered add button</td><td>One column at a time, swipe between stages</td></tr>
+        <tr><td>640 to 1023</td><td>Collapsed rail (icons)</td><td>Horizontal scroll, snap to columns</td></tr>
+        <tr><td>1024 and up</td><td>Full sidebar</td><td>Horizontal scroll, 288px columns</td></tr>
+      </tbody></table></div></div>
+</section>
+
+<!-- ================= STAGE RING ================= -->
+<section class="sec" id="stage">
+  <div class="sec-head">
+    <h2>Stage ring</h2>
+    <p>The signature element. Nine active stages fill the ring in eighths, so an application's progress is visible in a list of fifty without reading a word. Accepted fills completely and gets a marker-colored core. The three closed outcomes each have a distinct outline, so they are told apart by shape, not hue. The label always sits next to the ring.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>All twelve statuses</h3><p>Order matches the pipeline and the Kanban columns. Enum values come straight from the PRD status list.</p></div>
+    <div class="stages" id="stageList"></div></div>
+
+  <div class="row"><div class="cap"><h3>Try it</h3><p>Changing a status updates the ring and adds a timeline event, as the PRD requires. On the Kanban board the same change is optimistic, with an Undo toast if the request fails.</p></div>
+    <div class="grid2" style="align-items:start">
+      <div class="stack">
+        <div class="field"><label for="stSel">Status</label>
+          <select class="select" id="stSel"></select></div>
+        <div class="acard" id="demoCard" style="box-shadow:none">
+          <div class="top"><span class="st" id="demoSt"></span><span class="prio" data-n="2" role="img" aria-label="Medium priority"><i></i><i></i><i></i></span></div>
+          <div><h4>Northbeam</h4><div class="role">React Engineer</div></div>
+          <div class="facts"><span>Remote</span><span>₱70k–₱90k</span><span>Applied Sep 24</span><span>JobStreet</span></div>
+        </div>
+      </div>
+      <ol class="tl" id="demoTl" aria-live="polite"></ol>
+    </div></div>
+</section>
+
+<!-- ================= COMPONENTS ================= -->
+<section class="sec" id="components">
+  <div class="sec-head">
+    <h2>Components</h2>
+    <p>These map onto shadcn/ui primitives. Generic ones live in <span class="inl code">components/ui</span>; anything that knows about applications stays inside its feature folder, as the architecture doc requires.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>Buttons</h3><p>One primary per view, always "Add application" or the form's main save. Labels say what happens: "Save changes", not "Submit".</p></div>
+    <div class="stack">
+      <div class="flex">
+        <button class="btn primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add application</button>
+        <button class="btn secondary">Edit</button>
+        <button class="btn ghost">Cancel</button>
+        <button class="btn danger">Delete application</button>
+        <button class="btn primary" disabled>Save changes</button>
+      </div>
+      <div class="flex">
+        <button class="btn primary sm">Small 30</button>
+        <button class="btn primary">Default 36</button>
+        <button class="btn primary lg">Large 42</button>
+        <button class="btn secondary icon" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+        <button class="btn ghost sm icon" aria-label="More actions"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+      <p class="label">On touch screens every button keeps a 44px hit area, even where the visual size is smaller.</p>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Form fields</h3><p>Label above, hint below, error replaces hint. Control edges meet 3:1 contrast. Errors say what to do next.</p></div>
+    <div class="grid2">
+      <div class="field"><label for="f1">Company</label><input class="input" id="f1" placeholder="Halcyon Labs"><span class="hint">We'll match this to an existing company if there is one.</span></div>
+      <div class="field"><label for="f2">Job URL</label><input class="input" id="f2" value="linkedin.com/jobs/8841" aria-invalid="true" aria-describedby="f2e"><span class="err" id="f2e"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>Start the link with https:// so it can be opened later.</span></div>
+      <div class="field"><label for="f3">Work setup</label><select class="select" id="f3"><option>Hybrid</option><option>Remote</option><option>On-site</option></select></div>
+      <div class="field"><label for="f4">Search</label><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input" id="f4" placeholder="Company, role, skill, or note"><span class="kbd">/</span></div></div>
+      <div class="field" style="grid-column:1/-1"><label for="f5">Notes</label><textarea class="textarea" id="f5" placeholder="Anything worth remembering about this role"></textarea></div>
+      <label class="check"><input type="checkbox" checked> Show closed applications</label>
+      <label class="check"><input type="checkbox"> Remote only</label>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Tags and priority</h3><p>Priority is a 1 to 3 bar glyph in ink, not a color, because the PRD says it is the user's own ranking and not a recommendation. Tags stay neutral.</p></div>
+    <div class="stack">
+      <div class="flex"><span class="tag">React</span><span class="tag">TypeScript</span><span class="tag">Remote</span><span class="tag line">Referral</span><span class="tag line">Startup</span></div>
+      <div class="flex" style="gap:24px">
+        <span class="flex" style="gap:8px"><span class="prio" data-n="1" role="img" aria-label="Low priority"><i></i><i></i><i></i></span>Low</span>
+        <span class="flex" style="gap:8px"><span class="prio" data-n="2" role="img" aria-label="Medium priority"><i></i><i></i><i></i></span>Medium</span>
+        <span class="flex" style="gap:8px"><span class="prio" data-n="3" role="img" aria-label="High priority"><i></i><i></i><i></i></span>High</span>
+      </div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Follow-up states</h3><p>Only two states get color, because only two need you: due today takes the marker, overdue takes brick.</p></div>
+    <div class="flex">
+      <span class="fu"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Pending, Oct 4</span>
+      <span class="fu today">Due today</span>
+      <span class="fu over"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>Overdue 2 days</span>
+      <span class="fu done"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Completed</span></span>
+      <span class="fu snooze">Snoozed until Oct 3</span>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Tabs</h3><p>Used on the application detail page to keep the long layout in the PRD manageable. Selected tab gets a pine underline.</p></div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button role="tab" aria-selected="true">Overview</button><button role="tab" aria-selected="false">Job description</button><button role="tab" aria-selected="false">Timeline</button><button role="tab" aria-selected="false">Interviews</button><button role="tab" aria-selected="false">Notes</button>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Application card</h3><p>The most-seen component. Status, company, role, facts, and next action, in that order. The marker appears only if the action is due today or overdue. Cards get a darker hairline on hover. They do not lift.</p></div>
+    <div class="grid3">
+      <div class="acard">
+        <div class="top"><span class="st"><svg class="ring" viewBox="0 0 16 16" data-ring="tech" aria-hidden="true"></svg>Technical interview</span><span class="prio" data-n="3" role="img" aria-label="High priority"><i></i><i></i><i></i></span></div>
+        <div><h4>Halcyon Labs</h4><div class="role">Frontend Developer</div></div>
+        <div class="facts"><span>Hybrid</span><span>₱50k–₱70k</span><span>Applied Sep 28</span><span>LinkedIn</span></div>
+        <div class="next"><span><span class="marker">Prepare for technical interview</span></span><span class="when">Today, 4:00 PM</span></div>
+      </div>
+      <div class="acard">
+        <div class="top"><span class="st"><svg class="ring" viewBox="0 0 16 16" data-ring="applied" aria-hidden="true"></svg>Applied</span><span class="prio" data-n="2" role="img" aria-label="Medium priority"><i></i><i></i><i></i></span></div>
+        <div><h4>Kite &amp; Compass</h4><div class="role">Full Stack Developer</div></div>
+        <div class="facts"><span>Remote</span><span>₱80k–₱100k</span><span>Applied Sep 26</span><span>OnlineJobsPH</span></div>
+        <div class="next"><span>Check application status</span><span class="when">Oct 3</span></div>
+      </div>
+      <div class="acard">
+        <div class="top"><span class="st"><svg class="ring rejected" viewBox="0 0 16 16" data-ring="rejected" aria-hidden="true"></svg>Rejected</span><span class="prio" data-n="1" role="img" aria-label="Low priority"><i></i><i></i><i></i></span></div>
+        <div><h4>Orbit Freight</h4><div class="role">QA Engineer</div></div>
+        <div class="facts"><span>On-site</span><span>₱35k–₱45k</span><span>Applied Sep 12</span><span>JobStreet</span></div>
+        <div class="next"><span class="muted">No next action</span></div>
+      </div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Kanban</h3><p>Columns are sunken wells with the ring in the header. A dragged card gains a shadow and a slight tilt. The drop target is a dashed slot. That is the only motion on the board.</p></div>
+    <div class="kanban">
+      <div class="col">
+        <div class="col-h"><svg class="ring" viewBox="0 0 16 16" data-ring="applied" aria-hidden="true"></svg>Applied<span class="count">6</span></div>
+        <div class="acard"><div><h4>Kite &amp; Compass</h4><div class="role">Full Stack Developer</div></div><div class="facts"><span>Remote</span><span>Sep 26</span></div></div>
+        <div class="acard"><div><h4>Pageturn</h4><div class="role">Frontend Developer</div></div><div class="facts"><span>Hybrid</span><span>Sep 25</span></div></div>
+      </div>
+      <div class="col">
+        <div class="col-h"><svg class="ring" viewBox="0 0 16 16" data-ring="hr" aria-hidden="true"></svg>HR interview<span class="count">2</span></div>
+        <div class="acard dragging"><div><h4>Northbeam</h4><div class="role">React Engineer</div></div><div class="facts"><span>Remote</span><span>Sep 24</span></div></div>
+        <div class="dropslot">Drop here</div>
+      </div>
+      <div class="col">
+        <div class="col-h"><svg class="ring" viewBox="0 0 16 16" data-ring="tech" aria-hidden="true"></svg>Technical interview<span class="count">1</span></div>
+        <div class="acard"><div><h4>Halcyon Labs</h4><div class="role">Frontend Developer</div></div><div class="next" style="border:0;padding:0"><span><span class="marker">Prepare for interview</span></span></div></div>
+      </div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Timeline</h3><p>Newest first on the detail page. A status change gets a ring. Everything else gets a dot. Labels are plain past-tense events.</p></div>
+    <ol class="tl" style="max-width:520px">
+      <li><span class="d">Oct 2</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="tech" aria-hidden="true"></svg></span><div><div class="t">Moved to Technical interview</div><div class="s">Interview set for 10:30 AM with Dana Reyes</div></div></li>
+      <li><span class="d">Sep 27</span><span class="n"><span class="dot"></span></span><div><div class="t">HR interview completed</div><div class="s">Notes added</div></div></li>
+      <li><span class="d">Sep 25</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="recruiter" aria-hidden="true"></svg></span><div><div class="t">Recruiter contacted you</div></div></li>
+      <li><span class="d">Sep 22</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="applied" aria-hidden="true"></svg></span><div><div class="t">Application submitted</div><div class="s">LinkedIn, resume Frontend Developer v3</div></div></li>
+      <li><span class="d">Sep 20</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="saved" aria-hidden="true"></svg></span><div><div class="t">Job saved</div></div></li>
+    </ol></div>
+
+  <div class="row"><div class="cap"><h3>Feedback</h3><p>Errors don't apologize and always say what to do. The duplicate dialog leaves the decision with the user, as the PRD asks. The toast's Undo is the only other place the marker color appears as text.</p></div>
+    <div class="stack">
+      <div class="dialog" role="dialog" aria-label="Possible duplicate">
+        <h4>Possible duplicate</h4>
+        <p class="muted">You already have an application that looks like this one.</p>
+        <div class="ex"><svg class="ring" viewBox="0 0 16 16" data-ring="applied" aria-hidden="true" style="margin-top:3px"></svg><div><b>Halcyon Labs</b><br>Frontend Developer<div class="label">Applied September 20</div></div></div>
+        <div class="acts"><button class="btn secondary">View existing</button><button class="btn primary">Create anyway</button></div>
+      </div>
+      <div class="flex"><div class="toast" role="status">Moved to Technical interview <button>Undo</button></div></div>
+      <div class="banner" role="alert"><svg viewBox="0 0 24 24"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg><div><b>Couldn't save your changes</b>The connection dropped. Your edits are still here. Try again when you're back online.</div></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Empty and loading</h3><p>The empty ring is the zero state, and it doubles as the "no response" ring on purpose. Loading uses quiet placeholders shaped like the content.</p></div>
+    <div class="grid2">
+      <div class="panel"><div class="empty">
+        <svg class="ring" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+        <h4>No applications yet</h4>
+        <p>Start tracking your job search by adding your first application.</p>
+        <button class="btn primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add application</button>
+      </div></div>
+      <div class="panel"><div class="skel" aria-hidden="true"><i style="width:40%"></i><i style="width:70%;height:18px"></i><i style="width:55%"></i><i style="width:90%;margin-top:10px"></i><i style="width:80%"></i></div></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Icons</h3><p>Lucide, since shadcn already ships with it. 16px in controls and nav, 20px in tab bars. 1.5 stroke, round caps, currentColor.</p></div>
+    <div class="flex" style="gap:22px" id="icons"></div></div>
+</section>
+
+<!-- ================= PATTERNS ================= -->
+<section class="sec" id="patterns">
+  <div class="sec-head">
+    <h2>Patterns</h2>
+    <p>How the pieces come together on the dashboard, the first screen after login. The order follows the PRD's own priority: what needs you, then the numbers, then the pipeline, then recent activity.</p>
+  </div>
+
+  <div class="app" role="img" aria-label="Dashboard example: needs-you-today list, four statistics, pipeline counts, and recent applications">
+    <aside class="side">
+      <a class="brandmark" href="#patterns" tabindex="-1"><svg class="ring" viewBox="0 0 16 16" data-ring="offer" aria-hidden="true" style="width:20px;height:20px"></svg>Tracker</a>
+      <button class="btn primary" tabindex="-1" style="width:100%"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add application</button>
+      <nav id="sidenav" aria-hidden="true"></nav>
+    </aside>
+    <div class="main">
+      <div class="main-h">
+        <div><div class="label" style="margin-bottom:2px">Wednesday, September 30</div><h3>Good morning, Mika</h3></div>
+        <div class="search" style="width:min(280px,100%)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input" tabindex="-1" placeholder="Search everything"><span class="kbd">/</span></div>
+      </div>
+
+      <div>
+        <div class="h-sm">Needs you today <a href="#patterns" tabindex="-1">3 items</a></div>
+        <div class="todo"><ul>
+          <li><span class="cbx"></span><div><span class="marker">Follow up with recruiter</span><div class="who">Northbeam, React Engineer</div></div><span class="due">Today</span></li>
+          <li><span class="cbx"></span><div><span class="marker">Send portfolio</span><div class="who">Kite &amp; Compass, Full Stack Developer</div></div><span class="due late">Overdue 2 days</span></li>
+          <li><span class="cbx" style="border-style:dashed"></span><div>Technical interview<div class="who">Halcyon Labs, Frontend Developer</div></div><span class="due">Oct 2, 10:30 AM</span></li>
+        </ul></div>
+      </div>
+
+      <div class="strip">
+        <div><div class="v">14</div><div class="l">Active applications</div></div>
+        <div><div class="v">3</div><div class="l">Interviews</div></div>
+        <div><div class="v">2</div><div class="l">Follow-ups due</div></div>
+        <div><div class="v">6</div><div class="l">Applied this week</div></div>
+      </div>
+
+      <div>
+        <div class="h-sm">Pipeline</div>
+        <div class="pipe" id="pipe"></div>
+      </div>
+
+      <div>
+        <div class="h-sm">Recent applications <a href="#patterns" tabindex="-1">View all</a></div>
+        <div class="scroll"><table class="ttable">
+          <thead><tr><th>Company</th><th>Status</th><th class="hide-s">Platform</th><th class="hide-s">Applied</th></tr></thead>
+          <tbody>
+            <tr><td><div class="co">Halcyon Labs</div><div class="label">Frontend Developer</div></td><td><span class="st" style="display:inline-flex;gap:8px;align-items:center"><svg class="ring" viewBox="0 0 16 16" data-ring="tech" aria-hidden="true"></svg>Technical interview</span></td><td class="hide-s muted">LinkedIn</td><td class="hide-s muted">Sep 28</td></tr>
+            <tr><td><div class="co">Kite &amp; Compass</div><div class="label">Full Stack Developer</div></td><td><span class="st" style="display:inline-flex;gap:8px;align-items:center"><svg class="ring" viewBox="0 0 16 16" data-ring="applied" aria-hidden="true"></svg>Applied</span></td><td class="hide-s muted">OnlineJobsPH</td><td class="hide-s muted">Sep 26</td></tr>
+            <tr><td><div class="co">Northbeam</div><div class="label">React Engineer</div></td><td><span class="st" style="display:inline-flex;gap:8px;align-items:center"><svg class="ring" viewBox="0 0 16 16" data-ring="hr" aria-hidden="true"></svg>HR interview</span></td><td class="hide-s muted">JobStreet</td><td class="hide-s muted">Sep 24</td></tr>
+            <tr><td><div class="co">Orbit Freight</div><div class="label">QA Engineer</div></td><td><span class="st" style="display:inline-flex;gap:8px;align-items:center"><svg class="ring rejected" viewBox="0 0 16 16" data-ring="rejected" aria-hidden="true"></svg>Rejected</span></td><td class="hide-s muted">JobStreet</td><td class="hide-s muted">Sep 12</td></tr>
+          </tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:36px"><div class="cap"><h3>On a phone</h3><p>Nine nav items don't fit, so the tab bar keeps four destinations and a centered Add button. The rest live under More. The layout is the same list, just stacked.</p></div>
+    <div class="phone" role="img" aria-label="Mobile layout with bottom tab bar">
+      <div class="scr">
+        <div class="label">Wednesday, September 30</div>
+        <div class="t-title" style="font-size:24px;line-height:30px">Needs you today</div>
+        <div class="todo"><ul>
+          <li style="grid-template-columns:20px minmax(0,1fr)"><span class="cbx"></span><div><span class="marker">Follow up with recruiter</span><div class="who">Northbeam</div></div></li>
+          <li style="grid-template-columns:20px minmax(0,1fr)"><span class="cbx"></span><div><span class="marker">Send portfolio</span><div class="who" style="color:var(--brick)">Kite &amp; Compass, overdue 2 days</div></div></li>
+        </ul></div>
+      </div>
+      <div class="tabbar" id="tabbar"></div>
+    </div></div>
+</section>
+
+<!-- ================= DATA ================= -->
+<section class="sec" id="data">
+  <div class="sec-head">
+    <h2>Data and charts</h2>
+    <p>Analytics in the PRD are descriptive, so charts are plain and honest. One hue for magnitude, direct labels instead of legends, a single baseline instead of a grid. Nothing implies that a platform or habit will work better in the future.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>Funnel</h3><p>One pine hue, stepped by opacity. Each row shows its count and the share of the previous stage.</p></div>
+    <div class="bars" id="funnel"></div></div>
+
+  <div class="row"><div class="cap"><h3>Activity</h3><p>Bars by week. The current, still-filling week uses the marker with an outline so it reads as "in progress" and not as a different data series.</p></div>
+    <div>
+      <div class="week" role="img" aria-label="Applications per week: 4, 7, 5, 9, 6, 8, 3, 6">
+        <div><span>4</span><i style="height:36%"></i></div><div><span>7</span><i style="height:62%"></i></div><div><span>5</span><i style="height:45%"></i></div><div><span>9</span><i style="height:80%"></i></div>
+        <div><span>6</span><i style="height:54%"></i></div><div><span>8</span><i style="height:72%"></i></div><div><span>3</span><i style="height:27%"></i></div><div><span>6</span><i style="height:54%"></i></div>
+      </div>
+      <div class="weeklabels"><span>Aug 10</span><span>Aug 17</span><span>Aug 24</span><span>Aug 31</span><span>Sep 7</span><span>Sep 14</span><span>Sep 21</span><span>Sep 28</span></div>
+    </div></div>
+
+  <div class="row"><div class="cap"><h3>Category colors</h3><p>For platform breakdowns and other unordered categories. Five is the ceiling. Beyond that, group into "Other". Always pair color with a text label.</p></div>
+    <div class="stack">
+      <div class="cats"><span><i style="background:var(--brand)"></i>LinkedIn</span><span><i style="background:#4C78A8"></i>JobStreet</span><span><i style="background:#C98A1B"></i>OnlineJobsPH</span><span><i style="background:#B0342D"></i>Indeed</span><span><i style="background:#9AA39B"></i>Other</span></div>
+      <pre class="code">// Recharts
+&lt;Bar dataKey="applications" fill="var(--chart-1)" radius={[4, 4, 0, 0]} /&gt;
+&lt;CartesianGrid vertical={false} stroke="var(--border)" /&gt;
+&lt;XAxis tickLine={false} axisLine={{ stroke: "var(--input)" }} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} /&gt;</pre>
+    </div></div>
+</section>
+
+<!-- ================= VOICE ================= -->
+<section class="sec" id="voice">
+  <div class="sec-head">
+    <h2>Voice</h2>
+    <p>Words are part of the interface. Plain verbs, sentence case, second person. A control keeps the same name from button to toast, so "Archive" produces "Archived".</p>
+  </div>
+  <div class="say">
+    <div class="h">Instead of</div><div class="h">Write</div>
+    <div class="no">Submit</div><div>Save application</div>
+    <div class="no">Oops! Something went wrong.</div><div>Couldn't save your changes. Your edits are still here. Try again.</div>
+    <div class="no">No data available</div><div>No applications yet. Add your first one to start tracking.</div>
+    <div class="no">Invalid input</div><div>Enter a salary as a number, like 50000.</div>
+    <div class="no">Status updated successfully!</div><div>Moved to HR interview.</div>
+    <div class="no">You crushed it this week 🎉</div><div>6 applications this week, 2 more than last week.</div>
+    <div class="no">Delete? This action cannot be undone.</div><div>Delete Halcyon Labs, Frontend Developer? Its timeline and notes go with it.</div>
+  </div>
+</section>
+
+<!-- ================= ACCESS ================= -->
+<section class="sec" id="access">
+  <div class="sec-head">
+    <h2>Accessibility and motion</h2>
+    <p>The PRD lists keyboard navigation, focus states, contrast, and screen-reader-friendly controls as requirements. They are part of the tokens here, not an afterthought.</p>
+  </div>
+  <div class="row"><div class="cap"><h3>Rules</h3></div>
+    <ul class="stack" style="gap:12px;max-width:68ch">
+      <li><b>Never color alone.</b> Status is ring shape plus a text label. Overdue is brick plus the words "Overdue 2 days". The ring SVG is <span class="inl code">aria-hidden</span> because the label is right beside it.</li>
+      <li><b>Focus is always visible.</b> A 2px pine outline with 2px offset on every interactive element, in both themes. Inputs use a 1px offset so the ring hugs the field.</li>
+      <li><b>Targets.</b> 44px minimum hit area on touch, even where the drawn control is 30 or 36.</li>
+      <li><b>Kanban has a keyboard path.</b> Every card exposes a "Move to" menu, so drag and drop is never the only way to change a status. Announce moves through a polite live region.</li>
+      <li><b>Motion answers actions.</b> The marker sweep (500ms) plays once when a next action is set. New timeline rows fade in at 280ms. Dragged cards tilt. Nothing animates on page load. All of it collapses under <span class="inl code">prefers-reduced-motion</span>.</li>
+      <li><b>Both themes are first-class.</b> The theme follows the system and can be overridden; check both before shipping a component.</li>
+    </ul></div>
+</section>
+
+<!-- ================= BUILD ================= -->
+<section class="sec" id="build" style="padding-bottom:96px">
+  <div class="sec-head">
+    <h2>Building it</h2>
+    <p>Two files carry the system. <span class="inl code">index.css</span> holds every token in shadcn's variable names, so <span class="inl code">npx shadcn add button</span> and friends come out on-brand with no edits. <span class="inl code">stage-ring.tsx</span> holds the ring and the status map.</p>
+  </div>
+
+  <div class="row"><div class="cap"><h3>Where things go</h3></div>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th>File</th><th>Location in the architecture doc</th></tr></thead>
+      <tbody>
+        <tr><td><span class="inl code">index.css</span></td><td><span class="code">apps/web/src/index.css</span></td></tr>
+        <tr><td><span class="inl code">stage-ring.tsx</span></td><td><span class="code">features/applications/components/application-status-badge.tsx</span></td></tr>
+        <tr><td>Marker utility</td><td>Class <span class="inl code">marker</span> from <span class="inl code">index.css</span>; used by <span class="inl code">application-card.tsx</span> and the dashboard follow-up list</td></tr>
+      </tbody></table></div></div>
+
+  <div class="row"><div class="cap"><h3>shadcn adjustments</h3><p>Tokens do most of the work. These are the few component-level changes.</p></div>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th>Component</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>Button</td><td>Default variant hover uses <span class="inl code">bg-primary-hover</span>. Remove the default shadow. Add a <span class="inl code">danger</span> variant with <span class="inl code">bg-destructive</span>.</td></tr>
+        <tr><td>Input, Select, Textarea</td><td>Border uses <span class="inl code">border-input</span> (the 3:1 edge). Drop <span class="inl code">shadow-xs</span>.</td></tr>
+        <tr><td>Card</td><td>Remove <span class="inl code">shadow-sm</span>. Keep 1px <span class="inl code">border</span>. Use <span class="inl code">rounded-xl</span> for panels, <span class="inl code">rounded-lg</span> for application cards.</td></tr>
+        <tr><td>Badge</td><td>Not used for status. Status is <span class="inl code">ApplicationStatusBadge</span>. Keep Badge for tags only.</td></tr>
+        <tr><td>Dialog, Popover, Toast</td><td>Add <span class="inl code">shadow-float</span>. Toast uses inverted ink with a <span class="inl code">text-marker</span> Undo action.</td></tr>
+        <tr><td>Recharts</td><td>Use <span class="inl code">var(--chart-n)</span>. No legends where direct labels fit. Grid lines horizontal only.</td></tr>
+      </tbody></table></div></div>
+
+  <div class="row"><div class="cap"><h3>Using the marker</h3></div>
+    <pre class="code">// application-card.tsx
+const isActionable = nextActionDueAt &amp;&amp; isTodayOrPast(nextActionDueAt);
+
+&lt;span className={cn(isActionable &amp;&amp; "marker", justSet &amp;&amp; "marker-sweep")}&gt;
+  {nextAction}
+&lt;/span&gt;</pre></div>
+</section>
+
+</div>
+</main>
+
+<script>
+/* ---------- stage data: mirrors stage-ring.tsx ---------- */
+var STAGES=[
+  ["saved","Saved","SAVED",0,"p"],["applied","Applied","APPLIED",1/8,"p"],["viewed","Application viewed","APPLICATION_VIEWED",2/8,"p"],
+  ["recruiter","Recruiter contacted","RECRUITER_CONTACTED",3/8,"p"],["hr","HR interview","HR_INTERVIEW",4/8,"p"],
+  ["tech","Technical interview","TECHNICAL_INTERVIEW",5/8,"p"],["final","Final interview","FINAL_INTERVIEW",6/8,"p"],
+  ["offer","Offer","OFFER",7/8,"p"],["accepted","Accepted","ACCEPTED",1,"done"],
+  ["rejected","Rejected","REJECTED",0,"rejected"],["withdrawn","Withdrawn","WITHDRAWN",0,"withdrawn"],["noresp","No response","NO_RESPONSE",0,"noresp"]
+];
+var BYKEY={};STAGES.forEach(function(s){BYKEY[s[0]]=s});
+var C=2*Math.PI*2.25;
+function ringInner(k){
+  var s=BYKEY[k],kind=s[4],f=s[3];
+  var dash=kind==="withdrawn"?' stroke-dasharray="3 2.4"':kind==="noresp"?' stroke-dasharray="0.01 3.4"':'';
+  var sw=kind==="noresp"?1.8:1.5;
+  var h='<circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="'+sw+'" stroke-linecap="round" fill="none"'+dash+'/>';
+  if((kind==="p"||kind==="done")&&f>0) h+='<circle cx="8" cy="8" r="2.25" stroke="currentColor" stroke-width="4.5" fill="none" stroke-dasharray="'+(f*C).toFixed(3)+' '+C.toFixed(3)+'" transform="rotate(-90 8 8)"/>';
+  if(kind==="done") h+='<circle cx="8" cy="8" r="1.5" fill="var(--marker)"/>';
+  if(kind==="rejected") h+='<path d="M5.75 5.75l4.5 4.5M10.25 5.75l-4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>';
+  return h;
+}
+function paintRings(root){
+  (root||document).querySelectorAll("svg[data-ring]").forEach(function(el){
+    var k=el.getAttribute("data-ring"),s=BYKEY[k];
+    if(!s)return;
+    el.setAttribute("viewBox","0 0 16 16");el.setAttribute("fill","none");
+    el.innerHTML=ringInner(k);
+    el.classList.toggle("closed",s[4]==="withdrawn"||s[4]==="noresp");
+    el.classList.toggle("rejected",s[4]==="rejected");
+  });
+}
+paintRings();
+
+/* hero ring line */
+(function(){
+  var box=document.getElementById("ringline"),h="";
+  ["saved","applied","viewed","recruiter","hr","tech","final","offer","accepted"].forEach(function(k,i){
+    if(i)h+='<span class="seg"></span>';
+    h+='<svg class="ring" viewBox="0 0 16 16" data-ring="'+k+'"></svg>';
+  });
+  box.innerHTML=h;paintRings(box);
+})();
+
+/* stage list + demo select */
+(function(){
+  var list=document.getElementById("stageList"),sel=document.getElementById("stSel"),h="",o="";
+  STAGES.forEach(function(s){
+    h+='<div class="stg"><svg class="ring" viewBox="0 0 16 16" data-ring="'+s[0]+'" aria-hidden="true"></svg><b>'+s[1]+'</b><code>'+s[2]+'</code></div>';
+    o+='<option value="'+s[0]+'">'+s[1]+'</option>';
+  });
+  list.innerHTML=h;paintRings(list);
+  sel.innerHTML=o;sel.value="applied";
+  var tl=document.getElementById("demoTl"),st=document.getElementById("demoSt");
+  function set(k,log){
+    var s=BYKEY[k];
+    st.innerHTML='<svg class="ring" viewBox="0 0 16 16" data-ring="'+k+'" aria-hidden="true"></svg>'+s[1];paintRings(st);
+    if(log){
+      var li=document.createElement("li");li.className="new";
+      li.innerHTML='<span class="d">Sep 30</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="'+k+'" aria-hidden="true"></svg></span><div><div class="t">Moved to '+s[1]+'</div><div class="s">Just now</div></div>';
+      tl.insertBefore(li,tl.firstChild);paintRings(li);
+    }
+  }
+  tl.innerHTML='<li><span class="d">Sep 24</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="applied" aria-hidden="true"></svg></span><div><div class="t">Moved to Applied</div><div class="s">JobStreet</div></div></li><li><span class="d">Sep 22</span><span class="n"><svg class="ring" viewBox="0 0 16 16" data-ring="saved" aria-hidden="true"></svg></span><div><div class="t">Job saved</div></div></li>';
+  paintRings(tl);set("applied",false);
+  sel.addEventListener("change",function(){set(sel.value,true)});
+})();
+
+/* swatches */
+function swatch(name,token,light,dark,cssVar,text){
+  return '<div class="sw"><div class="sw-chip" style="background:var('+cssVar+');'+(text?'color:'+text:'')+'"></div><div><b>'+name+'</b><small>'+token+'</small><small>'+light+' / '+dark+'</small></div></div>';
+}
+function fill(id,arr){document.getElementById(id).innerHTML=arr.map(function(a){return swatch.apply(null,a)}).join("")}
+fill("sw-surface",[
+  ["Paper","background","#F4F5F2","#0E1714","--paper"],
+  ["Raised","card","#FFFFFF","#15201C","--raised"],
+  ["Sunken","secondary / muted","#E9ECE6","#1B2A24","--sunken"],
+  ["Hover","accent","#DDE3D6","#22332C","--hover"],
+  ["Hairline","border","#DADFD6","#263630","--line"],
+  ["Control edge","input","#7C867F","#6C7C72","--control"]
+]);
+fill("sw-ink",[
+  ["Ink","foreground","#16251F","#E8EDE6","--ink"],
+  ["Ink 2","muted-foreground","#5A665F","#93A197","--ink-2"],
+  ["Pine","primary","#1F4A3B","#C6E0D0","--brand"],
+  ["Pine hover","primary-hover","#173B2F","#DDEEE4","--brand-hover"]
+]);
+fill("sw-marker",[["Marker","marker","#D6F04F","#D6F04F","--marker"]]);
+fill("sw-signal",[
+  ["Brick","destructive","#B0342D","#E5786F","--brick"],
+  ["Brick tint","destructive-tint","#F6DEDB","#3A1F1D","--brick-tint"],
+  ["Amber","warning","#8A5300","#E3B25B","--amber"],
+  ["Amber tint","warning-tint","#F3E4C4","#3A2E14","--amber-tint"],
+  ["Steel","info","#33608F","#7FA9D6","--steel"],
+  ["Steel tint","info-tint","#DCE6F1","#1B2B3C","--steel-tint"],
+  ["Pine tint","success-tint","#DCE8E1","#1D3329","--pine-tint"],
+  ["Closed grey","stage-closed","#7C867F","#6C7C72","--closed"]
+]);
+document.getElementById("contrast").innerHTML=[
+  ["Ink on paper","14.6:1","Body text"],
+  ["Ink 2 on paper","5.5:1","Secondary text, captions"],
+  ["Ink 2 on raised","6.0:1","Secondary text in cards"],
+  ["Paper on pine","9.1:1","Primary button label"],
+  ["Ink on marker","12.5:1","Next action highlight"],
+  ["Brick on paper","5.7:1","Errors, overdue text"],
+  ["Amber on paper","5.8:1","Warnings"],
+  ["Steel on paper","6.0:1","Info text"],
+  ["Control edge on paper","3.4:1","Inputs, checkboxes, ring outlines"],
+  ["Dark: ink on paper","15.4:1","Body text"],
+  ["Dark: ink 2 on paper","6.8:1","Secondary text"],
+  ["Dark: ink on sage button","13.0:1","Primary button label"]
+].map(function(r){return '<tr><td>'+r[0]+'</td><td class="pass">'+r[1]+'</td><td class="muted">'+r[2]+'</td></tr>'}).join("");
+
+/* icons */
+(function(){
+  var P={
+    "plus":'<path d="M12 5v14M5 12h14"/>',
+    "search":'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+    "calendar":'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    "clock":'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    "check":'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "x":'<path d="M6 6l12 12M18 6L6 18"/>',
+    "chevron":'<path d="M9 6l6 6-6 6"/>',
+    "more":'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    "briefcase":'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+    "building":'<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',
+    "chart":'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    "home":'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9z"/>'
+  };
+  window.ICON=function(n){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+P[n]+'</svg>'};
+  var box=document.getElementById("icons");
+  box.innerHTML=Object.keys(P).map(function(n){return '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:56px"><span style="width:20px;height:20px;display:block">'+ICON(n)+'</span><span class="label">'+n+'</span></div>'}).join("");
+  var items=[["home","Dashboard","",1],["briefcase","Applications","24"],["clock","Saved jobs","5"],["building","Companies",""],["calendar","Interviews","3"],["chart","Analytics",""]];
+  document.getElementById("sidenav").innerHTML=items.map(function(i){return '<a href="#patterns" tabindex="-1"'+(i[3]?' aria-current="page"':'')+'>'+ICON(i[0])+i[1]+(i[2]?'<span class="badge">'+i[2]+'</span>':'')+'</a>'}).join("");
+  document.getElementById("tabbar").innerHTML=
+    '<div class="on">'+ICON("home")+'Home</div><div>'+ICON("briefcase")+'Applications</div><div><span class="fab">'+ICON("plus")+'</span></div><div>'+ICON("calendar")+'Interviews</div><div>'+ICON("more")+'More</div>';
+})();
+
+/* pipeline strip */
+(function(){
+  var counts={saved:5,applied:6,viewed:2,recruiter:1,hr:2,tech:1,final:0,offer:0,accepted:0};
+  document.getElementById("pipe").innerHTML=["saved","applied","viewed","recruiter","hr","tech","final","offer","accepted"].map(function(k){
+    return '<div><svg class="ring" viewBox="0 0 16 16" data-ring="'+k+'" aria-hidden="true"></svg><span class="v">'+counts[k]+'</span><span class="l">'+BYKEY[k][1]+'</span></div>';
+  }).join("");
+  paintRings(document.getElementById("pipe"));
+})();
+
+/* funnel */
+(function(){
+  var rows=[["Applications",58],["Responses",21],["HR interviews",12],["Technical interviews",7],["Final interviews",3],["Offers",1]],op=[1,.86,.72,.58,.44,.3],h="";
+  rows.forEach(function(r,i){
+    var pct=i?Math.round(r[1]/rows[i-1][1]*100)+"% of prev":"";
+    h+='<div class="bar-r"><span>'+r[0]+'</span><div class="track"><div class="fill" style="width:'+(r[1]/58*100)+'%;opacity:'+op[i]+'"></div></div><span class="val"><b style="color:var(--ink)">'+r[1]+'</b> '+pct+'</span></div>';
+  });
+  document.getElementById("funnel").innerHTML=h;
+})();
+
+/* tabs */
+(function(){
+  var tabs=document.querySelectorAll("#tabs button");
+  tabs.forEach(function(b,i){
+    b.addEventListener("click",function(){tabs.forEach(function(x){x.setAttribute("aria-selected","false")});b.setAttribute("aria-selected","true")});
+    b.addEventListener("keydown",function(e){
+      var n=e.key==="ArrowRight"?i+1:e.key==="ArrowLeft"?i-1:null;
+      if(n!==null&&tabs[n]){tabs[n].focus();tabs[n].click()}
+    });
+  });
+})();
+
+/* marker replay */
+document.getElementById("replay").addEventListener("click",function(){
+  var m=document.getElementById("demoMarker");m.classList.remove("sweep");void m.offsetWidth;m.classList.add("sweep");
+});
+
+/* theme */
+(function(){
+  var root=document.documentElement,btn=document.getElementById("themeBtn");
+  function eff(){var t=root.getAttribute("data-theme");if(t)return t;return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}
+  function label(){btn.setAttribute("aria-label","Switch to "+(eff()==="dark"?"light":"dark")+" theme")}
+  try{var s=localStorage.getItem("marker-theme");if(s)root.setAttribute("data-theme",s)}catch(e){}
+  label();
+  btn.addEventListener("click",function(){
+    var n=eff()==="dark"?"light":"dark";root.setAttribute("data-theme",n);
+    try{localStorage.setItem("marker-theme",n)}catch(e){}
+    label();
+  });
+})();
+</script>
+</body>
+</html>
