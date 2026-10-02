@@ -78,3 +78,10 @@ export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
 export type ApplicationFiltersInput = z.infer<typeof applicationFiltersSchema>;
+
+export const parseJobUrlSchema = z.object({
+  url: z.string().trim().url('Please provide a valid web URL (e.g. https://...)'),
+});
+
+export type ParseJobUrlInput = z.infer<typeof parseJobUrlSchema>;
+

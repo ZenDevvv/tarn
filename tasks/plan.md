@@ -194,3 +194,60 @@ Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modu
 - [x] Sidebar displays live count of saved jobs
 - [x] Full build and test suite passing cleanly
 
+---
+
+## Phase 9: Job Posting URL Auto-Fill & Metadata Extraction (`job-url-autofill`)
+
+### Task 9.1: Shared Types & Validation Schema [COMPLETED]
+- **Description:** Export `parseJobUrlSchema` and `ParsedJobMetadataDTO` from `@tracker/validation` and `@tracker/types`.
+- **Acceptance:**
+  - TypeScript contracts and Zod schemas compile cleanly.
+- **Verify:** `pnpm --filter @tracker/types build && pnpm --filter @tracker/validation build`
+- **Files:**
+  - `packages/types/src/entities.ts`
+  - `packages/validation/src/application.schema.ts`
+
+### Task 9.2: Backend Metadata Extraction Service & SSRF Guard [COMPLETED]
+- **Description:** Implement `JobParserService` in `apps/api` with SSRF protection, JSON-LD Schema.org parsing, OpenGraph meta tag extraction, and URL heuristics.
+- **Acceptance:**
+  - Blocks internal IPs and cloud metadata addresses.
+  - Correctly extracts job role, company, location, salary, and description from HTML.
+- **Verify:** `pnpm --filter @tracker/api test`
+- **Files:**
+  - `apps/api/src/modules/applications/job-parser.service.ts`
+
+### Task 9.3: Backend Endpoint & Automated Integration Tests [COMPLETED]
+- **Description:** Route `POST /api/v1/applications/parse-job-url` with Supertest integration tests verifying JSON-LD parsing, SSRF rejection, and URL fallback.
+- **Acceptance:**
+  - Protected endpoint returns 200 with extracted metadata.
+  - 14 automated tests pass in `job-parser.test.ts`.
+- **Verify:** `pnpm --filter @tracker/api test`
+- **Files:**
+  - `apps/api/src/modules/applications/application.controller.ts`
+  - `apps/api/src/modules/applications/application.routes.ts`
+  - `apps/api/tests/job-parser.test.ts`
+
+### Task 9.4: Frontend First-Action UI in `QuickSaveModal` [COMPLETED]
+- **Description:** Place Job URL input as the primary first action with auto-fetch on paste/change, loading spinner, auto-fill of all fields, visual confirmation badges, and graceful fallback.
+- **Acceptance:**
+  - URL is top hero field in `QuickSaveModal`.
+  - Auto-fills company, position, source, setup, location, salary, and description.
+- **Verify:** `pnpm --filter @tracker/web build`
+- **Files:**
+  - `apps/web/src/features/applications/api/application-api.ts`
+  - `apps/web/src/features/saved-jobs/components/quick-save-modal.tsx`
+
+### Task 9.5: Full Verification & Polish [COMPLETED]
+- **Description:** Full test suite passes across workspace with 0 errors. Clean build.
+- **Acceptance:**
+  - `pnpm test` passes across all workspace packages.
+  - `pnpm build` completes with zero errors.
+- **Verify:** `pnpm test && pnpm build`
+
+#### Checkpoint: Phase 9 Job URL Auto-Fill Complete [PASSED]
+- [x] Job URL is the first action in the Quick Save modal
+- [x] Pasting a URL auto-extracts company, role, platform, setup, salary, and location
+- [x] SSRF security guards and fallback heuristics verified
+- [x] Zero build or test failures
+
+

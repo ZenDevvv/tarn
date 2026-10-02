@@ -206,4 +206,42 @@
 - [x] Sidebar displays live count of saved jobs
 - [x] Full build and test suite passing cleanly
 
+---
+
+## Phase 9: Job Posting URL Auto-Fill & Metadata Extraction (`job-url-autofill`)
+
+- [x] **Task 9.1: Shared Types & Validation Schema**
+  - **Acceptance:** Export `parseJobUrlSchema` and `ParsedJobMetadataDTO` from `@tracker/validation` and `@tracker/types`.
+  - **Verify:** `pnpm --filter @tracker/types build && pnpm --filter @tracker/validation build`
+  - **Files:** `packages/types/src/entities.ts`, `packages/validation/src/application.schema.ts`
+
+- [x] **Task 9.2: Backend Metadata Extraction Service & SSRF Guard**
+  - **Acceptance:** Implement `jobParserService` in `apps/api` with SSRF protection, JSON-LD parsing, OpenGraph/meta tag extraction, and URL heuristics.
+  - **Verify:** `pnpm --filter @tracker/api test`
+  - **Files:** `apps/api/src/modules/applications/job-parser.service.ts`
+
+- [x] **Task 9.3: Backend Endpoint & Automated Integration Tests**
+  - **Acceptance:** Route `POST /api/v1/applications/parse-job-url` with Supertest integration tests verifying JSON-LD parsing, SSRF rejection, and URL fallback.
+  - **Verify:** `pnpm --filter @tracker/api test`
+  - **Files:** `apps/api/src/modules/applications/application.controller.ts`, `apps/api/src/modules/applications/application.routes.ts`, `apps/api/tests/job-parser.test.ts`
+
+- [x] **Task 9.4: Frontend First-Action UI in `QuickSaveModal`**
+  - **Acceptance:** Job URL input positioned as the first action with auto-fetch on paste/change, loading spinner, auto-fill of all fields, visual confirmation badges, and graceful fallback.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/applications/api/application-api.ts`, `apps/web/src/features/saved-jobs/components/quick-save-modal.tsx`
+
+- [x] **Task 9.5: Full Verification & Polish**
+  - **Acceptance:** Full test suite passes across workspace with 0 errors. Clean build.
+  - **Verify:** `pnpm test && pnpm build`
+  - **Files:** Workspace test and UI files
+
+---
+
+### Checkpoint: Job URL Auto-Fill Complete
+- [x] Job URL is the first action in the Quick Save modal
+- [x] Pasting a URL auto-extracts company, role, platform, setup, salary, and location
+- [x] SSRF security guards and fallback heuristics verified
+- [x] Zero build or test failures
+
+
 

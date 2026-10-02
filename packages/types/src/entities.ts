@@ -211,3 +211,18 @@ export interface DashboardAnalyticsDTO {
   upcomingInterviews?: DashboardUpcomingInterviewDTO[];
 }
 
+export interface ParsedJobMetadataDTO {
+  url: string;
+  companyName?: string;
+  position?: string;
+  source?: string;
+  location?: string;
+  workSetup?: WorkSetup;
+  salaryMin?: number;
+  salaryMax?: number;
+  currency?: string;
+  description?: string;
+  extractedVia?: 'json-ld' | 'opengraph' | 'heuristic' | 'url';
+}
+
+

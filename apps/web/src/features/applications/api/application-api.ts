@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import { ApplicationDTO, ApiListResponse } from '@tracker/types';
+import { ApplicationDTO, ApiListResponse, ParsedJobMetadataDTO } from '@tracker/types';
 import { CreateApplicationInput, UpdateApplicationInput, ApplicationFiltersInput } from '@tracker/validation';
 
 export const applicationApi = {
@@ -26,6 +26,10 @@ export const applicationApi = {
     return json;
   },
 
+  async parseJobUrl(url: string) {
+    return apiClient.post<ParsedJobMetadataDTO>('/applications/parse-job-url', { url });
+  },
+
   async getApplication(id: string) {
     return apiClient.get<ApplicationDTO>(`/applications/${id}`);
   },
@@ -46,3 +50,4 @@ export const applicationApi = {
     return apiClient.delete<{ id: string; archived: boolean }>(`/applications/${id}`);
   },
 };
+

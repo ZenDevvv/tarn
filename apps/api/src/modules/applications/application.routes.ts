@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { createApplicationSchema, updateApplicationSchema, updateStatusSchema, applicationFiltersSchema } from '@tracker/validation';
+import {
+  createApplicationSchema,
+  updateApplicationSchema,
+  updateStatusSchema,
+  applicationFiltersSchema,
+  parseJobUrlSchema,
+} from '@tracker/validation';
 import { applicationController } from './application.controller';
 import { timelineRouter } from '../timeline/timeline.routes';
 import { interviewController } from '../interviews/interview.controller';
@@ -10,7 +16,9 @@ export const applicationRouter = Router();
 
 applicationRouter.use(authenticate);
 
+applicationRouter.post('/parse-job-url', validateBody(parseJobUrlSchema), applicationController.parseJobUrl);
 applicationRouter.post('/', validateBody(createApplicationSchema), applicationController.create);
+
 applicationRouter.get('/', validateQuery(applicationFiltersSchema), applicationController.list);
 applicationRouter.get('/:id', applicationController.getById);
 applicationRouter.patch('/:id', validateBody(updateApplicationSchema), applicationController.update);

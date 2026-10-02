@@ -1,11 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { applicationService } from './application.service';
+import { jobParserService } from './job-parser.service';
 
 export const applicationController = {
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const application = await applicationService.createApplication(req.user!.id, req.body);
       return res.status(201).json({ data: application });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async parseJobUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await jobParserService.parseJobUrl(req.body.url);
+      return res.status(200).json({ data: result });
     } catch (error) {
       return next(error);
     }
@@ -59,3 +69,4 @@ export const applicationController = {
     }
   },
 };
+
