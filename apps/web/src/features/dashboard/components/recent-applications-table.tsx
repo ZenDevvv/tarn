@@ -44,7 +44,14 @@ export function RecentApplicationsTable({ applications, totalCount }: RecentAppl
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {applications.map((app) => {
+            {applications.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-muted-foreground text-small">
+                  No applications logged yet.
+                </td>
+              </tr>
+            ) : (
+              applications.map((app) => {
               const isActionable = Boolean(
                 app.nextAction &&
                 app.nextActionDueAt &&
@@ -119,7 +126,7 @@ export function RecentApplicationsTable({ applications, totalCount }: RecentAppl
                   </td>
                 </tr>
               );
-            })}
+            }))}
           </tbody>
         </table>
       </div>

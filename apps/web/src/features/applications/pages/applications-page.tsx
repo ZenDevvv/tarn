@@ -211,7 +211,7 @@ export function ApplicationsPage() {
           </p>
         </div>
       ) : applications.length === 0 ? (
-        <div className="py-16 px-4 text-center border border-dashed border-border rounded-lg bg-card/40 flex flex-col items-center">
+        <div className="w-full py-16 px-4 text-center border border-dashed border-border rounded-lg bg-card/40 flex flex-col items-center">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground mb-3">
             <Briefcase size={22} strokeWidth={1.5} />
           </div>

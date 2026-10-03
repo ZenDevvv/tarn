@@ -17,7 +17,7 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 w-full">
         <Loader2 className="animate-spin text-primary" size={32} />
         <span className="text-small text-muted-foreground font-sans">
           Loading dashboard metrics...
@@ -28,7 +28,7 @@ export function DashboardPage() {
 
   if (isError || !data) {
     return (
-      <div className="p-8 border border-destructive/20 bg-destructive/5 rounded-lg text-center my-8">
+      <div className="p-8 border border-destructive/20 bg-destructive/5 rounded-lg text-center my-8 w-full">
         <p className="text-body font-medium text-destructive">Failed to load dashboard metrics</p>
         <p className="text-small text-muted-foreground mt-1">
           {error instanceof Error ? error.message : 'Please check your connection and try again.'}
@@ -45,7 +45,7 @@ export function DashboardPage() {
   );
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-10 w-full">
       {/* 1. Header */}
       <DashboardHeader />
 

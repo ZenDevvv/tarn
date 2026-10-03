@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -22,6 +23,7 @@ export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
   const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
   const [followUpAction, setFollowUpAction] = useState('');
@@ -154,13 +156,9 @@ export function ApplicationDetailPage() {
             {/* Archive / Delete Button */}
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm('Are you sure you want to archive this application?')) {
-                  archiveMutation.mutate();
-                }
-              }}
+              onClick={() => setIsArchiveModalOpen(true)}
               disabled={archiveMutation.isPending}
-              className="p-2 rounded-md border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
+              className="p-2 rounded-md border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
               title="Archive application"
             >
               <Trash2 size={16} strokeWidth={1.5} />
@@ -351,6 +349,22 @@ export function ApplicationDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Archive / Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={isArchiveModalOpen}
+        onClose={() => setIsArchiveModalOpen(false)}
+        onConfirm={async () => {
+          await archiveMutation.mutateAsync();
+          setIsArchiveModalOpen(false);
+        }}
+        title="Archive application?"
+        description="You can restore or review it anytime from the status filters."
+        itemName={`${job?.title || 'Position'} at ${company?.name || 'Company'}`}
+        variant="archive"
+        confirmLabel="Archive"
+        isPending={archiveMutation.isPending}
+      />
     </div>
   );
 }

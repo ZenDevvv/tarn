@@ -1,4 +1,4 @@
-import { ParsedJobMetadataDTO, WorkSetup } from '@tracker/types';
+import { ParsedJobMetadataDTO, WorkSetup, EmploymentType } from '@tracker/types';
 import { BadRequestError } from '../../middleware/error-handler';
 
 export class JobParserService {
@@ -56,6 +56,7 @@ export class JobParserService {
    */
   public extractSourcePlatform(url: URL): string {
     const host = url.hostname.toLowerCase();
+    if (host.includes('jobstreet')) return 'Jobstreet';
     if (host.includes('greenhouse.io')) return 'Greenhouse';
     if (host.includes('lever.co')) return 'Lever';
     if (host.includes('ashbyhq.com')) return 'Ashby';
@@ -66,6 +67,12 @@ export class JobParserService {
     if (host.includes('workday') || host.includes('myworkdayjobs')) return 'Workday';
     if (host.includes('bamboohr.com')) return 'BambooHR';
     if (host.includes('ziprecruiter.com')) return 'ZipRecruiter';
+    if (host.includes('kalibrr.com')) return 'Kalibrr';
+    if (host.includes('bossjob')) return 'Bossjob';
+    if (host.includes('foundit') || host.includes('monster')) return 'Foundit';
+    if (host.includes('techinasia.com')) return 'Tech in Asia';
+    if (host.includes('workable.com')) return 'Workable';
+    if (host.includes('smartrecruiters.com')) return 'SmartRecruiters';
     if (host.includes('ycombinator.com')) return 'Work at a Startup';
     if (host.includes('remotive.com')) return 'Remotive';
 
@@ -205,31 +212,87 @@ export class JobParserService {
   /**
    * Parse job details directly from pasted text or job description snippet.
    */
+  /**
+   * Parse job details directly from pasted text or job description snippet.
+   * Handles both small targeted snippets and full-page Ctrl+A text dumps from
+   * Jobstreet, LinkedIn, Indeed, etc., stripping navigation headers and footer boilerplates.
+   */
   public parseJobText(text: string, sourceUrl?: string): ParsedJobMetadataDTO {
-    const trimmed = text.trim();
-    const lines = trimmed
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
+    // 0. Extract company from markdown links if present e.g. [White Cloak Technologies, Inc.](https://www.linkedin.com/company/whitecloak/life/)
+    let companyFromLink: string | undefined;
+    const compLinkMatch = text.match(/\[([^\]]+)\]\(https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/company\/[^)]+\)/i);
+    if (compLinkMatch) {
+      const cand = compLinkMatch[1]
+        .replace(/[\d,]+\+?\s+followers/i, '')
+        .replace(/\s+logo$/i, '')
+        .trim();
+      if (cand && cand.length < 80 && !this.isJobBoardOrPlatform(cand)) {
+        companyFromLink = cand;
+      }
+    }
+
+    // Convert all markdown links [Text](URL) into just Text for uniform processing
+    const normalizedText = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    const trimmed = normalizedText.trim();
+    const rawLines = trimmed.split('\n').map((l) => l.trim());
+    const nonEmptyLines = rawLines.filter(Boolean);
 
     let position = '';
-    let companyName = '';
+    let companyName = companyFromLink || '';
     let location = '';
     let workSetup: WorkSetup = 'ONSITE';
+    let employmentType: EmploymentType | undefined;
     let salaryMin: number | undefined;
     let salaryMax: number | undefined;
     let currency = 'USD';
 
-    // 1. Work setup detection
-    if (/\b(remote|work from home|wfh|anywhere)\b/i.test(trimmed)) {
+    // 1. Source detection from sourceUrl if provided, or from text
+    let source = 'Other';
+    if (sourceUrl) {
+      try {
+        const parsed = new URL(sourceUrl);
+        source = this.extractSourcePlatform(parsed);
+      } catch {
+        // fallback
+      }
+    }
+    if (source === 'Other') {
+      if (/jobstreet/i.test(trimmed)) source = 'Jobstreet';
+      else if (/linkedin/i.test(trimmed)) source = 'LinkedIn';
+      else if (/indeed/i.test(trimmed)) source = 'Indeed';
+      else if (/glassdoor/i.test(trimmed)) source = 'Glassdoor';
+      else if (/greenhouse/i.test(trimmed)) source = 'Greenhouse';
+      else if (/lever\.co/i.test(trimmed)) source = 'Lever';
+      else if (/ashby/i.test(trimmed)) source = 'Ashby';
+      else if (/workable/i.test(trimmed)) source = 'Workable';
+      else if (/smartrecruiters/i.test(trimmed)) source = 'SmartRecruiters';
+      else if (/kalibrr/i.test(trimmed)) source = 'Kalibrr';
+      else if (/bossjob/i.test(trimmed)) source = 'Bossjob';
+      else if (/foundit|monster/i.test(trimmed)) source = 'Foundit';
+    }
+
+    // 2. Work setup & employment type detection
+    if (/\b(remote|work from home|wfh|telecommute|anywhere)\b/i.test(trimmed)) {
       workSetup = 'REMOTE';
-    } else if (/\bhybrid\b/i.test(trimmed)) {
+    } else if (/\bhybrid\b/i.test(trimmed) || /\(hybrid\)/i.test(trimmed)) {
       workSetup = 'HYBRID';
     }
 
-    // 2. Salary extraction: handles PHP, ₱, $, USD, EUR, GBP, monthly and yearly
+    if (/\b(?:full[- ]time|permanent)\b/i.test(trimmed)) {
+      employmentType = 'FULL_TIME';
+    } else if (/\bpart[- ]time\b/i.test(trimmed)) {
+      employmentType = 'PART_TIME';
+    } else if (/\bcontract\b/i.test(trimmed)) {
+      employmentType = 'CONTRACT';
+    } else if (/\bfreelance\b/i.test(trimmed)) {
+      employmentType = 'FREELANCE';
+    } else if (/\binternship\b/i.test(trimmed)) {
+      employmentType = 'INTERNSHIP';
+    }
+
+    // 3. Salary extraction: handles PHP, ₱, $, USD, EUR, GBP, SGD, AUD, monthly and yearly
     const salaryRegex =
-      /(?:(PHP|₱|\$|USD|EUR|€|£|GBP)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)\s*(?:-|to|–|—)\s*(?:(PHP|₱|\$|USD|EUR|€|£|GBP)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)(?:\s*(?:a|per|\/)\s*(month|mo|year|yr|annum))?/i;
+      /(?:(PHP|₱|\$|USD|EUR|€|£|GBP|SGD|S\$|AUD|A\$)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)\s*(?:-|to|–|—)\s*(?:(PHP|₱|\$|USD|EUR|€|£|GBP|SGD|S\$|AUD|A\$)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)(?:\s*(?:a|per|\/)\s*(month|mo|year|yr|annum))?/i;
     const salaryMatch = trimmed.match(salaryRegex);
 
     if (salaryMatch) {
@@ -240,6 +303,10 @@ export class JobParserService {
         currency = 'EUR';
       } else if (rawCurr.includes('GBP') || rawCurr.includes('£')) {
         currency = 'GBP';
+      } else if (rawCurr.includes('SGD') || rawCurr.includes('S$')) {
+        currency = 'SGD';
+      } else if (rawCurr.includes('AUD') || rawCurr.includes('A$')) {
+        currency = 'AUD';
       } else {
         currency = 'USD';
       }
@@ -252,54 +319,61 @@ export class JobParserService {
 
       salaryMin = parseNum(salaryMatch[2]);
       salaryMax = parseNum(salaryMatch[4]);
+    } else if (
+      source === 'Jobstreet' ||
+      source === 'Kalibrr' ||
+      source === 'Bossjob' ||
+      /Philippines|Makati|Taguig|Manila|Cebu|Pasig|BGC/i.test(trimmed)
+    ) {
+      currency = 'PHP';
     }
 
-    // 3. Location detection (PH & Global cities)
+    // 4. Location detection & cleaning (PH & Global hubs)
     const locMatch = trimmed.match(
-      /\b(Taguig|BGC|Makati|Quezon City|Manila|Cebu|Pasig|Mandaluyong|Pasay|Ortigas|Alabang|Clark|Davao|Iloilo|Angeles|Baguio|Cavite|Laguna|Philippines|San Francisco|New York|London|Singapore|Sydney|Toronto|Tokyo|Berlin|Paris|Amsterdam|Dublin|Austin|Seattle)\b(?:[^\n,]*)/i
+      /\b(Taguig|BGC|Makati|Quezon City|Manila|Cebu|Pasig|Mandaluyong|Pasay|Ortigas|Alabang|Clark|Davao|Iloilo|Angeles|Baguio|Cavite|Laguna|National Capital Region|Metro Manila|Philippines|San Francisco|New York|London|Singapore|Sydney|Toronto|Tokyo|Berlin|Paris|Amsterdam|Dublin|Austin|Seattle|Boston|Chicago|Los Angeles|Denver|Vancouver|Montreal|Stockholm|Bangalore|Bengaluru|Hong Kong|Melbourne|Auckland|Zurich|Munich)\b/i
     );
     if (locMatch) {
-      location = locMatch[0].trim();
-    }
+      const matchedCity = locMatch[1];
+      const locLine = nonEmptyLines.find(
+        (l) =>
+          new RegExp(`\\b${matchedCity}\\b`, 'i').test(l) &&
+          !/^(job search|browse|saved|similar|about us|careers|salary)/i.test(l)
+      );
 
-    // 4. Role & Company line heuristics
-    if (lines.length > 0) {
-      let roleIdx = 0;
-      while (
-        roleIdx < lines.length &&
-        /^(jobstreet|indeed|linkedin|apply|quick apply|save job|posted|view job|overview)/i.test(lines[roleIdx])
-      ) {
-        roleIdx++;
-      }
+      if (locLine) {
+        if (/\(hybrid\)/i.test(locLine)) workSetup = 'HYBRID';
+        if (/\(remote\)/i.test(locLine)) workSetup = 'REMOTE';
 
-      if (roleIdx < lines.length) {
-        position = lines[roleIdx].replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
-      }
+        let cleanedLoc = locLine
+          .replace(/\s*\((?:Hybrid|Remote|Onsite|On-site)\)/gi, '')
+          .replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Permanent|Contract).*$/i, '')
+          .trim();
 
-      const compIdx = roleIdx + 1;
-      if (compIdx < lines.length) {
-        const line = lines[compIdx];
-        if (!/[₱$€£]/.test(line) && !/^\d\.\d\s*★?/.test(line) && line.length < 80) {
-          companyName = line.replace(/^\d\.\d\s*★?\s*/, '').trim();
+        // If line is multi-segment separated by [·•|] e.g. "Pasig, National Capital Region, Philippines · Reposted 5 days ago · Over 100 people clicked apply"
+        // or "Canva · Manila, Metro Manila, Philippines"
+        if (/[·•|]/.test(cleanedLoc)) {
+          const segments = cleanedLoc.split(/\s+[·•|]\s+/);
+          const bestSeg = segments.find((s) => new RegExp(`\\b${matchedCity}\\b`, 'i').test(s));
+          if (bestSeg) {
+            cleanedLoc = bestSeg.trim();
+          } else {
+            cleanedLoc = segments[0].trim();
+          }
         }
+
+        location = cleanedLoc;
+      } else {
+        location = locMatch[0].trim();
       }
     }
 
-    // 5. Source detection from sourceUrl if provided, or from text
-    let source = 'Other';
-    if (sourceUrl) {
-      try {
-        const parsed = new URL(sourceUrl);
-        source = this.extractSourcePlatform(parsed);
-      } catch {
-        // fallback
-      }
-    } else {
-      if (/jobstreet/i.test(trimmed)) source = 'Jobstreet';
-      else if (/linkedin/i.test(trimmed)) source = 'LinkedIn';
-      else if (/indeed/i.test(trimmed)) source = 'Indeed';
-      else if (/glassdoor/i.test(trimmed)) source = 'Glassdoor';
-    }
+    // 5. Role & Company line heuristics
+    const roleAndCompany = this.extractRoleAndCompanyFromLines(nonEmptyLines, companyFromLink);
+    if (roleAndCompany.position) position = roleAndCompany.position;
+    if (roleAndCompany.companyName) companyName = roleAndCompany.companyName;
+
+    // 6. Clean Description Extraction (stripping header nav and footer boilerplates)
+    const description = this.extractCleanDescription(rawLines, position, companyName);
 
     return {
       url: sourceUrl || undefined,
@@ -308,12 +382,304 @@ export class JobParserService {
       source,
       location: location || undefined,
       workSetup,
+      employmentType,
       salaryMin,
       salaryMax,
       currency,
-      description: trimmed.slice(0, 2500),
+      description: description || undefined,
       extractedVia: 'text_snippet',
     };
+  }
+
+  /**
+   * Intelligently extract Position title and Company Name from snippet lines across
+   * LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, Ashby, Jobstreet, and generic formats.
+   */
+  private extractRoleAndCompanyFromLines(
+    lines: string[],
+    companyHint?: string
+  ): { position?: string; companyName?: string } {
+    let position: string | undefined;
+    let companyName: string | undefined = companyHint;
+
+    const isNoiseLine = (line: string): boolean => {
+      const l = line.toLowerCase().trim();
+      if (!l) return true;
+      if (/^skip to (?:main |search )?content/i.test(l)) return true;
+      if (/^back to (?:open )?roles|back to jobs|view all (?:open )?positions/i.test(l)) return true;
+      if (
+        /^(?:ph\.)?(?:jobstreet|indeed|linkedin|glassdoor|kalibrr|bossjob|foundit|monster|workable|smartrecruiters|greenhouse|lever|ashby)(?:\.com)?$/i.test(
+          l
+        )
+      )
+        return true;
+      if (
+        /^(jobs|people|learning|my network|network|messaging|notifications|\d+\s*notifications|home|job search|people search|career advice|companies|employer site|find jobs|company reviews|find salaries|sign in|sign up|log in|register|download apps|join now|start of main content|employers \/ post job|for business|me)$/i.test(
+          l
+        )
+      )
+        return true;
+      if (
+        /^(strong applicant|be an early applicant|high application volume|actively recruiting|urgently hiring|featured|promoted|promoted by hirer|responses managed off linkedin|easy apply|apply|apply now|apply for this job|apply on company website|submit application|save|save job|share|responsive employer|direct employer|hybrid|remote|onsite|on-site|contract|full[- ]time|part[- ]time)$/i.test(
+          l
+        )
+      )
+        return true;
+      if (/^(?:\d+|over\s+\d+)\s+(?:applicants|people clicked apply)/i.test(l)) return true;
+      if (
+        /^(?:see how you compare|try premium|get notified about new|reposted|show match details|beta\s*[•·]|set alert for similar jobs|job search faster with premium|activate premium|access company insights|interested in working with us|members who share|i’m interested|show more|more jobs|looking for talent|post a job|status is online|messagingyou are on the messaging|compose message|navigating to jobs|learn more|commitments|career growth|grow your career|become an advanced|see more jobs like this|follow|software development)/i.test(
+          l
+        )
+      )
+        return true;
+      if (/^your profile and resume are missing/i.test(l)) return true;
+      if (/^\d+[\d,]*\+?\s+employees/i.test(l)) return true;
+      if (/^\d+[\d,]*\+?\s+followers/i.test(l)) return true;
+      if (/^\d+[\d,]*\+?\s+on linkedin/i.test(l)) return true;
+      if (/^posted\s+\d+.*ago/i.test(l)) return true;
+      if (/^(full[- ]time|part[- ]time|contract|permanent|temporary|internship|mid-senior level|entry level)$/i.test(l))
+        return true;
+      if (/^(salary undisclosed|competitive salary|pay:?|job type:?|shift and schedule:?)$/i.test(l)) return true;
+      if (/^how you match|here's how the job details align/i.test(l)) return true;
+      if (/^\d+\s+skills?(?:\s+and\s+credentials)?\s+match/i.test(l)) return true;
+      if (/^\+\d+\s+more$/i.test(l)) return true;
+      if (/^•$/i.test(l)) return true;
+      return false;
+    };
+
+    const isLocationLine = (str: string): boolean => {
+      return (
+        /\b(Taguig|BGC|Makati|Quezon City|Manila|Cebu|Pasig|Mandaluyong|Pasay|Ortigas|Alabang|Clark|Davao|Iloilo|Angeles|Baguio|Cavite|Laguna|National Capital Region|Metro Manila|Philippines|San Francisco|New York|London|Singapore|Sydney|Toronto|Tokyo|Berlin|Paris|Amsterdam|Dublin|Austin|Seattle|Boston|Chicago|Los Angeles|Denver|Vancouver|Montreal|Stockholm|Bangalore|Bengaluru|Hong Kong|Melbourne|Auckland|Zurich|Munich)\b/i.test(
+          str
+        ) || /\b(remote|hybrid|onsite|on-site)\b/i.test(str)
+      );
+    };
+
+    const ROLE_KEYWORDS =
+      /\b(engineer|developer|designer|architect|programmer|manager|lead|director|analyst|specialist|consultant|officer|administrator|coordinator|technician|associate|scientist|intern|executive|qa|tester|devops|sre|scrum master|product owner)\b/i;
+
+    // 1. Logo line hint e.g. "SB Finance logo" or "Canva logo"
+    let logoCompanyHint: string | undefined;
+    for (const line of lines.slice(0, 15)) {
+      const match = line.match(/^(.+?)\s+logo$/i);
+      if (match && match[1].length < 60 && !isNoiseLine(match[1])) {
+        logoCompanyHint = match[1].trim();
+        break;
+      }
+    }
+
+    // 2. Pattern: "View all jobs" (Jobstreet layout where company is right above it)
+    const viewAllJobsIdx = lines.findIndex((l) => /^view all jobs$/i.test(l));
+    if (viewAllJobsIdx > 0) {
+      const compCandidate = lines[viewAllJobsIdx - 1];
+      if (!isNoiseLine(compCandidate) && compCandidate.length < 80) {
+        companyName = compCandidate.replace(/^\d\.\d\s*★?\s*/, '').trim();
+      }
+
+      // Look upwards for position (skipping badges, logos, noise)
+      for (let i = viewAllJobsIdx - 2; i >= 0; i--) {
+        const cand = lines[i];
+        if (!isNoiseLine(cand) && !cand.toLowerCase().endsWith('logo') && cand.length < 90) {
+          position = cand.replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
+          break;
+        }
+      }
+    }
+
+    // 3. Pattern: LinkedIn detail line e.g. "Pasig, National Capital Region, Philippines · Reposted 5 days ago · Over 100 people clicked apply"
+    if (!position || !companyName) {
+      const linkedInMetaIdx = lines.findIndex((l) =>
+        /[·•|]\s*(?:reposted|posted|\d+\s+days?\s+ago|\d+\s+weeks?\s+ago|\d+\s+months?\s+ago|over\s+\d+|clicked apply|applicants)/i.test(
+          l
+        )
+      );
+
+      if (linkedInMetaIdx > 0) {
+        // Find non-noise line above metadata line -> Position Title
+        let foundRoleIdx = -1;
+        for (let i = linkedInMetaIdx - 1; i >= 0; i--) {
+          const cand = lines[i];
+          if (!isNoiseLine(cand) && !cand.toLowerCase().endsWith('logo') && !isLocationLine(cand)) {
+            foundRoleIdx = i;
+            position = cand.replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote|Contract).*$/i, '').trim();
+            break;
+          }
+        }
+
+        // Find non-noise line above Position -> Company Name
+        if (foundRoleIdx > 0 && !companyName) {
+          for (let i = foundRoleIdx - 1; i >= 0; i--) {
+            const cand = lines[i];
+            if (!isNoiseLine(cand) && !cand.toLowerCase().endsWith('logo') && !isLocationLine(cand)) {
+              companyName = cand.replace(/[\d,]+\+?\s+followers/i, '').trim();
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Pattern: LinkedIn separator "Company · Location (Setup)"
+    if (!companyName) {
+      const dotLineIdx = lines.slice(0, 15).findIndex((l) => /^[^\n·•|]{2,60}\s+[·•|]\s+[^\n]{2,80}$/.test(l));
+      if (dotLineIdx >= 0) {
+        const parts = lines[dotLineIdx].split(/\s+[·•|]\s+/);
+        // Only treat parts[0] as company if it is NOT a location and NOT a noise line
+        if (parts[0] && !isNoiseLine(parts[0]) && !isLocationLine(parts[0])) {
+          companyName = parts[0].trim();
+        }
+
+        // Look for position above dotLine
+        if (!position) {
+          for (let i = dotLineIdx - 1; i >= 0; i--) {
+            const cand = lines[i];
+            if (!isNoiseLine(cand) && !cand.toLowerCase().endsWith('logo') && cand.length < 90) {
+              position = cand.replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Pattern: Rating pattern e.g. "4.1 ★" right after company / location (Indeed / Glassdoor)
+    if (!companyName) {
+      const ratingIdx = lines.findIndex((l) => /^\d\.\d\s*★?/.test(l));
+      if (ratingIdx > 0) {
+        let compCandidate = lines[ratingIdx - 1];
+        if (isLocationLine(compCandidate) && ratingIdx > 1) {
+          compCandidate = lines[ratingIdx - 2];
+        }
+        if (!isNoiseLine(compCandidate) && compCandidate.length < 80) {
+          companyName = compCandidate.replace(/\s*[-–—|•]\s*.*$/, '').trim();
+        }
+      }
+    }
+
+    // 6. Pattern: ATS and general clean candidates
+    const cleanCandidates = lines.filter((l) => !isNoiseLine(l) && !l.toLowerCase().endsWith('logo'));
+
+    if (!position) {
+      const roleMatch = cleanCandidates.find((l) => ROLE_KEYWORDS.test(l) && !isLocationLine(l));
+      if (roleMatch) {
+        position = roleMatch.replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
+      } else if (cleanCandidates.length > 0) {
+        position = cleanCandidates[0].replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
+      }
+    }
+
+    if (!companyName) {
+      if (companyHint) {
+        companyName = companyHint;
+      } else if (logoCompanyHint) {
+        companyName = logoCompanyHint;
+      } else {
+        const compCandidate = cleanCandidates.find(
+          (l) => l !== position && !isLocationLine(l) && !/[₱$€£]/.test(l) && l.length < 70
+        );
+        if (compCandidate) {
+          companyName = compCandidate.split(/\s+[·•|-]\s+/)[0].replace(/^\d\.\d\s*★?\s*/, '').trim();
+        }
+      }
+    }
+
+    // Fallback company from hint or logo hint if needed
+    if ((!companyName || companyName === position) && (companyHint || logoCompanyHint)) {
+      companyName = companyHint || logoCompanyHint;
+    }
+
+    if (position) {
+      position = position.replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote|Contract).*$/i, '').trim();
+    }
+    if (companyName) {
+      companyName = companyName
+        .replace(/\s+logo$/i, '')
+        .replace(/[\d,]+\+?\s+followers/i, '')
+        .trim();
+    }
+
+    return { position, companyName };
+  }
+
+  /**
+   * Extract clean job description from lines, removing navigation headers,
+   * platform widgets, and footer boilerplates (like employer questions & copyright).
+   */
+  private extractCleanDescription(rawLines: string[], position?: string, companyName?: string): string {
+    const trimmedLines = rawLines.map((l) => l.trim());
+
+    const DESCRIPTION_START_REGEX =
+      /^(duties\s+(?:and|&)\s+responsibilities|responsibilities\s*(?:and|&)?\s*(?:duties)?|key\s+responsibilities|job\s+description|full\s+job\s+description|job\s+details|job\s+summary|job\s+overview|role\s+overview|about\s+the\s+role|about\s+the\s+job|about\s+the\s+position|about\s+the\s+opportunity|the\s+opportunity|the\s+role|what\s+you(?:'ll|\swill)\s+do|what\s+you(?:'ll|\swill)\s+be\s+doing|what\s+you(?:'ll|\swill)\s+work\s+on|what\s+we(?:'re|\sare)\s+looking\s+for|who\s+you\s+are|requirements|qualifications|position\s+overview|scope\s+of\s+work|role\s+description|your\s+impact|our\s+mission|overview\b|summary\b)/i;
+
+    const DESCRIPTION_END_REGEX =
+      /^(employer\s+questions|your\s+application\s+will\s+include|report\s+this\s+job|report\s+this\s+advert|report\s+this\s+listing|report\s+job|be\s+careful|don['’]t\s+provide\s+your\s+bank|never\s+provide\s+your\s+bank|learn\s+how\s+to\s+protect\s+yourself|salary\s+teaser|what\s+can\s+i\s+earn\s+as|see\s+more\s+detailed\s+salary|job\s+seekers|explore\s+careers|explore\s+salaries|download\s+apps|register\s+for\s+free|post\s+a\s+job\s+ad|recruitment\s+software|similar\s+jobs|people\s+also\s+viewed|recommended\s+jobs|recommended\s+opportunities|related\s+jobs|terms\s+(?:and|&)\s+conditions|terms\s+of\s+service|copyright\s+©|all\s+rights\s+reserved|privacy\s+policy|hiring\s+lab|indeed\s+events|work\s+at\s+indeed|esg\s+at\s+indeed|©\s+\d+\s+indeed|about\s+the\s+company|sign\s+in\s+to\s+create\s+job\s+alert|explore\s+collaborative\s+articles|linkedin\s+corporation|submit\s+your\s+application|submit\s+application|resume\/cv|attach\s+resume|powered\s+by\s+(?:greenhouse|lever|ashby|workable|smartrecruiters)|set\s+alert\s+for\s+similar\s+jobs|job\s+search\s+faster\s+with\s+premium|access\s+company\s+insights|more\s+jobs\b|looking\s+for\s+talent\??|post\s+a\s+job\b|interested\s+in\s+working\s+with\s+us|commitments\b|career\s+growth\s+and\s+learning)/i;
+
+    let startIndex = -1;
+
+    // 1. Try to find explicit description heading
+    for (let i = 0; i < trimmedLines.length; i++) {
+      const line = trimmedLines[i];
+      if (DESCRIPTION_START_REGEX.test(line)) {
+        startIndex = i;
+        break;
+      }
+    }
+
+    // 2. If no explicit heading found, find end of header metadata block
+    if (startIndex === -1) {
+      let metaIndex = 0;
+      for (let i = 0; i < trimmedLines.length && i < 25; i++) {
+        const line = trimmedLines[i];
+        if (!line) continue;
+
+        if (
+          /^(skip to|back to|jobstreet|indeed|linkedin|glassdoor|kalibrr|bossjob|workable|greenhouse|lever|ashby|job search|people search|career advice|companies|employer site)/i.test(
+            line
+          ) ||
+          /^(strong applicant|be an early applicant|high application volume|actively recruiting|featured|promoted|easy apply|apply now|save|share)/i.test(
+            line
+          ) ||
+          /^(posted\s+\d+|how you match|\d+\s+skills|\+\d+\s+more|view all jobs|\d+\s+applicants)/i.test(line) ||
+          line.toLowerCase().endsWith('logo') ||
+          (position && line.toLowerCase() === position.toLowerCase()) ||
+          (companyName && line.toLowerCase() === companyName.toLowerCase()) ||
+          /^(full[- ]time|part[- ]time|salary undisclosed)/i.test(line) ||
+          /^(makati|taguig|manila|cebu|quezon|pasig|hybrid|remote|onsite)/i.test(line)
+        ) {
+          metaIndex = i + 1;
+        } else if (line.length > 40 || /^[1-9]\.|\bwe are\b|\byou will\b|\bresponsible for\b/i.test(line)) {
+          break;
+        }
+      }
+      startIndex = metaIndex;
+    }
+
+    // 3. Find where the description ends (footer / boilerplate boundary)
+    let endIndex = trimmedLines.length;
+    for (let i = startIndex; i < trimmedLines.length; i++) {
+      const line = trimmedLines[i];
+      if (DESCRIPTION_END_REGEX.test(line)) {
+        endIndex = i;
+        break;
+      }
+      if (/^about us$/i.test(line) && i > startIndex + 15 && i > trimmedLines.length - 35) {
+        endIndex = i;
+        break;
+      }
+    }
+
+    if (startIndex >= endIndex || startIndex >= trimmedLines.length) {
+      return '';
+    }
+
+    const descLines = trimmedLines.slice(startIndex, endIndex);
+
+    const cleaned = descLines
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    return cleaned.slice(0, 15000);
   }
 
 
@@ -478,6 +844,16 @@ export class JobParserService {
   }
 
   /**
+   * Helper to check if a string is a job board or ATS platform name rather than a hiring company.
+   */
+  public isJobBoardOrPlatform(name: string): boolean {
+    const n = name.toLowerCase().replace(/^@/, '').trim();
+    return /^(?:ph\.)?(?:linkedin(?:\s+jobs)?|jobstreet|indeed(?:\.com)?|glassdoor|kalibrr|bossjob|foundit|monster|greenhouse|lever|ashby|workable|smartrecruiters|ziprecruiter|remotive|wellfound|angel|ycombinator)(?:\.com)?$/i.test(
+      n
+    );
+  }
+
+  /**
    * Parse OpenGraph and Twitter meta tags.
    */
   private parseMetaTags(html: string): Partial<ParsedJobMetadataDTO> | null {
@@ -499,15 +875,24 @@ export class JobParserService {
     const result: Partial<ParsedJobMetadataDTO> = {};
 
     if (ogSiteName) {
-      result.companyName = this.cleanText(ogSiteName);
+      const cleanSite = this.cleanText(ogSiteName);
+      if (this.isJobBoardOrPlatform(cleanSite)) {
+        result.source = cleanSite.replace(/^@/, '');
+      } else {
+        result.companyName = cleanSite;
+      }
     }
 
     if (ogTitle) {
-      // Often formats like "Senior Frontend Engineer at Stripe" or "Stripe - Senior Frontend Engineer"
       const parsedTitle = this.splitTitleRoleAndCompany(ogTitle);
-      result.position = parsedTitle.role || this.cleanText(ogTitle);
-      if (!result.companyName && parsedTitle.company) {
+      if (parsedTitle.role) {
+        result.position = parsedTitle.role;
+      }
+      if (parsedTitle.company && (!result.companyName || this.isJobBoardOrPlatform(result.companyName))) {
         result.companyName = parsedTitle.company;
+      }
+      if (parsedTitle.location && !result.location) {
+        result.location = parsedTitle.location;
       }
     }
 
@@ -533,22 +918,76 @@ export class JobParserService {
     return {
       position: parsed.role,
       companyName: parsed.company,
+      location: parsed.location,
     };
   }
 
-  private splitTitleRoleAndCompany(title: string): { role?: string; company?: string } {
-    const cleaned = this.cleanText(title);
+  private splitTitleRoleAndCompany(title: string): { role?: string; company?: string; location?: string } {
+    let cleaned = this.cleanText(title);
 
-    // Matches: "Role at Company" or "Role @ Company"
-    const atMatch = cleaned.match(/^(.+?)\s+(?:at|@)\s+(.+)$/i);
-    if (atMatch) {
-      return { role: atMatch[1].trim(), company: atMatch[2].trim() };
+    // Strip trailing platform suffixes e.g. " | LinkedIn Jobs", " - Indeed.com", " | Glassdoor", etc.
+    cleaned = cleaned
+      .replace(
+        /\s*[-–—|•]\s*(?:LinkedIn(?:\s+Jobs)?|Indeed(?:\.com)?|Jobstreet|Glassdoor|ZipRecruiter|Greenhouse|Lever|Ashby|Workable).*$/i,
+        ''
+      )
+      .trim();
+
+    const ROLE_KEYWORDS =
+      /\b(engineer|developer|designer|architect|programmer|manager|lead|director|analyst|specialist|consultant|officer|administrator|coordinator|technician|associate|scientist|intern|executive|qa|tester|devops|sre|scrum master|product owner)\b/i;
+
+    // 1. Format: "{Company} hiring {Role} in {Location}" (common LinkedIn og:title)
+    // e.g. "White Cloak Technologies, Inc. hiring ReactJS Software Engineer in Pasig, National Capital Region, Philippines"
+    const hiringMatch = cleaned.match(/^(.+?)\s+(?:is\s+)?hiring(?:\s+(?:a|an)\s+)?(.+?)(?:\s+in\s+([^\n|–—]+))?$/i);
+    if (hiringMatch) {
+      const candComp = hiringMatch[1].trim();
+      const candRole = hiringMatch[2].trim();
+      const candLoc = hiringMatch[3] ? hiringMatch[3].trim() : undefined;
+
+      if (ROLE_KEYWORDS.test(candRole) || !ROLE_KEYWORDS.test(candComp)) {
+        return {
+          company: candComp,
+          role: candRole,
+          location: candLoc,
+        };
+      }
     }
 
-    // Matches: "Company - Role" or "Company | Role" or "Role - Company"
-    const dashMatch = cleaned.split(/\s+[-–—|•]\s+/);
-    if (dashMatch.length === 2) {
-      return { role: dashMatch[0].trim(), company: dashMatch[1].trim() };
+    // 2. Format: "{Role} at {Company} — {Location}" or "{Role} @ {Company}"
+    // e.g. "ReactJS Software Engineer at White Cloak Technologies, Inc. — Pasig, National Capital Region, Philippines"
+    const atMatch = cleaned.match(/^(.+?)\s+(?:at|@)\s+([^–—-—|]+?)(?:\s*(?:[-–—|•]|(?:\s+in\s+))\s*(.+))?$/i);
+    if (atMatch) {
+      const candRole = atMatch[1].trim();
+      const candComp = atMatch[2].trim();
+      const candLoc = atMatch[3] ? atMatch[3].trim() : undefined;
+
+      return {
+        role: candRole,
+        company: candComp,
+        location: candLoc,
+      };
+    }
+
+    // 3. Format: "{Company} - {Role}" or "{Role} - {Company}"
+    const parts = cleaned.split(/\s+[-–—|•]\s+/);
+    if (parts.length >= 2) {
+      const p0 = parts[0].trim();
+      const p1 = parts[1].trim();
+      const p2 = parts[2]?.trim();
+
+      if (ROLE_KEYWORDS.test(p1) && !ROLE_KEYWORDS.test(p0)) {
+        return {
+          company: p0,
+          role: p1,
+          location: p2,
+        };
+      } else if (ROLE_KEYWORDS.test(p0) && !ROLE_KEYWORDS.test(p1)) {
+        return {
+          role: p0,
+          company: p1,
+          location: p2,
+        };
+      }
     }
 
     return { role: cleaned };

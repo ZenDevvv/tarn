@@ -218,6 +218,7 @@ export interface ParsedJobMetadataDTO {
   source?: string;
   location?: string;
   workSetup?: WorkSetup;
+  employmentType?: EmploymentType;
   salaryMin?: number;
   salaryMax?: number;
   currency?: string;

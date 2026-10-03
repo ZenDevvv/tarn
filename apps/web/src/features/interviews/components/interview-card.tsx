@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import { InterviewDTO, ApplicationStatus } from '@tracker/types';
 import { StageRing } from '@/features/applications/components/application-status-badge';
 import { Calendar, Clock, Video, MapPin, User, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, MoreVertical, Trash2, Edit2 } from 'lucide-react';
@@ -20,6 +21,7 @@ export function InterviewCard({
 }: InterviewCardProps) {
   const [showPrepNotes, setShowPrepNotes] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Map interview type to ApplicationStatus for StageRing
   const stageRingStatus: ApplicationStatus = (() => {
@@ -158,11 +160,9 @@ export function InterviewCard({
                   type="button"
                   onClick={() => {
                     setShowActionsMenu(false);
-                    if (window.confirm('Delete this interview record?')) {
-                      onDelete(interview.id);
-                    }
+                    setIsDeleteModalOpen(true);
                   }}
-                  className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-destructive/10 text-destructive border-t border-border mt-1"
+                  className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-destructive/10 text-destructive border-t border-border mt-1 cursor-pointer"
                 >
                   <Trash2 size={14} />
                   <span>Delete</span>
@@ -281,6 +281,21 @@ export function InterviewCard({
           {interview.prepNotes}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => {
+          onDelete?.(interview.id);
+          setIsDeleteModalOpen(false);
+        }}
+        title="Delete interview?"
+        description="This scheduled interview record will be deleted."
+        itemName={`${interview.type || 'Interview'}: ${interview.application?.job?.title || interview.title || 'Role'} at ${interview.application?.company?.name || 'Company'}`}
+        variant="destructive"
+        confirmLabel="Delete"
+      />
     </article>
   );
 }

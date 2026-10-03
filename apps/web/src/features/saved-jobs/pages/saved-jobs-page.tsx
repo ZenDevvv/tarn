@@ -70,7 +70,7 @@ export function SavedJobsPage() {
   const remoteCount = savedApplications.filter((a) => a.job?.workSetup === 'REMOTE').length;
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto p-4 md:p-8 animate-fade-in text-foreground">
+    <div className="flex flex-col gap-6 w-full animate-fade-in text-foreground">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
@@ -158,7 +158,7 @@ export function SavedJobsPage() {
           Loading saved jobs...
         </div>
       ) : savedApplications.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-border rounded-xl p-8 flex flex-col items-center gap-3">
+        <div className="w-full py-16 text-center border border-dashed border-border rounded-xl p-8 flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
             <Bookmark size={24} strokeWidth={1.5} />
           </div>

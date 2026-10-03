@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import { ApplicationDTO } from '@tracker/types';
 import { StageRing } from '@/features/applications/components/application-status-badge';
 import { PriorityGlyph } from '@/features/applications/components/priority-glyph';
@@ -18,6 +19,7 @@ export function SavedJobCard({
   onDelete,
   isApplying = false,
 }: SavedJobCardProps) {
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { job, company } = application;
 
   const dateSaved = new Date(application.createdAt).toLocaleDateString('en-US', {
@@ -47,12 +49,8 @@ export function SavedJobCard({
           <PriorityGlyph priority={application.priority} />
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('Remove this opportunity from saved jobs?')) {
-                onDelete(application.id);
-              }
-            }}
-            className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
             title="Remove from saved"
             aria-label="Remove from saved"
           >
@@ -148,6 +146,21 @@ export function SavedJobCard({
           <span>Mark as applied</span>
         </button>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => {
+          onDelete(application.id);
+          setIsDeleteModalOpen(false);
+        }}
+        title="Remove saved job?"
+        description="This will remove the opportunity from your wishlist."
+        itemName={`${job?.title || 'Job Opportunity'} at ${company?.name || 'Company'}`}
+        variant="destructive"
+        confirmLabel="Remove"
+      />
     </article>
   );
 }

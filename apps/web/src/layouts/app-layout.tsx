@@ -166,8 +166,8 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="p-8 max-[1023px]:px-6 max-[719px]:px-4 max-[719px]:pb-28 min-w-0">
-        <div className="max-w-[1040px] mx-auto flex flex-col gap-10">
+      <main className="w-full flex-1 p-8 max-[1023px]:px-6 max-[719px]:px-4 max-[719px]:pb-28 min-w-0">
+        <div className="w-full max-w-[1040px] mx-auto flex flex-col gap-10">
           <Outlet />
         </div>
       </main>
