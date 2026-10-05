@@ -11,7 +11,6 @@ import { CreateResumeInput } from '@tracker/validation';
 import {
   FileText,
   Plus,
-  Star,
   Briefcase,
   Layers,
   Sparkles,
@@ -72,7 +71,6 @@ export function ResumesPage() {
 
   // Metrics / Statistics
   const totalResumes = resumes.length;
-  const defaultResume = useMemo(() => resumes.find((r) => r.isDefault), [resumes]);
   const totalLinkedApplications = useMemo(
     () => resumes.reduce((acc, r) => acc + (r.applicationsCount || 0), 0),
     [resumes]
@@ -186,7 +184,7 @@ export function ResumesPage() {
       </div>
 
       {/* Metrics Ribbon */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-micro font-semibold uppercase tracking-wider">Total Versions</span>
@@ -194,19 +192,6 @@ export function ResumesPage() {
           </div>
           <span className="font-display font-bold text-2xl text-foreground mt-1">{totalResumes}</span>
           <span className="text-micro text-muted-foreground">Tailored variations</span>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-micro font-semibold uppercase tracking-wider">Primary / Default</span>
-            <Star size={16} className="text-amber-500" />
-          </div>
-          <span className="font-display font-semibold text-small text-foreground truncate mt-1">
-            {defaultResume ? defaultResume.name : 'None set'}
-          </span>
-          <span className="text-micro text-muted-foreground">
-            {defaultResume?.targetRole || (defaultResume ? 'Default version' : 'Select a default')}
-          </span>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">

@@ -12,7 +12,6 @@ import {
   Pencil,
   Trash2,
   Briefcase,
-  CheckCircle2,
   Calendar,
   Sparkles,
   Building2,
@@ -79,9 +78,12 @@ export function ResumeDetailModal({
                   </span>
                 )}
                 {resume.isDefault && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-semibold bg-primary/15 text-primary border border-primary/30">
-                    <CheckCircle2 size={11} className="stroke-[2.5]" />
-                    Primary / Default
+                  <span
+                    className="inline-flex items-center justify-center p-1 rounded-md text-amber-500 bg-amber-500/10 border border-amber-500/30"
+                    title="Default Resume"
+                    aria-label="Default Resume"
+                  >
+                    <Star size={14} className="fill-amber-500 text-amber-500" />
                   </span>
                 )}
               </div>
@@ -100,11 +102,11 @@ export function ResumeDetailModal({
               <button
                 type="button"
                 onClick={() => onSetDefault(resume)}
-                className="px-2.5 py-1.5 text-micro font-medium text-foreground hover:bg-secondary rounded-lg border border-border transition-colors flex items-center gap-1.5"
-                title="Make default resume"
+                className="p-1.5 text-muted-foreground hover:text-amber-500 hover:bg-secondary rounded-lg transition-colors"
+                title="Set as default resume"
+                aria-label="Set as default resume"
               >
-                <Star size={13} className="text-muted-foreground" />
-                <span>Make Default</span>
+                <Star size={16} />
               </button>
             )}
 

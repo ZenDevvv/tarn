@@ -9,7 +9,6 @@ import {
   Pencil,
   Trash2,
   Briefcase,
-  CheckCircle2,
   Eye,
   FileCode,
 } from 'lucide-react';
@@ -131,10 +130,9 @@ export function ResumeCard({
         </div>
 
         {resume.isDefault && (
-          <div className="absolute top-2.5 right-2.5 z-10 pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro font-bold bg-primary text-primary-foreground shadow-xs">
-              <CheckCircle2 size={11} className="stroke-[2.5]" />
-              Default
+          <div className="absolute top-2.5 right-2.5 z-10 pointer-events-none" title="Default Resume">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-background/90 text-amber-500 border border-border/80 shadow-xs backdrop-blur-xs">
+              <Star size={13} className="fill-amber-500 text-amber-500" />
             </span>
           </div>
         )}
