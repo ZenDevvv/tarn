@@ -180,37 +180,42 @@ export function ResumesPage() {
         </button>
       </div>
 
-      {/* Metrics Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-micro font-semibold uppercase tracking-wider">Total Versions</span>
-            <FileText size={16} />
+      {/* Stats Summary Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-y border-border py-3 text-small">
+        <div className="flex items-center gap-3 px-2">
+          <div className="p-2 rounded-md bg-secondary text-foreground">
+            <FileText size={18} />
           </div>
-          <span className="font-display font-bold text-2xl text-foreground mt-1">{totalResumes}</span>
-          <span className="text-micro text-muted-foreground">Tailored variations</span>
+          <div>
+            <div className="font-display font-semibold text-heading text-foreground">
+              {totalResumes}
+            </div>
+            <div className="text-micro text-muted-foreground">Total versions</div>
+          </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-micro font-semibold uppercase tracking-wider">Linked Applications</span>
-            <Briefcase size={16} />
+        <div className="flex items-center gap-3 px-2 border-t sm:border-t-0 sm:border-l border-border pt-2 sm:pt-0">
+          <div className="p-2 rounded-md bg-primary/10 text-primary">
+            <Briefcase size={18} />
           </div>
-          <span className="font-display font-bold text-2xl text-foreground mt-1">
-            {totalLinkedApplications}
-          </span>
-          <span className="text-micro text-muted-foreground">Submissions mapped</span>
+          <div>
+            <div className="font-display font-semibold text-heading text-primary">
+              {totalLinkedApplications}
+            </div>
+            <div className="text-micro text-muted-foreground">Linked to opportunities</div>
+          </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-micro font-semibold uppercase tracking-wider">Target Roles</span>
-            <Layers size={16} />
+        <div className="flex items-center gap-3 px-2 border-t sm:border-t-0 sm:border-l border-border pt-2 sm:pt-0">
+          <div className="p-2 rounded-md bg-secondary text-foreground">
+            <Layers size={18} />
           </div>
-          <span className="font-display font-bold text-2xl text-foreground mt-1">
-            {uniqueRolesCount}
-          </span>
-          <span className="text-micro text-muted-foreground">Distinct archetypes</span>
+          <div>
+            <div className="font-display font-semibold text-heading text-foreground">
+              {uniqueRolesCount}
+            </div>
+            <div className="text-micro text-muted-foreground">Target roles configured</div>
+          </div>
         </div>
       </div>
 

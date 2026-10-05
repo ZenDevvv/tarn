@@ -4,7 +4,7 @@ import { applicationApi } from '@/features/applications/api/application-api';
 import { SavedJobCard } from '../components/saved-job-card';
 import { QuickSaveModal } from '../components/quick-save-modal';
 import { CreateApplicationInput } from '@tracker/validation';
-import { Bookmark, Plus, Search, Filter, Building, Sparkles } from 'lucide-react';
+import { Bookmark, Plus, Search, Filter, Building, Sparkles, Globe, Flame } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Select } from '@/components/ui/select';
 
@@ -97,30 +97,41 @@ export function SavedJobsPage() {
       </div>
 
       {/* Stats Summary Strip */}
-      <div className="grid grid-cols-3 gap-4 border-y border-border py-3 text-small">
-        <div className="flex flex-col">
-          <span className="font-display font-bold text-subheading text-foreground">
-            {savedApplications.length}
-          </span>
-          <span className="text-caption text-muted-foreground uppercase tracking-wider">
-            Bookmarked
-          </span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-y border-border py-3 text-small">
+        <div className="flex items-center gap-3 px-2">
+          <div className="p-2 rounded-md bg-secondary text-foreground">
+            <Bookmark size={18} />
+          </div>
+          <div>
+            <div className="font-display font-semibold text-heading text-foreground">
+              {savedApplications.length}
+            </div>
+            <div className="text-micro text-muted-foreground">Bookmarked opportunities</div>
+          </div>
         </div>
-        <div className="flex flex-col border-x border-border px-4">
-          <span className="font-display font-bold text-subheading text-foreground">
-            {remoteCount}
-          </span>
-          <span className="text-caption text-muted-foreground uppercase tracking-wider">
-            Remote Roles
-          </span>
+
+        <div className="flex items-center gap-3 px-2 border-t sm:border-t-0 sm:border-l border-border pt-2 sm:pt-0">
+          <div className="p-2 rounded-md bg-primary/10 text-primary">
+            <Globe size={18} />
+          </div>
+          <div>
+            <div className="font-display font-semibold text-heading text-primary">
+              {remoteCount}
+            </div>
+            <div className="text-micro text-muted-foreground">Remote roles</div>
+          </div>
         </div>
-        <div className="flex flex-col pl-2">
-          <span className="font-display font-bold text-subheading text-foreground">
-            {highInterestCount}
-          </span>
-          <span className="text-caption text-muted-foreground uppercase tracking-wider">
-            High Priority
-          </span>
+
+        <div className="flex items-center gap-3 px-2 border-t sm:border-t-0 sm:border-l border-border pt-2 sm:pt-0">
+          <div className="p-2 rounded-md bg-secondary text-foreground">
+            <Flame size={18} />
+          </div>
+          <div>
+            <div className="font-display font-semibold text-heading text-foreground">
+              {highInterestCount}
+            </div>
+            <div className="text-micro text-muted-foreground">High priority targets</div>
+          </div>
         </div>
       </div>
 

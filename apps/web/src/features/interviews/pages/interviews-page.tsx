@@ -108,30 +108,41 @@ export function InterviewsPage() {
       </div>
 
       {/* Stats Summary Strip */}
-      <div className="grid grid-cols-3 gap-4 border-y border-border py-3 text-small">
-        <div className="flex flex-col">
-          <span className="font-display font-bold text-subheading text-foreground">
-            {upcomingInterviews.length}
-          </span>
-          <span className="text-caption text-muted-foreground uppercase tracking-wider">
-            Upcoming
-          </span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-y border-border py-3 text-small">
+        <div className="flex items-center gap-3 px-2">
+          <div className="p-2 rounded-md bg-primary/10 text-primary">
+            <Calendar size={18} />
+          </div>
+          <div>
+            <div className="font-display font-semibold text-heading text-primary">
+              {upcomingInterviews.length}
+            </div>
+            <div className="text-micro text-muted-foreground">Upcoming interviews</div>
+          </div>
         </div>
-        <div className="flex flex-col border-x border-border px-4">
-          <span className="font-display font-bold text-subheading text-foreground">
-            {interviews.filter((i) => i.status === 'COMPLETED').length}
-          </span>
-          <span className="text-caption text-muted-foreground uppercase tracking-wider">
-            Completed
-          </span>
+
+        <div className="flex items-center gap-3 px-2 border-t sm:border-t-0 sm:border-l border-border pt-2 sm:pt-0">
+          <div className="p-2 rounded-md bg-secondary text-foreground">
+            <CheckCircle size={18} />
+          </div>
+          <div>
+            <div className="font-display font-semibold text-heading text-foreground">
+              {interviews.filter((i) => i.status === 'COMPLETED').length}
+            </div>
+            <div className="text-micro text-muted-foreground">Completed rounds</div>
+          </div>
         </div>
-        <div className="flex flex-col pl-2">
-          <span className="font-display font-bold text-subheading text-foreground">
-            {interviews.length}
-          </span>
-          <span className="text-caption text-muted-foreground uppercase tracking-wider">
-            Total Rounds
-          </span>
+
+        <div className="flex items-center gap-3 px-2 border-t sm:border-t-0 sm:border-l border-border pt-2 sm:pt-0">
+          <div className="p-2 rounded-md bg-secondary text-foreground">
+            <Clock size={18} />
+          </div>
+          <div>
+            <div className="font-display font-semibold text-heading text-foreground">
+              {interviews.length}
+            </div>
+            <div className="text-micro text-muted-foreground">Total rounds scheduled</div>
+          </div>
         </div>
       </div>
 
