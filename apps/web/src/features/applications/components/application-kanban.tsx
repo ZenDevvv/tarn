@@ -6,6 +6,7 @@ import { PriorityGlyph } from './priority-glyph';
 import { useApplicationStatusMutation } from '../hooks/use-application-mutations';
 import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Select } from '@/components/ui/select';
 
 interface ApplicationKanbanProps {
   applications: ApplicationDTO[];
@@ -167,23 +168,25 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                           <ChevronLeft size={14} />
                         </button>
 
-                        <select
-                          value={status}
-                          onChange={(e) =>
-                            statusMutation.mutate({
-                              id: app.id,
-                              status: e.target.value as ApplicationStatus,
-                            })
-                          }
-                          className="text-[11px] bg-transparent text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer max-w-[130px] truncate"
-                          aria-label="Change stage"
-                        >
-                          {STAGES.map((s) => (
-                            <option key={s.status} value={s.status}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="w-[115px]">
+                          <Select<ApplicationStatus>
+                            size="sm"
+                            value={status}
+                            onChange={(newStatus) =>
+                              statusMutation.mutate({
+                                id: app.id,
+                                status: newStatus,
+                              })
+                            }
+                            aria-label="Change stage"
+                            triggerClassName="h-6 px-1.5 text-[11px] bg-transparent border-border/40 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                            options={STAGES.map((s) => ({
+                              value: s.status,
+                              label: s.label,
+                              icon: <StageRing status={s.status} size={12} />,
+                            }))}
+                          />
+                        </div>
 
                         <button
                           type="button"

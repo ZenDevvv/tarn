@@ -3,6 +3,7 @@ import { CreateInterviewInput, UpdateInterviewInput } from '@tracker/validation'
 import { InterviewDTO, ApplicationDTO } from '@tracker/types';
 import { X, Calendar, Clock, Video, User, FileText } from 'lucide-react';
 import { applicationApi } from '@/features/applications/api/application-api';
+import { Select } from '@/components/ui/select';
 
 interface ScheduleInterviewModalProps {
   isOpen: boolean;
@@ -164,19 +165,16 @@ export function ScheduleInterviewModal({
               <label htmlFor="app-select" className="block text-small font-medium text-foreground mb-1">
                 Opportunity / Application *
               </label>
-              <select
+              <Select<string>
                 id="app-select"
                 value={applicationId}
-                onChange={(e) => setApplicationId(e.target.value)}
-                required
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {applications.map((app) => (
-                  <option key={app.id} value={app.id}>
-                    {app.company?.name} — {app.job?.title}
-                  </option>
-                ))}
-              </select>
+                onChange={setApplicationId}
+                placeholder="Select opportunity..."
+                options={applications.map((app) => ({
+                  value: app.id,
+                  label: `${app.company?.name || 'Company'} — ${app.job?.title || 'Position'}`,
+                }))}
+              />
             </div>
           )}
 
@@ -201,23 +199,22 @@ export function ScheduleInterviewModal({
               <label htmlFor="interview-type" className="block text-small font-medium text-foreground mb-1">
                 Interview Type *
               </label>
-              <select
+              <Select<string>
                 id="interview-type"
                 value={type}
-                onChange={(e) => setType(e.target.value)}
-                required
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="HR">HR Interview</option>
-                <option value="RECRUITER">Recruiter Screen</option>
-                <option value="TECHNICAL">Technical Deep Dive</option>
-                <option value="CODING_ASSESSMENT">Coding Assessment</option>
-                <option value="SYSTEM_DESIGN">System Design</option>
-                <option value="HIRING_MANAGER">Hiring Manager</option>
-                <option value="FINAL">Final Interview</option>
-                <option value="CLIENT">Client Interview</option>
-                <option value="OTHER">Other</option>
-              </select>
+                onChange={setType}
+                options={[
+                  { value: 'HR', label: 'HR Interview' },
+                  { value: 'RECRUITER', label: 'Recruiter Screen' },
+                  { value: 'TECHNICAL', label: 'Technical Deep Dive' },
+                  { value: 'CODING_ASSESSMENT', label: 'Coding Assessment' },
+                  { value: 'SYSTEM_DESIGN', label: 'System Design' },
+                  { value: 'HIRING_MANAGER', label: 'Hiring Manager' },
+                  { value: 'FINAL', label: 'Final Interview' },
+                  { value: 'CLIENT', label: 'Client Interview' },
+                  { value: 'OTHER', label: 'Other' },
+                ]}
+              />
             </div>
           </div>
 
@@ -255,18 +252,18 @@ export function ScheduleInterviewModal({
               <label htmlFor="interview-duration" className="block text-small font-medium text-foreground mb-1">
                 Duration
               </label>
-              <select
+              <Select<number>
                 id="interview-duration"
                 value={durationMinutes}
-                onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value={30}>30 mins</option>
-                <option value={45}>45 mins</option>
-                <option value={60}>60 mins</option>
-                <option value={90}>90 mins</option>
-                <option value={120}>2 hours</option>
-              </select>
+                onChange={setDurationMinutes}
+                options={[
+                  { value: 30, label: '30 mins' },
+                  { value: 45, label: '45 mins' },
+                  { value: 60, label: '60 mins' },
+                  { value: 90, label: '90 mins' },
+                  { value: 120, label: '2 hours' },
+                ]}
+              />
             </div>
           </div>
 

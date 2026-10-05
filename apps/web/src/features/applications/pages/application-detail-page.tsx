@@ -11,8 +11,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { applicationApi } from '../api/application-api';
-import { ApplicationStatusBadge, STATUS_CONFIG } from '../components/application-status-badge';
+import { ApplicationStatusBadge, StageRing, STATUS_CONFIG } from '../components/application-status-badge';
 import { PriorityGlyph } from '../components/priority-glyph';
+import { Select } from '@/components/ui/select';
 import { ApplicationTimeline } from '../components/application-timeline';
 import { ApplicationInterviewsTab } from '../components/application-interviews-tab';
 import { FollowUpItem } from '@/features/follow-ups/components/follow-up-item';
@@ -136,21 +137,18 @@ export function ApplicationDetailPage() {
 
           <div className="flex items-center gap-3">
             {/* Stage Selector Dropdown */}
-            <div className="flex items-center gap-2 bg-card border border-border rounded-md px-3 py-1.5">
-              <ApplicationStatusBadge status={application.status} />
-              <select
+            <div className="w-[200px]">
+              <Select<ApplicationStatus>
                 value={application.status}
-                onChange={(e) => statusMutation.mutate(e.target.value as ApplicationStatus)}
+                onChange={(val) => statusMutation.mutate(val)}
                 disabled={statusMutation.isPending}
-                className="bg-transparent text-small font-medium text-foreground focus:outline-none cursor-pointer border-l border-border pl-2"
                 aria-label="Change stage"
-              >
-                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>
-                    Move to: {config.label}
-                  </option>
-                ))}
-              </select>
+                options={Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+                  value: key as ApplicationStatus,
+                  label: config.label,
+                  icon: <StageRing status={key as ApplicationStatus} size={15} />,
+                }))}
+              />
             </div>
 
             {/* Archive / Delete Button */}

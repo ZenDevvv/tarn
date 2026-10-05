@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { ApplicationStatus, WorkSetup } from '@tracker/types';
-import { STATUS_CONFIG } from './application-status-badge';
+import { STATUS_CONFIG, StageRing } from './application-status-badge';
+import { Select } from '@/components/ui/select';
 
 interface ApplicationFiltersProps {
   search: string;
@@ -45,32 +46,38 @@ export function ApplicationFilters({
       </div>
 
       {/* Status Filter */}
-      <select
-        value={status || ''}
-        onChange={(e) => onStatusChange((e.target.value as ApplicationStatus) || undefined)}
-        className="h-9 px-3 rounded-md bg-card border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-        aria-label="Filter by status"
-      >
-        <option value="">All statuses</option>
-        {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-          <option key={key} value={key}>
-            {config.label}
-          </option>
-        ))}
-      </select>
+      <div className="w-[180px]">
+        <Select<string>
+          value={status || ''}
+          onChange={(val) => onStatusChange((val as ApplicationStatus) || undefined)}
+          placeholder="All statuses"
+          aria-label="Filter by status"
+          options={[
+            { value: '', label: 'All statuses' },
+            ...Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+              value: key,
+              label: config.label,
+              icon: <StageRing status={key as ApplicationStatus} size={15} />,
+            })),
+          ]}
+        />
+      </div>
 
       {/* Work Setup Filter */}
-      <select
-        value={workSetup || ''}
-        onChange={(e) => onWorkSetupChange((e.target.value as WorkSetup) || undefined)}
-        className="h-9 px-3 rounded-md bg-card border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-        aria-label="Filter by work setup"
-      >
-        <option value="">All setups</option>
-        <option value="REMOTE">Remote</option>
-        <option value="HYBRID">Hybrid</option>
-        <option value="ONSITE">Onsite</option>
-      </select>
+      <div className="w-[140px]">
+        <Select<string>
+          value={workSetup || ''}
+          onChange={(val) => onWorkSetupChange((val as WorkSetup) || undefined)}
+          placeholder="All setups"
+          aria-label="Filter by work setup"
+          options={[
+            { value: '', label: 'All setups' },
+            { value: 'REMOTE', label: 'Remote' },
+            { value: 'HYBRID', label: 'Hybrid' },
+            { value: 'ONSITE', label: 'Onsite' },
+          ]}
+        />
+      </div>
     </div>
   );
 }

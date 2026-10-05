@@ -12,7 +12,8 @@ import {
   Check,
 } from 'lucide-react';
 import { applicationApi } from '../api/application-api';
-import { STATUS_CONFIG } from './application-status-badge';
+import { STATUS_CONFIG, StageRing } from './application-status-badge';
+import { Select } from '@/components/ui/select';
 import {
   ApplicationStatus,
   Priority,
@@ -459,34 +460,32 @@ export function ApplicationForm({
             <label htmlFor="form-stage-status" className="block text-small font-medium text-foreground mb-1.5">
               Current Stage
             </label>
-            <select
+            <Select<ApplicationStatus>
               id="form-stage-status"
               value={status}
-              onChange={(e) => handleStatusChange(e.target.value as ApplicationStatus)}
-              className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                <option key={key} value={key}>
-                  {config.label}
-                </option>
-              ))}
-            </select>
+              onChange={handleStatusChange}
+              options={Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+                value: key as ApplicationStatus,
+                label: config.label,
+                icon: <StageRing status={key as ApplicationStatus} size={15} />,
+              }))}
+            />
           </div>
 
           <div>
             <label htmlFor="form-job-priority" className="block text-small font-medium text-foreground mb-1.5">
               Interest / Priority
             </label>
-            <select
+            <Select<Priority>
               id="form-job-priority"
               value={priority}
-              onChange={(e) => setPriority(e.target.value as Priority)}
-              className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <option value="HIGH">High interest (3 bars)</option>
-              <option value="MEDIUM">Medium interest (2 bars)</option>
-              <option value="LOW">Low interest (1 bar)</option>
-            </select>
+              onChange={setPriority}
+              options={[
+                { value: 'HIGH', label: 'High interest (3 bars)' },
+                { value: 'MEDIUM', label: 'Medium interest (2 bars)' },
+                { value: 'LOW', label: 'Low interest (1 bar)' },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -567,36 +566,38 @@ export function ApplicationForm({
             <label htmlFor="form-work-setup" className="block text-small font-medium text-foreground mb-1.5">
               Work Setup
             </label>
-            <select
+            <Select<WorkSetup | ''>
               id="form-work-setup"
               value={workSetup}
-              onChange={(e) => setWorkSetup(e.target.value as WorkSetup | '')}
-              className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <option value="">Not specified</option>
-              <option value="REMOTE">Remote</option>
-              <option value="HYBRID">Hybrid</option>
-              <option value="ONSITE">Onsite</option>
-            </select>
+              onChange={setWorkSetup}
+              placeholder="Not specified"
+              options={[
+                { value: '', label: 'Not specified' },
+                { value: 'REMOTE', label: 'Remote' },
+                { value: 'HYBRID', label: 'Hybrid' },
+                { value: 'ONSITE', label: 'Onsite' },
+              ]}
+            />
           </div>
 
           <div>
             <label htmlFor="form-employment-type" className="block text-small font-medium text-foreground mb-1.5">
               Employment Type
             </label>
-            <select
+            <Select<EmploymentType | ''>
               id="form-employment-type"
               value={employmentType}
-              onChange={(e) => setEmploymentType(e.target.value as EmploymentType | '')}
-              className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <option value="">Not specified</option>
-              <option value="FULL_TIME">Full-time</option>
-              <option value="PART_TIME">Part-time</option>
-              <option value="CONTRACT">Contract</option>
-              <option value="FREELANCE">Freelance</option>
-              <option value="INTERNSHIP">Internship</option>
-            </select>
+              onChange={setEmploymentType}
+              placeholder="Not specified"
+              options={[
+                { value: '', label: 'Not specified' },
+                { value: 'FULL_TIME', label: 'Full-time' },
+                { value: 'PART_TIME', label: 'Part-time' },
+                { value: 'CONTRACT', label: 'Contract' },
+                { value: 'FREELANCE', label: 'Freelance' },
+                { value: 'INTERNSHIP', label: 'Internship' },
+              ]}
+            />
           </div>
         </div>
 
@@ -619,20 +620,20 @@ export function ApplicationForm({
             <label htmlFor="form-salary-currency" className="block text-small font-medium text-foreground mb-1.5">
               Currency
             </label>
-            <select
+            <Select<string>
               id="form-salary-currency"
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="PHP">PHP (₱)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="SGD">SGD (S$)</option>
-              <option value="CAD">CAD ($)</option>
-              <option value="AUD">AUD (A$)</option>
-            </select>
+              onChange={setCurrency}
+              options={[
+                { value: 'USD', label: 'USD ($)' },
+                { value: 'PHP', label: 'PHP (₱)' },
+                { value: 'EUR', label: 'EUR (€)' },
+                { value: 'GBP', label: 'GBP (£)' },
+                { value: 'SGD', label: 'SGD (S$)' },
+                { value: 'CAD', label: 'CAD ($)' },
+                { value: 'AUD', label: 'AUD (A$)' },
+              ]}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2">

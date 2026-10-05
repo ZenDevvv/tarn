@@ -6,6 +6,7 @@ import { QuickSaveModal } from '../components/quick-save-modal';
 import { CreateApplicationInput } from '@tracker/validation';
 import { Bookmark, Plus, Search, Filter, Building, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Select } from '@/components/ui/select';
 
 export function SavedJobsPage() {
   const queryClient = useQueryClient();
@@ -136,19 +137,20 @@ export function SavedJobsPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter size={14} className="text-muted-foreground" />
-          <select
+        <div className="flex items-center gap-2 w-[170px]">
+          <Filter size={14} className="text-muted-foreground shrink-0" />
+          <Select<string>
             value={workSetupFilter}
-            onChange={(e) => setWorkSetupFilter(e.target.value)}
+            onChange={setWorkSetupFilter}
             aria-label="Filter by work setup"
-            className="bg-background border border-border rounded-md px-2.5 py-1.5 text-small text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="">All Work Setups</option>
-            <option value="REMOTE">Remote</option>
-            <option value="HYBRID">Hybrid</option>
-            <option value="ONSITE">Onsite</option>
-          </select>
+            placeholder="All Work Setups"
+            options={[
+              { value: '', label: 'All Work Setups' },
+              { value: 'REMOTE', label: 'Remote' },
+              { value: 'HYBRID', label: 'Hybrid' },
+              { value: 'ONSITE', label: 'Onsite' },
+            ]}
+          />
         </div>
       </div>
 
