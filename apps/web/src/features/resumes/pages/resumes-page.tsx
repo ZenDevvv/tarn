@@ -162,7 +162,8 @@ export function ResumesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="font-display font-bold text-headline text-foreground tracking-tight">
+            <FileText size={24} className="text-primary" />
+            <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
               Resumes
             </h1>
             <span className="px-2 py-0.5 rounded-full text-micro font-medium bg-secondary text-secondary-foreground border border-border">
@@ -204,7 +205,7 @@ export function ResumesPage() {
             {defaultResume ? defaultResume.name : 'None set'}
           </span>
           <span className="text-micro text-muted-foreground">
-            {defaultResume?.targetRole || (defaultResume ? 'Primary ATS version' : 'Select a default')}
+            {defaultResume?.targetRole || (defaultResume ? 'Default version' : 'Select a default')}
           </span>
         </div>
 
