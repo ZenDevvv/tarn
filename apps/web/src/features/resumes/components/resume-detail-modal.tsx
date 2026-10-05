@@ -221,14 +221,9 @@ export function ResumeDetailModal({
 
           {/* Linked Applications */}
           <div className="space-y-3 pt-2 border-t border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="text-subheading font-display font-semibold text-foreground">
-                Applications Using This Resume ({resume.applicationsCount})
-              </h3>
-              <span className="text-micro text-muted-foreground">
-                ATS Version Tracking
-              </span>
-            </div>
+            <h3 className="text-subheading font-display font-semibold text-foreground">
+              Applications Using This Resume ({resume.applicationsCount})
+            </h3>
 
             {resume.applications && resume.applications.length > 0 ? (
               <div className="grid grid-cols-1 gap-2.5">
