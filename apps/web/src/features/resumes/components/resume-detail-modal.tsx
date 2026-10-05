@@ -61,8 +61,8 @@ export function ResumeDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-border bg-card">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div className="flex items-center justify-between p-5 border-b border-border bg-card">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
               <FileText size={22} />
             </div>
@@ -79,11 +79,11 @@ export function ResumeDetailModal({
                 )}
                 {resume.isDefault && (
                   <span
-                    className="inline-flex items-center justify-center p-1 rounded-md text-amber-500 bg-amber-500/10 border border-amber-500/30"
+                    className="inline-flex items-center justify-center text-amber-500 shrink-0"
                     title="Default Resume"
                     aria-label="Default Resume"
                   >
-                    <Star size={14} className="fill-amber-500 text-amber-500" />
+                    <Star size={16} className="fill-amber-500 text-amber-500" />
                   </span>
                 )}
               </div>
