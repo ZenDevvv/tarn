@@ -9,8 +9,11 @@ import {
   Trash2,
   Plus,
   Loader2,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { applicationApi } from '../api/application-api';
+import { resumeApi } from '@/features/resumes/api/resume-api';
 import { ApplicationStatusBadge, StageRing, STATUS_CONFIG } from '../components/application-status-badge';
 import { PriorityGlyph } from '../components/priority-glyph';
 import { Select } from '@/components/ui/select';
@@ -38,6 +41,21 @@ export function ApplicationDetailPage() {
     queryKey: ['application', id],
     queryFn: () => applicationApi.getApplication(id!),
     enabled: Boolean(id),
+  });
+
+  const { data: userResumes = [] } = useQuery({
+    queryKey: ['resumes-list-all'],
+    queryFn: () => resumeApi.getResumes({}),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (resumeId: string | null) =>
+      applicationApi.updateApplication(id!, { resumeId } as any),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['application', id] });
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+      queryClient.invalidateQueries({ queryKey: ['resumes-count'] });
+    },
   });
 
   const statusMutation = useMutation({
@@ -228,6 +246,56 @@ export function ApplicationDetailPage() {
                 </a>
               </div>
             )}
+
+            {/* Resume Section */}
+            <div className="mt-4 pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="block text-caption text-muted-foreground">Submitted Resume</span>
+                {application.resume ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <FileText size={15} className="text-primary shrink-0" />
+                    <span className="font-semibold text-small text-foreground">{application.resume.name}</span>
+                    {application.resume.version && (
+                      <span className="px-1.5 py-0.2 rounded font-mono text-micro font-medium bg-secondary text-secondary-foreground border border-border">
+                        {application.resume.version}
+                      </span>
+                    )}
+                    {application.resume.fileUrl && (
+                      <a
+                        href={application.resume.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-micro text-primary hover:underline font-medium ml-1"
+                        title="Download or preview submitted resume"
+                      >
+                        <Download size={12} />
+                        <span>Download</span>
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-small text-muted-foreground italic mt-0.5 block">No resume attached</span>
+                )}
+              </div>
+
+              {/* Quick Resume Selector */}
+              {userResumes.length > 0 && (
+                <div className="w-full sm:w-[220px]">
+                  <Select
+                    value={application.resumeId || ''}
+                    onChange={(val) => resumeMutation.mutate(val || null)}
+                    placeholder="Attach resume..."
+                    options={[
+                      { value: '', label: 'None (detach resume)' },
+                      ...userResumes.map((r) => ({
+                        value: r.id,
+                        label: `${r.name}${r.version ? ` (${r.version})` : ''}`,
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Interview Rounds Tracker */}

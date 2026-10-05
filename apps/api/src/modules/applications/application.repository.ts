@@ -55,10 +55,12 @@ export const applicationRepository = {
           nextAction: input.nextAction,
           nextActionDueAt: nextActionDueDate,
           notes: input.notes,
+          resumeId: input.resumeId || null,
         },
         include: {
           company: true,
           job: true,
+          resume: true,
         },
       });
 
@@ -129,6 +131,7 @@ export const applicationRepository = {
         include: {
           company: true,
           job: true,
+          resume: true,
         },
         orderBy: {
           [filters.sortBy || 'appliedAt']: filters.sortOrder || 'desc',
@@ -155,6 +158,7 @@ export const applicationRepository = {
       include: {
         company: true,
         job: true,
+        resume: true,
         timelineEvents: {
           orderBy: { occurredAt: 'desc' },
         },
@@ -209,10 +213,12 @@ export const applicationRepository = {
           nextAction: input.nextAction,
           nextActionDueAt: input.nextActionDueAt ? new Date(input.nextActionDueAt) : undefined,
           notes: input.notes,
+          resumeId: input.resumeId !== undefined ? input.resumeId : undefined,
         },
         include: {
           company: true,
           job: true,
+          resume: true,
         },
       });
     });

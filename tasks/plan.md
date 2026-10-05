@@ -250,4 +250,37 @@ Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modu
 - [x] SSRF security guards and fallback heuristics verified
 - [x] Zero build or test failures
 
+---
+
+## Phase 10: Resume Version Management & Application Linking (`resumes`)
+
+### Task 10.1: Database Model & Prisma Migration [COMPLETED]
+- **Description:** Define `Resume` model in Prisma with relations to `User` and `Application.resumeId`. Run migration and generate Prisma Client.
+- **Verify:** `pnpm --filter @tracker/database exec prisma migrate dev --name add_resumes`
+
+### Task 10.2: Shared Types & Validation Schemas [COMPLETED]
+- **Description:** Export `ResumeDTO` and `ResumeWithDetailsDTO` from `@tracker/types` and schemas from `@tracker/validation`.
+- **Verify:** `pnpm --filter @tracker/types build && pnpm --filter @tracker/validation build`
+
+### Task 10.3: Backend Module & File Upload Endpoint [COMPLETED]
+- **Description:** Implement `resumeRepository`, `resumeService`, `resumeController`, and `resumeRouter` with 10 Supertest tests.
+- **Verify:** `pnpm --filter @tracker/api test tests/resumes.test.ts` (10 passed)
+
+### Task 10.4: Frontend UI Components, Hub Page & Routing [COMPLETED]
+- **Description:** Implement `ResumeCard`, `ResumeFilters`, `ResumeFormModal`, `ResumeDetailModal`, `ResumesPage`, `/resumes` route in `AppRouter`, and dynamic sidebar counter in `AppLayout`.
+- **Verify:** `pnpm build`
+
+### Task 10.5: Application Detail Integration [COMPLETED]
+- **Description:** Link resumes to applications with 1-click preview/download and attachment switcher in `ApplicationDetailPage`.
+- **Verify:** Full test suite passes (88 tests passing).
+
+#### Checkpoint: Phase 10 Resume Management Complete [PASSED]
+- [x] Dedicated `/resumes` hub live and accessible from sidebar
+- [x] Supports direct PDF/DOCX file upload and external document links
+- [x] Tracks versions, target roles, highlighted skills, and notes
+- [x] 100% tenant-isolated with default version toggle
+- [x] Integrated into application detail view
+- [x] All 88 tests passing and zero build errors
+
+
 

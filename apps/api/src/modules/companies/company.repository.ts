@@ -58,7 +58,7 @@ export const companyRepository = {
           id: app.id,
           status: app.status,
           priority: app.priority,
-          appliedAt: app.appliedAt.toISOString(),
+          appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
           job: app.job
             ? {
                 id: app.job.id,
@@ -141,7 +141,7 @@ export const companyRepository = {
         id: app.id,
         status: app.status,
         priority: app.priority,
-        appliedAt: app.appliedAt.toISOString(),
+        appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
         job: app.job
           ? {
               id: app.job.id,

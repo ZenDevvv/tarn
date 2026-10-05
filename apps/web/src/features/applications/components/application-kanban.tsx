@@ -106,7 +106,7 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
             </div>
 
             {/* Column Cards */}
-            <div className="flex-1 p-2.5 flex flex-col gap-2.5 min-h-[360px] overflow-y-auto">
+            <div className="flex-1 p-2.5 flex flex-col gap-2.5 min-h-[360px] overflow-y-auto custom-scrollbar">
               {stageApps.length === 0 ? (
                 <div className="h-28 border border-dashed border-border/70 rounded-lg grid place-items-center text-caption text-muted-foreground">
                   Drop here

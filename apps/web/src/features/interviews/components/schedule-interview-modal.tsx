@@ -152,7 +152,7 @@ export function ScheduleInterviewModal({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-4">
           {error && (
             <div className="p-3 rounded bg-destructive/10 border border-destructive/20 text-destructive text-small">
               {error}

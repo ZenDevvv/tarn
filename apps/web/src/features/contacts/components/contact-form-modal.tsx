@@ -142,7 +142,7 @@ export function ContactFormModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-y-auto p-6 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-6 gap-4">
           {error && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-small">
               {error}

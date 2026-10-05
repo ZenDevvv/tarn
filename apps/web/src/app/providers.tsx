@@ -31,6 +31,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
+    root.style.colorScheme = theme;
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {

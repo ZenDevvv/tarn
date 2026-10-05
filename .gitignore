@@ -22,6 +22,8 @@ dist/
 build/
 out/
 .next/
+uploads/
+apps/api/uploads/
 
 # Operating System & IDE
 .DS_Store

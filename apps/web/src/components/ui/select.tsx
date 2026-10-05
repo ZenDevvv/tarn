@@ -301,7 +301,7 @@ export function Select<T = string>({
           role="listbox"
           aria-labelledby={selectId}
           className={cn(
-            'absolute left-0 z-50 w-full min-w-[160px] max-h-60 overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-float text-foreground',
+            'absolute left-0 z-50 w-full min-w-[160px] max-h-60 overflow-y-auto custom-scrollbar rounded-lg border border-border bg-card p-1 shadow-float text-foreground',
             placement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
             'animate-scale-up',
             menuClassName

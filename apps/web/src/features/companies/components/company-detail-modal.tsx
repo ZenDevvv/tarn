@@ -198,7 +198,7 @@ export function CompanyDetailModal({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-6">
           {/* Company Notes / Description */}
           {company.description ? (
             <div className="p-4 rounded-lg bg-secondary/40 border border-border/80">
@@ -274,11 +274,13 @@ export function CompanyDetailModal({
               <div className="flex flex-col gap-2.5">
                 {company.applications.map((app) => {
                   const statusCfg = STATUS_CONFIG[app.status] || { label: app.status };
-                  const appliedDate = new Date(app.appliedAt).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  });
+                  const appliedDate = app.appliedAt
+                    ? new Date(app.appliedAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : 'Not submitted';
 
                   return (
                     <Link

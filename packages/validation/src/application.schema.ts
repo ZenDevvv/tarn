@@ -49,6 +49,7 @@ export const createApplicationSchema = z.object({
   nextAction: z.string().trim().optional().nullable(),
   nextActionDueAt: z.string().datetime().optional().nullable(),
   notes: z.string().optional().nullable(),
+  resumeId: z.string().trim().optional().nullable(),
 });
 
 export const updateApplicationSchema = createApplicationSchema.partial().omit({

@@ -128,7 +128,7 @@ export function ContactDetailModal({
         </div>
 
         {/* Modal Scrollable Content */}
-        <div className="flex flex-col flex-1 overflow-y-auto p-6 gap-6">
+        <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-6 gap-6">
           {/* Quick Contact Actions Strip */}
           <div className="flex flex-wrap items-center gap-2">
             {contact.email && (

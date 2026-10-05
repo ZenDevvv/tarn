@@ -86,7 +86,7 @@ export interface CompanyWithDetailsDTO extends CompanyDTO {
     id: string;
     status: ApplicationStatus;
     priority: Priority;
-    appliedAt: string;
+    appliedAt?: string | null;
     job?: {
       id: string;
       title: string;
@@ -127,11 +127,13 @@ export interface ApplicationDTO {
   nextActionDueAt?: string | null;
   notes?: string | null;
   archivedAt?: string | null;
+  resumeId?: string | null;
   createdAt: string;
   updatedAt: string;
   company?: CompanyDTO;
   job?: JobDTO;
   interviews?: InterviewDTO[];
+  resume?: ResumeDTO | null;
 }
 
 export interface TimelineEventDTO {
@@ -287,6 +289,41 @@ export interface ContactWithDetailsDTO extends ContactDTO {
       title: string;
     } | null;
   } | null;
+}
+
+export interface ResumeDTO {
+  id: string;
+  userId: string;
+  name: string;
+  version?: string | null;
+  targetRole?: string | null;
+  fileUrl?: string | null;
+  filename?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  isDefault: boolean;
+  skills: string[];
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResumeWithDetailsDTO extends ResumeDTO {
+  applicationsCount: number;
+  applications: Array<{
+    id: string;
+    status: ApplicationStatus;
+    priority: Priority;
+    appliedAt?: string | null;
+    company?: {
+      id: string;
+      name: string;
+    } | null;
+    job?: {
+      id: string;
+      title: string;
+    } | null;
+  }>;
 }
 
 
