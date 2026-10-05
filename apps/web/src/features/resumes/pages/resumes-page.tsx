@@ -164,9 +164,6 @@ export function ResumesPage() {
             <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
               Resumes
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-micro font-medium bg-secondary text-secondary-foreground border border-border">
-              {totalResumes}
-            </span>
           </div>
           <p className="text-small text-muted-foreground mt-1">
             Manage multiple tailored resume versions and track which opportunities they were used for.

@@ -72,14 +72,18 @@ export function ResumeCard({
       <div className="relative w-full h-44 bg-muted/20 border-b border-border/70 overflow-hidden flex items-center justify-center group/preview">
         {resolvedUrl && isPdf && !iframeError ? (
           <>
-            {/* Embedded Live PDF Preview */}
-            <iframe
-              src={`${resolvedUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-              title={resume.name}
-              onError={() => setIframeError(true)}
-              className="w-full h-full border-0 pointer-events-none select-none bg-white/95 dark:bg-zinc-900/90"
-              loading="lazy"
-            />
+            {/* Embedded Live PDF Preview - right edge scrollbar clipped */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <iframe
+                src={`${resolvedUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                title={resume.name}
+                scrolling="no"
+                onError={() => setIframeError(true)}
+                className="w-[calc(100%+36px)] max-w-none h-full border-0 select-none bg-white/95 dark:bg-zinc-900/90 pointer-events-none"
+                tabIndex={-1}
+                loading="lazy"
+              />
+            </div>
             {/* Gradient bottom overlay to blend cleanly */}
             <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent pointer-events-none" />
           </>
