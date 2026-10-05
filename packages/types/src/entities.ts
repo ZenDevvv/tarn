@@ -253,5 +253,42 @@ export interface ParsedJobMetadataDTO {
   message?: string;
 }
 
+export interface ContactDTO {
+  id: string;
+  userId: string;
+  name: string;
+  role?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  linkedinUrl?: string | null;
+  companyId?: string | null;
+  applicationId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContactWithDetailsDTO extends ContactDTO {
+  company?: {
+    id: string;
+    name: string;
+    website?: string | null;
+  } | null;
+  application?: {
+    id: string;
+    status: ApplicationStatus;
+    priority: Priority;
+    company?: {
+      id: string;
+      name: string;
+    } | null;
+    job?: {
+      id: string;
+      title: string;
+    } | null;
+  } | null;
+}
+
+
 
 

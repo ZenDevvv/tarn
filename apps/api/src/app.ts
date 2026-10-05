@@ -42,12 +42,14 @@ import { followUpRouter } from './modules/follow-ups/follow-up.routes';
 import { analyticsRouter } from './modules/analytics/analytics.routes';
 import { interviewRouter } from './modules/interviews/interview.routes';
 import { companyRouter } from './modules/companies/company.routes';
+import { contactRouter } from './modules/contacts/contact.routes';
 
 // Root routes placeholder
 export const apiRouter = express.Router();
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/applications', applicationRouter);
 apiRouter.use('/companies', companyRouter);
+apiRouter.use('/contacts', contactRouter);
 apiRouter.use('/follow-ups', followUpRouter);
 apiRouter.use('/analytics', analyticsRouter);
 apiRouter.use('/interviews', interviewRouter);

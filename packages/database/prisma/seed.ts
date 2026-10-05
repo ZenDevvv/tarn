@@ -18,6 +18,7 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // Clean existing records
+  await prisma.contact.deleteMany();
   await prisma.interview.deleteMany();
   await prisma.followUp.deleteMany();
   await prisma.timelineEvent.deleteMany();
@@ -139,6 +140,9 @@ async function main() {
     },
   ];
 
+  const companyMap = new Map<string, any>();
+  const appMap = new Map<string, any>();
+
   for (const item of appData) {
     const company = await prisma.company.create({
       data: {
@@ -176,6 +180,9 @@ async function main() {
         nextActionDueAt: item.nextActionDueAt,
       },
     });
+
+    companyMap.set(item.company, company);
+    appMap.set(item.company, app);
 
     // Initial timeline event
     await prisma.timelineEvent.create({
@@ -284,6 +291,97 @@ async function main() {
 
     console.log(`✅ Seeded application: ${item.company} — ${item.role}`);
   }
+
+  // Seed 8 realistic contacts matching dashboard sample
+  const contactsData = [
+    {
+      name: 'Sarah Jenkins',
+      role: 'Lead Technical Recruiter',
+      email: 'sarah.j@northbeam.io',
+      phone: '+1 (415) 890-2311',
+      linkedinUrl: 'https://linkedin.com/in/sarahjenkins-recruiter',
+      companyName: 'Northbeam',
+      notes: 'Initial recruiter screen went great. Recommended reviewing React state machine architecture for next round.',
+    },
+    {
+      name: 'Marcus Chen',
+      role: 'Head of Engineering',
+      email: 'marcus.chen@halcyonlabs.com',
+      linkedinUrl: 'https://linkedin.com/in/marcus-chen-tech',
+      companyName: 'Halcyon Labs',
+      notes: 'Direct interviewer for system design and architecture deep-dive.',
+    },
+    {
+      name: 'Elena Vance',
+      role: 'Senior Talent Partner',
+      email: 'elena.vance@lumenhealth.org',
+      phone: '+1 (650) 412-9980',
+      linkedinUrl: 'https://linkedin.com/in/elena-vance-talent',
+      companyName: 'Lumen Health',
+      notes: 'Provided official offer letter package and detailed benefits overview.',
+    },
+    {
+      name: 'Dave Miller',
+      role: 'Engineering Manager',
+      email: 'dave.m@kitecompass.co',
+      linkedinUrl: 'https://linkedin.com/in/dave-miller-eng',
+      companyName: 'Kite & Compass',
+      notes: 'Reviewed GitHub open source repositories and portfolio.',
+    },
+    {
+      name: 'Aria Takahashi',
+      role: 'Talent Acquisition Specialist',
+      email: 'aria.t@pageturn.io',
+      linkedinUrl: 'https://linkedin.com/in/aria-takahashi',
+      companyName: 'Pageturn',
+      notes: 'Recruiter coordinator for frontend engineering team.',
+    },
+    {
+      name: 'Julian Reed',
+      role: 'Principal Tech Recruiter',
+      email: 'jreed@techflowsearch.com',
+      phone: '+1 (212) 555-8940',
+      linkedinUrl: 'https://linkedin.com/in/julian-reed-recruiter',
+      notes: 'Independent recruiter specializing in high-growth startups and remote roles.',
+    },
+    {
+      name: 'Chloe Dupont',
+      role: 'VP of Product',
+      email: 'chloe.d@orbitfreight.com',
+      linkedinUrl: 'https://linkedin.com/in/chloe-dupont-product',
+      companyName: 'Orbit Freight',
+      notes: 'Hiring manager contact from warehouse logistics portal discussions.',
+    },
+    {
+      name: 'Samira Patel',
+      role: 'Staff Engineer',
+      email: 'samira.p@northbeam.io',
+      linkedinUrl: 'https://linkedin.com/in/samira-patel-dev',
+      companyName: 'Northbeam',
+      notes: 'Peer engineer on the core web analytics team.',
+    },
+  ];
+
+  for (const c of contactsData) {
+    const company = c.companyName ? companyMap.get(c.companyName) : undefined;
+    const application = c.companyName ? appMap.get(c.companyName) : undefined;
+
+    await prisma.contact.create({
+      data: {
+        userId: user.id,
+        name: c.name,
+        role: c.role,
+        email: c.email,
+        phone: c.phone || null,
+        linkedinUrl: c.linkedinUrl || null,
+        companyId: company?.id || null,
+        applicationId: application?.id || null,
+        notes: c.notes,
+      },
+    });
+  }
+
+  console.log(`✅ Seeded 8 contacts across companies and applications`);
 
   console.log('🎉 Database seed completed successfully!');
 }
