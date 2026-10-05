@@ -326,6 +326,88 @@ export interface ResumeWithDetailsDTO extends ResumeDTO {
   }>;
 }
 
+export interface AnalyticsKpiDTO {
+  totalApplications: number;
+  activeApplications: number;
+  closedApplications: number;
+  responseCount: number;
+  responseRate: number; // 0-100, 1 decimal
+  interviewCount: number;
+  interviewRate: number; // 0-100, 1 decimal
+  offerCount: number;
+  offerRate: number; // 0-100, 1 decimal
+  rejectionCount: number;
+  rejectionRate: number; // 0-100, 1 decimal
+}
+
+export interface FunnelStageDTO {
+  id: string;
+  name: string;
+  count: number;
+  conversionFromTotal: number; // 0-100%
+  stepConversion: number; // 0-100% of previous step
+}
+
+export interface PlatformMetricDTO {
+  platform: string;
+  totalApplications: number;
+  activeCount: number;
+  interviewCount: number;
+  offerCount: number;
+  interviewRate: number; // 0-100%
+  offerRate: number; // 0-100%
+}
+
+export interface WorkSetupMetricDTO {
+  setup: WorkSetup | 'UNSPECIFIED';
+  label: string;
+  count: number;
+  percentage: number;
+  interviewCount: number;
+  interviewRate: number;
+}
+
+export interface VelocityMetricDTO {
+  label: string;
+  count: number;
+  isCurrent?: boolean;
+}
+
+export interface TimingMetricsDTO {
+  avgDaysToResponse: number | null;
+  avgDaysToInterview: number | null;
+  avgDaysToRejection: number | null;
+}
+
+export interface SalaryInsightsDTO {
+  disclosedCount: number;
+  disclosedPercentage: number;
+  avgSalaryMin: number | null;
+  avgSalaryMax: number | null;
+  currency: string;
+}
+
+export interface StatusDistributionDTO {
+  status: ApplicationStatus;
+  count: number;
+  percentage: number;
+}
+
+export interface AnalyticsOverviewDTO {
+  range: 'all' | '30d' | '90d' | 'ytd';
+  rangeLabel: string;
+  kpis: AnalyticsKpiDTO;
+  funnel: FunnelStageDTO[];
+  platforms: PlatformMetricDTO[];
+  workSetups: WorkSetupMetricDTO[];
+  weeklyVelocity: VelocityMetricDTO[];
+  monthlyVelocity: VelocityMetricDTO[];
+  timing: TimingMetricsDTO;
+  salaryInsights: SalaryInsightsDTO;
+  statusDistribution: StatusDistributionDTO[];
+}
+
+
 
 
 

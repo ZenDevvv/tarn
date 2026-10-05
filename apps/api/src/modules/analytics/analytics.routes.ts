@@ -7,3 +7,5 @@ export const analyticsRouter = Router();
 analyticsRouter.use(authenticate);
 
 analyticsRouter.get('/dashboard', analyticsController.getDashboard);
+analyticsRouter.get('/overview', analyticsController.getOverview);
+

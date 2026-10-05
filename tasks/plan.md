@@ -282,5 +282,33 @@ Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modu
 - [x] Integrated into application detail view
 - [x] All 88 tests passing and zero build errors
 
+---
+
+## Phase 11: Job-Search Analytics Hub (`analytics`)
+
+### Task 11.1: Shared Types & Validation Schemas [COMPLETED]
+- **Description:** Define `AnalyticsOverviewDTO` and sub-interfaces (`AnalyticsKpiDTO`, `FunnelStageDTO`, `PlatformMetricDTO`, `WorkSetupMetricDTO`, `VelocityMetricDTO`, `TimingMetricsDTO`, `SalaryInsightsDTO`, `StatusDistributionDTO`) in `@tracker/types`. Define `analyticsQuerySchema` in `@tracker/validation`.
+- **Verify:** `pnpm --filter @tracker/types build; pnpm --filter @tracker/validation build`
+
+### Task 11.2: Backend Analytics Overview Endpoint & Automated Tests [COMPLETED]
+- **Description:** Implement `analyticsService.getAnalyticsOverview(userId, range)` in `apps/api/src/modules/analytics/` supporting date range filtering (`all`, `30d`, `90d`, `ytd`), funnel conversion progression, platform performance, work setup and salary aggregations, 12-week velocity, and full 12-stage distribution. Route `GET /api/v1/analytics/overview`.
+- **Verify:** `pnpm --filter @tracker/api test tests/analytics.test.ts` (5 tests passing)
+
+### Task 11.3: Frontend UI Components & Markers [COMPLETED]
+- **Description:** Build `AnalyticsHeader`, `AnalyticsKpiStrip`, `AnalyticsFunnel`, `PlatformBreakdown`, `VelocityTrend`, `TimingMetrics`, `WorkSetupAndSalary`, and `StatusDistribution` with Marker design aesthetics (Bricolage Grotesque display numbers, StageRing status shapes, subtle border surfaces, and `.marker` highlight accents).
+- **Verify:** `pnpm --filter @tracker/web test` (10 tests passing)
+
+### Task 11.4: Analytics Page & App Router Integration [COMPLETED]
+- **Description:** Implement `AnalyticsPage` coordinating time range filtering, loading/error states, and empty state CTA. Register `/analytics` route in `apps/web/src/app/router.tsx`. Connect with desktop sidebar and mobile navigation.
+- **Verify:** `pnpm build` across workspace (0 errors)
+
+#### Checkpoint: Phase 11 Analytics Hub Complete [PASSED]
+- [x] Dedicated `/analytics` page live and integrated with AppLayout navigation
+- [x] Multi-tenant server-side aggregations for KPIs, funnel, platforms, velocity, and timing
+- [x] Time-range filtering (`all`, `30d`, `90d`, `ytd`) with smooth reactivity
+- [x] 97 total workspace automated tests passing (100% green)
+- [x] Clean production build with zero errors
+
+
 
 

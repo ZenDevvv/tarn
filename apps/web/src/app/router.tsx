@@ -12,8 +12,10 @@ import { SavedJobsPage } from '@/features/saved-jobs/pages/saved-jobs-page';
 import { CompaniesPage } from '@/features/companies/pages/companies-page';
 import { ContactsPage } from '@/features/contacts/pages/contacts-page';
 import { ResumesPage } from '@/features/resumes/pages/resumes-page';
+import { AnalyticsPage } from '@/features/analytics/pages/analytics-page';
 
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
+
 
 const router = createBrowserRouter([
   {
@@ -74,7 +76,12 @@ const router = createBrowserRouter([
             path: '/resumes',
             element: <ResumesPage />,
           },
+          {
+            path: '/analytics',
+            element: <AnalyticsPage />,
+          },
         ],
+
       },
     ],
   },

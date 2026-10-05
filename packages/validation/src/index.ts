@@ -5,3 +5,4 @@ export * from './follow-up.schema';
 export * from './interview.schema';
 export * from './contact.schema';
 export * from './resume.schema';
+export * from './analytics.schema';
