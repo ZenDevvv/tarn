@@ -56,15 +56,22 @@ export function AppLayout() {
     staleTime: 30000,
   });
 
+  const { data: companies } = useQuery({
+    queryKey: ['companies-count'],
+    queryFn: () => apiClient.get<any[]>('/companies'),
+    staleTime: 30000,
+  });
+
   const savedCount = analytics?.pipeline?.SAVED ?? 0;
   const activeCount = analytics?.summary?.activeApplications ?? 0;
   const interviewsCount = analytics?.summary?.interviewCount ?? 0;
+  const companiesCount = companies?.length ?? 0;
 
   const navItems: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: <Home size={16} strokeWidth={1.5} /> },
     { to: '/applications', label: 'Applications', icon: <Briefcase size={16} strokeWidth={1.5} />, count: activeCount > 0 ? activeCount : undefined },
     { to: '/saved-jobs', label: 'Saved jobs', icon: <Bookmark size={16} strokeWidth={1.5} />, count: savedCount > 0 ? savedCount : undefined },
-    { to: '/companies', label: 'Companies', icon: <Building2 size={16} strokeWidth={1.5} /> },
+    { to: '/companies', label: 'Companies', icon: <Building2 size={16} strokeWidth={1.5} />, count: companiesCount > 0 ? companiesCount : undefined },
     { to: '/contacts', label: 'Contacts', icon: <Users size={16} strokeWidth={1.5} /> },
     { to: '/interviews', label: 'Interviews', icon: <Calendar size={16} strokeWidth={1.5} />, count: interviewsCount > 0 ? interviewsCount : undefined },
     { to: '/resumes', label: 'Resumes', icon: <FileText size={16} strokeWidth={1.5} /> },

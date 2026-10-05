@@ -9,6 +9,7 @@ import { CreateApplicationPage } from '@/features/applications/pages/create-appl
 import { ApplicationDetailPage } from '@/features/applications/pages/application-detail-page';
 import { InterviewsPage } from '@/features/interviews/pages/interviews-page';
 import { SavedJobsPage } from '@/features/saved-jobs/pages/saved-jobs-page';
+import { CompaniesPage } from '@/features/companies/pages/companies-page';
 
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
 
@@ -46,6 +47,14 @@ const router = createBrowserRouter([
           {
             path: '/applications/:id',
             element: <ApplicationDetailPage />,
+          },
+          {
+            path: '/companies',
+            element: <CompaniesPage />,
+          },
+          {
+            path: '/companies/:id',
+            element: <CompaniesPage />,
           },
           {
             path: '/interviews',

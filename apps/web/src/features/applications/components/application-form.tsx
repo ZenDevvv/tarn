@@ -25,6 +25,7 @@ import { CreateApplicationInput } from '@tracker/validation';
 
 export interface ApplicationFormProps {
   initialStatus?: ApplicationStatus;
+  initialCompanyName?: string;
   isModal?: boolean;
   onSubmit?: (data: CreateApplicationInput) => Promise<any>;
   onSuccess?: (app: ApplicationDTO) => void;
@@ -36,6 +37,7 @@ export interface ApplicationFormProps {
 
 export function ApplicationForm({
   initialStatus = 'APPLIED',
+  initialCompanyName = '',
   isModal = false,
   onSubmit,
   onSuccess,
@@ -58,7 +60,7 @@ export function ApplicationForm({
   } | null>(null);
 
   // Form Fields
-  const [companyName, setCompanyName] = useState('');
+  const [companyName, setCompanyName] = useState(initialCompanyName);
   const [position, setPosition] = useState('');
   const [status, setStatus] = useState<ApplicationStatus>(initialStatus);
   const [priority, setPriority] = useState<Priority>('MEDIUM');

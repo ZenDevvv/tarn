@@ -243,5 +243,39 @@
 - [x] SSRF security guards and fallback heuristics verified
 - [x] Zero build or test failures
 
+---
+
+## Phase 10: Companies Hub & Directory (`companies`)
+
+- [x] **Task 10.1: Shared Types & Validation Schemas**
+  - **Acceptance:** `CompanyWithDetailsDTO` defined in `packages/types/src/entities.ts` with application statistics. `companyFiltersSchema` and refined `createCompanySchema` defined in `packages/validation/src/company.schema.ts`.
+  - **Verify:** `pnpm build`
+  - **Files:** `packages/types/src/entities.ts`, `packages/validation/src/company.schema.ts`
+
+- [x] **Task 10.2: Backend Companies REST API & Automated Tests**
+  - **Acceptance:** Full CRUD and search/filter endpoints (`GET /api/v1/companies`, `GET /api/v1/companies/:id`, `POST /api/v1/companies`, `PATCH /api/v1/companies/:id`, `DELETE /api/v1/companies/:id`) with strict user tenant isolation. Supertest integration test suite with 8 tests passing.
+  - **Verify:** `pnpm --filter @tracker/api test`
+  - **Files:** `apps/api/src/modules/companies/*`, `apps/api/tests/companies.test.ts`, `apps/api/src/app.ts`
+
+- [x] **Task 10.3: Frontend UI Components & Markers**
+  - **Acceptance:** `CompanyCard` with Bricolage Grotesque typography, website link, location/industry badges, active pipeline counter, recent application status pills. `CompanyFilters` with search, industry filter, active filter, and sort options. `CompanyDetailModal` with full history and quick "New role" action. `CompanyFormModal` with validation. Reusable `ConfirmDeleteModal` integration.
+  - **Verify:** `pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/companies/components/*`
+
+- [x] **Task 10.4: Companies Page & Layout Integration**
+  - **Acceptance:** `CompaniesPage` at `/companies` with statistics summary strip, responsive card grid, empty states, and modal workflows. Active company count badge in sidebar navigation. Support for `?company=...` prefilling in `/applications/new`.
+  - **Verify:** `pnpm test && pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/companies/pages/companies-page.tsx`, `apps/web/src/app/router.tsx`, `apps/web/src/layouts/app-layout.tsx`
+
+---
+
+### Checkpoint: Companies Hub Complete
+- [x] Dedicated `/companies` route with Marker styling and responsive layout
+- [x] Full CRUD operations for companies with tenant isolation
+- [x] Live count badge in sidebar navigation
+- [x] Pre-fills company name in application creation
+- [x] All 63 backend integration tests and all frontend tests passing (100% green)
+
+
 
 

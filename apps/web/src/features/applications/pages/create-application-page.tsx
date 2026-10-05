@@ -1,9 +1,11 @@
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { ApplicationForm } from '../components/application-form';
 
 export function CreateApplicationPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialCompany = searchParams.get('company') || '';
 
   return (
     <div className="max-w-[760px] mx-auto w-full">
@@ -27,6 +29,7 @@ export function CreateApplicationPage() {
       <div className="bg-card border border-border rounded-lg p-6 sm:p-8">
         <ApplicationForm
           initialStatus="APPLIED"
+          initialCompanyName={initialCompany}
           isModal={false}
           onSuccess={(res) => {
             if (res?.id) {

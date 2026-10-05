@@ -73,6 +73,30 @@ export interface CompanyDTO {
   industry?: string | null;
   location?: string | null;
   description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CompanyWithDetailsDTO extends CompanyDTO {
+  createdAt: string;
+  updatedAt: string;
+  applicationsCount: number;
+  activeApplicationsCount: number;
+  applications: Array<{
+    id: string;
+    status: ApplicationStatus;
+    priority: Priority;
+    appliedAt: string;
+    job?: {
+      id: string;
+      title: string;
+      location?: string | null;
+      workSetup?: WorkSetup | null;
+      salaryMin?: number | null;
+      salaryMax?: number | null;
+      currency?: string | null;
+    } | null;
+  }>;
 }
 
 export interface JobDTO {

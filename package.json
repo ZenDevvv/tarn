@@ -5,7 +5,7 @@
   "description": "Personal Job Application Tracker with Marker design system",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "pnpm --parallel --filter \"@tracker/*\" dev",
+    "dev": "docker compose up -d && pnpm --parallel --filter \"@tracker/*\" dev",
     "dev:api": "pnpm --filter @tracker/api dev",
     "dev:web": "pnpm --filter @tracker/web dev",
     "build": "pnpm --recursive --filter \"./packages/*\" --filter \"./apps/*\" build",

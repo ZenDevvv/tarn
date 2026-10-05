@@ -41,11 +41,13 @@ import { applicationRouter } from './modules/applications/application.routes';
 import { followUpRouter } from './modules/follow-ups/follow-up.routes';
 import { analyticsRouter } from './modules/analytics/analytics.routes';
 import { interviewRouter } from './modules/interviews/interview.routes';
+import { companyRouter } from './modules/companies/company.routes';
 
 // Root routes placeholder
 export const apiRouter = express.Router();
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/applications', applicationRouter);
+apiRouter.use('/companies', companyRouter);
 apiRouter.use('/follow-ups', followUpRouter);
 apiRouter.use('/analytics', analyticsRouter);
 apiRouter.use('/interviews', interviewRouter);
