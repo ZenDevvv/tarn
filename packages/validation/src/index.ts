@@ -7,3 +7,4 @@ export * from './contact.schema';
 export * from './resume.schema';
 export * from './analytics.schema';
 export * from './settings.schema';
+export * from './status.schema';

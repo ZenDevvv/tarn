@@ -24,7 +24,8 @@ export const employmentTypeEnum = z.enum([
 export const createApplicationSchema = z.object({
   companyName: z.string().trim().min(1, 'Company name is required'),
   position: z.string().trim().min(1, 'Position title is required'),
-  status: applicationStatusEnum.default('SAVED'),
+  statusId: z.string().trim().optional(),
+  status: z.string().trim().optional(),
   priority: priorityEnum.default('MEDIUM'),
   source: z.string().trim().optional().nullable(),
   sourceUrl: z
@@ -56,12 +57,16 @@ export const updateApplicationSchema = createApplicationSchema.partial().omit({
   position: z.string().trim().min(1).optional(),
 });
 
-export const updateStatusSchema = z.object({
-  status: applicationStatusEnum,
+export const updateApplicationStatusSchema = z.object({
+  statusId: z.string().trim().min(1, 'Status ID is required').optional(),
+  status: z.string().trim().min(1).optional(),
+}).refine((data) => data.statusId || data.status, {
+  message: 'Status ID is required',
 });
 
 export const applicationFiltersSchema = z.object({
-  status: applicationStatusEnum.optional(),
+  statusId: z.string().trim().optional(),
+  status: z.string().trim().optional(),
   search: z.string().trim().optional(),
   source: z.string().trim().optional(),
   workSetup: workSetupEnum.optional(),
@@ -73,7 +78,7 @@ export const applicationFiltersSchema = z.object({
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;
-export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
+export type UpdateApplicationStatusInput = z.infer<typeof updateApplicationStatusSchema>;
 export type ApplicationFiltersInput = z.infer<typeof applicationFiltersSchema>;
 
 export const parseJobUrlSchema = z.object({

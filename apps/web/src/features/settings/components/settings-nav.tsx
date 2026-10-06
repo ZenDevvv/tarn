@@ -1,8 +1,8 @@
 import React from 'react';
-import { User, Sliders, Shield, Database } from 'lucide-react';
+import { User, Sliders, Shield, Database, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-export type SettingsTab = 'profile' | 'preferences' | 'security' | 'data';
+export type SettingsTab = 'profile' | 'preferences' | 'stages' | 'security' | 'data';
 
 interface SettingsNavProps {
   activeTab: SettingsTab;
@@ -12,6 +12,7 @@ interface SettingsNavProps {
 const TABS: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
   { id: 'profile', label: 'Profile', icon: <User size={16} strokeWidth={1.5} /> },
   { id: 'preferences', label: 'Preferences', icon: <Sliders size={16} strokeWidth={1.5} /> },
+  { id: 'stages', label: 'Pipeline & Stages', icon: <GitBranch size={16} strokeWidth={1.5} /> },
   { id: 'security', label: 'Security', icon: <Shield size={16} strokeWidth={1.5} /> },
   { id: 'data', label: 'Data & Account', icon: <Database size={16} strokeWidth={1.5} /> },
 ];

@@ -49,7 +49,7 @@ describe('Timeline & Follow-ups Integration Tests', () => {
       .send({ status: 'INTERVIEWING' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.status).toBe('INTERVIEWING');
+    expect(res.body.data.status.name).toBe('Interviewing');
 
     // Verify timeline
     const timelineRes = await request(app)
@@ -62,7 +62,7 @@ describe('Timeline & Follow-ups Integration Tests', () => {
       (e: any) => e.type === 'STATUS_CHANGED'
     );
     expect(statusEvent).toBeDefined();
-    expect(statusEvent.description).toContain('APPLIED to INTERVIEWING');
+    expect(statusEvent.description).toContain('Applied to Interviewing');
   });
 
   it('POST /api/v1/applications/:id/timeline/note adds custom note to timeline', async () => {

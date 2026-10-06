@@ -28,6 +28,7 @@ export const companyRepository = {
           where: { archivedAt: null },
           include: {
             job: true,
+            status: true,
           },
           orderBy: { appliedAt: 'desc' },
         },
@@ -40,7 +41,7 @@ export const companyRepository = {
     // Format and calculate application statistics
     const mapped = companies.map((c) => {
       const activeApplications = c.applications.filter(
-        (app) => !['REJECTED', 'WITHDRAWN'].includes(app.status)
+        (app) => !app.status || app.status.closeType === null
       );
 
       return {
@@ -56,7 +57,7 @@ export const companyRepository = {
         activeApplicationsCount: activeApplications.length,
         applications: c.applications.map((app) => ({
           id: app.id,
-          status: app.status,
+          status: app.status?.name || 'Saved',
           priority: app.priority,
           appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
           job: app.job
@@ -114,6 +115,7 @@ export const companyRepository = {
           where: { archivedAt: null },
           include: {
             job: true,
+            status: true,
           },
           orderBy: { appliedAt: 'desc' },
         },
@@ -123,7 +125,7 @@ export const companyRepository = {
     if (!company) return null;
 
     const activeApplications = company.applications.filter(
-      (app) => !['REJECTED', 'WITHDRAWN'].includes(app.status)
+      (app) => !app.status || app.status.closeType === null
     );
 
     return {
@@ -139,7 +141,7 @@ export const companyRepository = {
       activeApplicationsCount: activeApplications.length,
       applications: company.applications.map((app) => ({
         id: app.id,
-        status: app.status,
+        status: app.status?.name || 'Saved',
         priority: app.priority,
         appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
         job: app.job

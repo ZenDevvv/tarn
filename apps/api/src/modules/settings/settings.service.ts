@@ -9,12 +9,6 @@ import {
 } from '@tracker/types';
 import { AuthenticationError, NotFoundError } from '../../middleware/error-handler';
 
-const ACTIVE_STATUSES = [
-  'APPLIED',
-  'INTERVIEWING',
-  'OFFER',
-] as const;
-
 export const settingsService = {
   async getSettings(userId: string): Promise<UserSettingsDTO> {
     const user = await prisma.user.findUnique({
@@ -37,7 +31,7 @@ export const settingsService = {
       prisma.application.count({
         where: {
           userId,
-          status: { in: ACTIVE_STATUSES as any },
+          status: { closeType: null },
           archivedAt: null,
         },
       }),
@@ -174,6 +168,7 @@ export const settingsService = {
           include: {
             company: true,
             job: true,
+            status: true,
             timelineEvents: true,
             interviews: true,
             followUps: true,
@@ -187,6 +182,9 @@ export const settingsService = {
             },
           },
           orderBy: { createdAt: 'desc' },
+        },
+        statuses: {
+          orderBy: { order: 'asc' },
         },
         companies: {
           orderBy: { createdAt: 'desc' },

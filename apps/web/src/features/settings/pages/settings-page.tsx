@@ -4,6 +4,7 @@ import { settingsApi } from '../api/settings-api';
 import { SettingsNav, SettingsTab } from '../components/settings-nav';
 import { ProfileSection } from '../components/profile-section';
 import { PreferencesSection } from '../components/preferences-section';
+import { PipelineStagesSection } from '../components/pipeline-stages-section';
 import { SecuritySection } from '../components/security-section';
 import { DataSection } from '../components/data-section';
 import { useAuth } from '@/features/auth/context/auth-context';
@@ -14,7 +15,7 @@ import {
 } from '@tracker/types';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
-const VALID_TABS: readonly SettingsTab[] = ['profile', 'preferences', 'security', 'data'];
+const VALID_TABS: readonly SettingsTab[] = ['profile', 'preferences', 'stages', 'security', 'data'];
 
 export function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -142,6 +143,10 @@ export function SettingsPage() {
             }}
             isSaving={preferencesMutation.isPending}
           />
+        )}
+
+        {activeTab === 'stages' && (
+          <PipelineStagesSection />
         )}
 
         {activeTab === 'security' && (

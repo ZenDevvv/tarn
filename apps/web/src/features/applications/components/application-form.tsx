@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { applicationApi } from '../api/application-api';
 import { STATUS_CONFIG, StageRing } from './application-status-badge';
+import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { Select } from '@/components/ui/select';
 import {
   ApplicationStatus,
@@ -60,9 +61,11 @@ export function ApplicationForm({
   } | null>(null);
 
   // Form Fields
+  const { data: userStatuses } = useApplicationStatuses();
   const [companyName, setCompanyName] = useState(initialCompanyName);
   const [position, setPosition] = useState('');
   const [status, setStatus] = useState<ApplicationStatus>(initialStatus);
+  const [statusId, setStatusId] = useState<string | null>(null);
   const [priority, setPriority] = useState<Priority>('MEDIUM');
   const [workSetup, setWorkSetup] = useState<WorkSetup | ''>('REMOTE');
   const [employmentType, setEmploymentType] = useState<EmploymentType | ''>('FULL_TIME');
@@ -86,9 +89,25 @@ export function ApplicationForm({
   const lastExtractedSnippetRef = useRef<string>('');
   const lastExtractedUrlRef = useRef<string>('');
 
+  // Initialize statusId once userStatuses load if not set
+  useEffect(() => {
+    if (userStatuses && userStatuses.length > 0 && !statusId) {
+      const match = userStatuses.find(
+        (s) => s.name === status || s.name.toUpperCase() === (status || '').toUpperCase()
+      );
+      if (match) {
+        setStatusId(match.id);
+      }
+    }
+  }, [userStatuses, status, statusId]);
+
   // Notify parent of status changes if requested
   const handleStatusChange = (newStatus: ApplicationStatus) => {
     setStatus(newStatus);
+    const match = userStatuses?.find(
+      (s) => s.name === newStatus || s.name.toUpperCase() === newStatus.toUpperCase()
+    );
+    if (match) setStatusId(match.id);
     onStatusChange?.(newStatus);
   };
 
@@ -269,12 +288,17 @@ export function ApplicationForm({
 
     setIsSubmitting(true);
 
-    const isSaved = status === 'SAVED';
+    const matchedStatus = userStatuses?.find(
+      (s) => s.id === statusId || s.name === status || s.name.toUpperCase() === (status || '').toUpperCase()
+    );
+    const resolvedStatusId = matchedStatus?.id || statusId || undefined;
+    const isSaved = (matchedStatus?.name || status).toUpperCase() === 'SAVED';
 
     const payload: CreateApplicationInput = {
       companyName: companyName.trim(),
       position: position.trim(),
       status,
+      statusId: resolvedStatusId,
       priority,
       workSetup: workSetup || null,
       employmentType: employmentType || null,
@@ -466,11 +490,25 @@ export function ApplicationForm({
               id="form-stage-status"
               value={status}
               onChange={handleStatusChange}
-              options={Object.entries(STATUS_CONFIG).map(([key, config]) => ({
-                value: key as ApplicationStatus,
-                label: config.label,
-                icon: <StageRing status={key as ApplicationStatus} size={15} />,
-              }))}
+              options={
+                userStatuses && userStatuses.length > 0
+                  ? userStatuses.map((s) => ({
+                      value: s.name as ApplicationStatus,
+                      label: s.name,
+                      icon: (
+                        <StageRing
+                          status={s}
+                          size={15}
+                          totalStages={userStatuses.filter((x) => x.closeType === null).length}
+                        />
+                      ),
+                    }))
+                  : Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+                      value: key as ApplicationStatus,
+                      label: config.label,
+                      icon: <StageRing status={key as ApplicationStatus} size={15} />,
+                    }))
+              }
             />
           </div>
 

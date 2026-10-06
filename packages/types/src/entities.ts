@@ -1,12 +1,39 @@
-export type ApplicationStatus =
-  | 'SAVED'
-  | 'APPLIED'
-  | 'INTERVIEWING'
-  | 'OFFER'
-  | 'ACCEPTED'
-  | 'REJECTED'
-  | 'WITHDRAWN'
-  | 'NO_RESPONSE';
+export type CloseType = 'REJECTED' | 'WITHDRAWN' | 'NO_RESPONSE' | 'CANCELLED' | 'OTHER';
+
+export interface ApplicationStatusDTO {
+  id: string;
+  userId: string;
+  name: string;
+  order: number | null;
+  closeType: CloseType | null;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ApplicationStatus = string;
+
+export interface CreateApplicationStatusInput {
+  name: string;
+  order?: number;
+  closeType?: CloseType | null;
+  isDefault?: boolean;
+}
+
+export type CreateStatusInput = CreateApplicationStatusInput;
+
+export interface UpdateApplicationStatusInput {
+  name?: string;
+  order?: number;
+  closeType?: CloseType | null;
+  isDefault?: boolean;
+}
+
+export type UpdateStatusInput = UpdateApplicationStatusInput;
+
+export interface ReorderStatusesInput {
+  statusIds: string[];
+}
 
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -116,7 +143,9 @@ export interface ApplicationDTO {
   userId: string;
   companyId: string;
   jobId: string;
+  statusId?: string;
   status: ApplicationStatus;
+  statusDetail?: ApplicationStatusDTO;
   priority: Priority;
   appliedAt?: string | null;
   nextAction?: string | null;
@@ -226,10 +255,20 @@ export interface DashboardUpcomingInterviewDTO {
   prepTotal: number;
 }
 
+export interface PipelineStageCountDTO {
+  status: ApplicationStatusDTO;
+  count: number;
+}
+
+export interface PipelineSummaryDTO {
+  activeStages: PipelineStageCountDTO[];
+  closedOutcomes: PipelineStageCountDTO[];
+}
+
 export interface DashboardAnalyticsDTO {
   summary: DashboardSummaryDTO;
   weeklyVelocity: WeeklyVelocityDTO;
-  pipeline: Record<ApplicationStatus, number>;
+  pipeline: PipelineSummaryDTO;
   upcomingInterviews?: DashboardUpcomingInterviewDTO[];
 }
 
@@ -384,7 +423,8 @@ export interface SalaryInsightsDTO {
 }
 
 export interface StatusDistributionDTO {
-  status: ApplicationStatus;
+  status: ApplicationStatusDTO;
+  name: string;
   count: number;
   percentage: number;
 }

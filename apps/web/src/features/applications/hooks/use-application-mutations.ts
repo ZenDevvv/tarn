@@ -6,11 +6,11 @@ export function useApplicationStatusMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: ApplicationStatus }) =>
-      applicationApi.updateStatus(id, status),
+    mutationFn: ({ id, status, statusId }: { id: string; status?: ApplicationStatus; statusId?: string }) =>
+      applicationApi.updateStatus(id, (statusId || status) as string),
 
     // Optimistic Update
-    onMutate: async ({ id, status }) => {
+    onMutate: async ({ id, status, statusId }) => {
       // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: ['applications'] });
       await queryClient.cancelQueries({ queryKey: ['dashboard'] });
@@ -25,7 +25,15 @@ export function useApplicationStatusMutation() {
           if (!old) return old;
           return {
             ...old,
-            data: old.data.map((app) => (app.id === id ? { ...app, status } : app)),
+            data: old.data.map((app) =>
+              app.id === id
+                ? {
+                    ...app,
+                    status: (status || app.status) as ApplicationStatus,
+                    statusId: statusId || app.statusId,
+                  }
+                : app
+            ),
           };
         }
       );

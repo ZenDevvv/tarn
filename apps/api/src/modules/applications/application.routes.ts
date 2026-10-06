@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   createApplicationSchema,
   updateApplicationSchema,
-  updateStatusSchema,
+  updateApplicationStatusSchema,
   applicationFiltersSchema,
   parseJobUrlSchema,
   parseJobTextSchema,
@@ -25,7 +25,7 @@ applicationRouter.post('/', validateBody(createApplicationSchema), applicationCo
 applicationRouter.get('/', validateQuery(applicationFiltersSchema), applicationController.list);
 applicationRouter.get('/:id', applicationController.getById);
 applicationRouter.patch('/:id', validateBody(updateApplicationSchema), applicationController.update);
-applicationRouter.patch('/:id/status', validateBody(updateStatusSchema), applicationController.updateStatus);
+applicationRouter.patch('/:id/status', validateBody(updateApplicationStatusSchema), applicationController.updateStatus);
 applicationRouter.delete('/:id', applicationController.archive);
 applicationRouter.get('/:id/interviews', interviewController.listByApplication);
 

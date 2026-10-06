@@ -1,6 +1,6 @@
 import {
   PrismaClient,
-  ApplicationStatus,
+  CloseType,
   Priority,
   WorkSetup,
   EmploymentType,
@@ -23,6 +23,7 @@ async function main() {
   await prisma.followUp.deleteMany();
   await prisma.timelineEvent.deleteMany();
   await prisma.application.deleteMany();
+  await prisma.applicationStatus.deleteMany();
   await prisma.job.deleteMany();
   await prisma.company.deleteMany();
   await prisma.user.deleteMany();
@@ -46,12 +47,38 @@ async function main() {
   const twoDaysLater = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
   const fiveDaysLater = new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000);
 
+  // Seed default application statuses for user
+  const defaultStatuses = [
+    { name: 'Saved', order: 0, closeType: null, isDefault: true },
+    { name: 'Applied', order: 1, closeType: null, isDefault: false },
+    { name: 'Interviewing', order: 2, closeType: null, isDefault: false },
+    { name: 'Offer', order: 3, closeType: null, isDefault: false },
+    { name: 'Accepted', order: 4, closeType: null, isDefault: false },
+    { name: 'Rejected', order: null, closeType: CloseType.REJECTED, isDefault: true },
+    { name: 'Withdrawn', order: null, closeType: CloseType.WITHDRAWN, isDefault: true },
+    { name: 'No response', order: null, closeType: CloseType.NO_RESPONSE, isDefault: true },
+  ];
+
+  const statusMap = new Map<string, any>();
+  for (const s of defaultStatuses) {
+    const createdStatus = await prisma.applicationStatus.create({
+      data: {
+        userId: user.id,
+        name: s.name,
+        order: s.order,
+        closeType: s.closeType,
+        isDefault: s.isDefault,
+      },
+    });
+    statusMap.set(s.name.toUpperCase(), createdStatus);
+  }
+
   // Seed applications matching Dashboard sample
   const appData = [
     {
       company: 'Halcyon Labs',
       role: 'Frontend Developer',
-      status: ApplicationStatus.INTERVIEWING,
+      statusKey: 'INTERVIEWING',
       priority: Priority.HIGH,
       source: 'LinkedIn',
       sourceUrl: 'https://linkedin.com/jobs/view/12345',
@@ -66,7 +93,7 @@ async function main() {
     {
       company: 'Northbeam',
       role: 'React Engineer',
-      status: ApplicationStatus.INTERVIEWING,
+      statusKey: 'INTERVIEWING',
       priority: Priority.MEDIUM,
       source: 'JobStreet',
       sourceUrl: 'https://jobstreet.com/jobs/view/23456',
@@ -81,7 +108,7 @@ async function main() {
     {
       company: 'Kite & Compass',
       role: 'Full Stack Developer',
-      status: ApplicationStatus.APPLIED,
+      statusKey: 'APPLIED',
       priority: Priority.MEDIUM,
       source: 'OnlineJobsPH',
       sourceUrl: 'https://onlinejobs.ph/job/34567',
@@ -96,7 +123,7 @@ async function main() {
     {
       company: 'Pageturn',
       role: 'Frontend Developer',
-      status: ApplicationStatus.APPLIED,
+      statusKey: 'APPLIED',
       priority: Priority.LOW,
       source: 'Indeed',
       sourceUrl: 'https://indeed.com/viewjob?jk=45678',
@@ -111,7 +138,7 @@ async function main() {
     {
       company: 'Orbit Freight',
       role: 'QA Engineer',
-      status: ApplicationStatus.REJECTED,
+      statusKey: 'REJECTED',
       priority: Priority.LOW,
       source: 'JobStreet',
       sourceUrl: 'https://jobstreet.com/jobs/view/56789',
@@ -126,7 +153,7 @@ async function main() {
     {
       company: 'Lumen Health',
       role: 'Full Stack Developer',
-      status: ApplicationStatus.OFFER,
+      statusKey: 'OFFER',
       priority: Priority.HIGH,
       source: 'Referral',
       sourceUrl: null,
@@ -144,6 +171,7 @@ async function main() {
   const appMap = new Map<string, any>();
 
   for (const item of appData) {
+    const statusObj = statusMap.get(item.statusKey);
     const company = await prisma.company.create({
       data: {
         userId: user.id,
@@ -173,7 +201,7 @@ async function main() {
         userId: user.id,
         companyId: company.id,
         jobId: job.id,
-        status: item.status,
+        statusId: statusObj.id,
         priority: item.priority,
         appliedAt: item.appliedAt,
         nextAction: item.nextAction,
@@ -195,12 +223,12 @@ async function main() {
       },
     });
 
-    if (item.status !== ApplicationStatus.APPLIED) {
+    if (item.statusKey !== 'APPLIED') {
       await prisma.timelineEvent.create({
         data: {
           applicationId: app.id,
           type: TimelineEventType.STATUS_CHANGED,
-          title: `Moved to ${item.status.replace(/_/g, ' ').toLowerCase()}`,
+          title: `Moved to ${statusObj.name.toLowerCase()}`,
           occurredAt: new Date(item.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000),
         },
       });

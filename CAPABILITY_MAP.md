@@ -21,6 +21,7 @@
 | `kanban-pipeline` | Kanban board with status columns, stage transitions, keyboard controls, optimistic UI updates | Multi-column board (`rounded-xl`), stage rings, drag tilt & drop slot | `applications`, `timeline` |
 | `interviews` | Multi-stage interview scheduling, rounds (HR, Tech, Behavioral, Final), preparation notes, meeting links, timeline events, and dynamic dashboard feed | `Interview` model, `apps/api/src/modules/interviews`, `apps/web/src/features/interviews` | `applications`, `timeline` |
 | `saved-jobs` | Dedicated pre-application opportunity bookmarking, quick-save modal, 1-click conversion to applied, platform filtering | `apps/web/src/features/saved-jobs`, `SavedJobCard`, `QuickSaveModal` | `applications` |
+| `statuses` | Dynamic user-configurable application statuses, pipeline stages, closed outcomes, order-based StageRing & funnel | `ApplicationStatus`, `CloseType`, dynamic `StageRing`, `PipelineStagesSection` | `applications`, `auth` |
 
 ---
 
@@ -43,6 +44,7 @@ foundation ──▶ auth ──▶ companies-jobs ──▶ applications ──
 7. **`dashboard-analytics`**: Fast aggregated analytics queries and modern dashboard overview ("Needs you today", stats strip, pipeline strip, recent applications).
 8. **`kanban-pipeline`**: Interactive Kanban board with status columns, keyboard path, and optimistic mutations.
 9. **`interviews`** *(Phase 2)*: Multi-round interview tracking (HR, Technical, System Design, Final, etc.), meeting links, preparation notes, timeline logging, `/interviews` hub, application detail integration, and dynamic dashboard integration.
+10. **`statuses`** *(Phase 13)*: Dynamic workflow pipeline stages and terminal outcomes (`ApplicationStatus`), order-based dynamic `StageRing` fractions, dynamic Kanban & funnel, and Settings pipeline management hub (`/settings?tab=stages`).
 
 ---
 

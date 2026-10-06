@@ -1,10 +1,47 @@
-import { prisma, Prisma, ApplicationStatus, WorkSetup } from '@tracker/database';
+import { prisma, Prisma, WorkSetup } from '@tracker/database';
 import { CreateApplicationInput, UpdateApplicationInput, ApplicationFiltersInput } from '@tracker/validation';
+import { statusRepository } from '../statuses/status.repository';
 
 export const applicationRepository = {
   async createWithRelations(userId: string, input: CreateApplicationInput) {
     return prisma.$transaction(async (tx) => {
-      // 1. Find or create company for this user
+      // 1. Resolve ApplicationStatus
+      let status: any = null;
+      if (input.statusId) {
+        status = await tx.applicationStatus.findFirst({
+          where: { id: input.statusId, userId },
+        });
+      }
+
+      if (!status && input.status) {
+        status = await tx.applicationStatus.findFirst({
+          where: {
+            userId,
+            name: { equals: input.status, mode: 'insensitive' },
+          },
+        });
+      }
+
+      if (!status) {
+        status =
+          (await tx.applicationStatus.findFirst({
+            where: { userId, isDefault: true },
+          })) ||
+          (await tx.applicationStatus.findFirst({
+            where: { userId },
+            orderBy: { order: 'asc' },
+          }));
+      }
+
+      // If user still has no statuses seeded, seed now
+      if (!status) {
+        await statusRepository.seedDefaultStatuses(userId);
+        status = await tx.applicationStatus.findFirst({
+          where: { userId, isDefault: true },
+        });
+      }
+
+      // 2. Find or create company for this user
       let company = await tx.company.findFirst({
         where: {
           userId,
@@ -22,7 +59,7 @@ export const applicationRepository = {
         });
       }
 
-      // 2. Create Job
+      // 3. Create Job
       const job = await tx.job.create({
         data: {
           userId,
@@ -43,13 +80,13 @@ export const applicationRepository = {
       const appliedDate = input.appliedAt ? new Date(input.appliedAt) : new Date();
       const nextActionDueDate = input.nextActionDueAt ? new Date(input.nextActionDueAt) : null;
 
-      // 3. Create Application
+      // 4. Create Application
       const application = await tx.application.create({
         data: {
           userId,
           companyId: company.id,
           jobId: job.id,
-          status: (input.status as ApplicationStatus) || ApplicationStatus.SAVED,
+          statusId: status.id,
           priority: (input.priority as any) || 'MEDIUM',
           appliedAt: appliedDate,
           nextAction: input.nextAction,
@@ -60,11 +97,12 @@ export const applicationRepository = {
         include: {
           company: true,
           job: true,
+          status: true,
           resume: true,
         },
       });
 
-      // 4. Record initial TimelineEvent
+      // 5. Record initial TimelineEvent
       await tx.timelineEvent.create({
         data: {
           applicationId: application.id,
@@ -75,7 +113,7 @@ export const applicationRepository = {
         },
       });
 
-      // 5. If initial nextAction specified, record follow-up
+      // 6. If initial nextAction specified, record follow-up
       if (input.nextAction && nextActionDueDate) {
         await tx.followUp.create({
           data: {
@@ -99,8 +137,12 @@ export const applicationRepository = {
       archivedAt: null,
     };
 
-    if (filters.status) {
-      where.status = filters.status as ApplicationStatus;
+    if (filters.statusId) {
+      where.statusId = filters.statusId;
+    } else if (filters.status) {
+      where.status = {
+        name: { equals: filters.status, mode: 'insensitive' },
+      };
     }
 
     if (filters.source || filters.workSetup) {
@@ -131,6 +173,7 @@ export const applicationRepository = {
         include: {
           company: true,
           job: true,
+          status: true,
           resume: true,
           interviews: {
             orderBy: { scheduledAt: 'desc' },
@@ -161,6 +204,7 @@ export const applicationRepository = {
       include: {
         company: true,
         job: true,
+        status: true,
         resume: true,
         timelineEvents: {
           orderBy: { occurredAt: 'desc' },
@@ -176,7 +220,7 @@ export const applicationRepository = {
     return prisma.$transaction(async (tx) => {
       const existing = await tx.application.findFirst({
         where: { id, userId, archivedAt: null },
-        include: { job: true, company: true },
+        include: { job: true, company: true, status: true },
       });
 
       if (!existing) return null;
@@ -206,11 +250,23 @@ export const applicationRepository = {
         },
       });
 
+      // Resolve statusId if provided
+      let statusId = input.statusId;
+      if (!statusId && input.status) {
+        const found = await tx.applicationStatus.findFirst({
+          where: {
+            userId,
+            name: { equals: input.status, mode: 'insensitive' },
+          },
+        });
+        if (found) statusId = found.id;
+      }
+
       // Update Application
       return tx.application.update({
         where: { id },
         data: {
-          status: input.status as ApplicationStatus | undefined,
+          statusId: statusId ?? undefined,
           priority: input.priority as any,
           appliedAt: input.appliedAt ? new Date(input.appliedAt) : undefined,
           nextAction: input.nextAction,
@@ -221,37 +277,56 @@ export const applicationRepository = {
         include: {
           company: true,
           job: true,
+          status: true,
           resume: true,
         },
       });
     });
   },
 
-  async updateStatus(userId: string, id: string, newStatus: ApplicationStatus) {
+  async updateStatus(userId: string, id: string, newStatusIdOrName: string) {
     return prisma.$transaction(async (tx) => {
       const existing = await tx.application.findFirst({
         where: { id, userId, archivedAt: null },
+        include: { status: true },
       });
 
       if (!existing) return null;
 
+      // Find target status
+      let newStatus = await tx.applicationStatus.findFirst({
+        where: { id: newStatusIdOrName, userId },
+      });
+
+      if (!newStatus) {
+        newStatus = await tx.applicationStatus.findFirst({
+          where: {
+            userId,
+            name: { equals: newStatusIdOrName, mode: 'insensitive' },
+          },
+        });
+      }
+
+      if (!newStatus) return null;
+
       const oldStatus = existing.status;
       const updated = await tx.application.update({
         where: { id },
-        data: { status: newStatus },
+        data: { statusId: newStatus.id },
         include: {
           company: true,
           job: true,
+          status: true,
         },
       });
 
-      if (oldStatus !== newStatus) {
+      if (oldStatus.id !== newStatus.id) {
         await tx.timelineEvent.create({
           data: {
             applicationId: id,
             type: 'STATUS_CHANGED',
-            title: `Stage updated to ${newStatus.replace(/_/g, ' ').toLowerCase()}`,
-            description: `Stage moved from ${oldStatus} to ${newStatus}`,
+            title: `Stage updated to ${newStatus.name.toLowerCase()}`,
+            description: `Stage moved from ${oldStatus.name} to ${newStatus.name}`,
             occurredAt: new Date(),
           },
         });

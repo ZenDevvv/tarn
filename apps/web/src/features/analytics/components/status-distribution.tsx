@@ -39,14 +39,16 @@ export function StatusDistribution({ distribution }: StatusDistributionProps) {
       </div>
 
       <div className="grid grid-cols-6 max-[1023px]:grid-cols-4 max-[639px]:grid-cols-2 gap-3">
-        {distribution.map(({ status, count, percentage }) => {
+        {distribution.map(({ status, name, count, percentage }) => {
           const isZero = count === 0;
-          const label = STAGE_LABELS[status] || status;
+          const label = name || (typeof status === 'string' ? (STAGE_LABELS[status as any] || status) : status.name);
+          const statusKey = typeof status === 'string' ? status : status.id;
+          const statusParam = typeof status === 'string' ? status : status.name;
 
           return (
             <Link
-              key={status}
-              to={`/applications?status=${status}`}
+              key={statusKey}
+              to={`/applications?status=${encodeURIComponent(statusParam)}`}
               className={cn(
                 'p-3.5 rounded-lg bg-card border border-border flex flex-col justify-between gap-2.5 no-underline transition-all group',
                 isZero

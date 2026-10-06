@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { ApplicationStatus, WorkSetup } from '@tracker/types';
 import { STATUS_CONFIG, StageRing } from './application-status-badge';
+import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { Select } from '@/components/ui/select';
 
 interface ApplicationFiltersProps {
@@ -20,6 +21,25 @@ export function ApplicationFilters({
   workSetup,
   onWorkSetupChange,
 }: ApplicationFiltersProps) {
+  const { data: userStatuses } = useApplicationStatuses();
+
+  const totalActiveStages = userStatuses?.filter((s) => s.closeType === null).length || 5;
+
+  const statusOptions = [
+    { value: '', label: 'All statuses' },
+    ...(userStatuses && userStatuses.length > 0
+      ? userStatuses.map((s) => ({
+          value: s.name,
+          label: s.name,
+          icon: <StageRing status={s} size={15} totalStages={totalActiveStages} />,
+        }))
+      : Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+          value: key,
+          label: config.label,
+          icon: <StageRing status={key as ApplicationStatus} size={15} />,
+        }))),
+  ];
+
   return (
     <div className="flex flex-wrap items-center gap-3 w-full">
       {/* Search Input with / shortcut badge */}
@@ -52,14 +72,7 @@ export function ApplicationFilters({
           onChange={(val) => onStatusChange((val as ApplicationStatus) || undefined)}
           placeholder="All statuses"
           aria-label="Filter by status"
-          options={[
-            { value: '', label: 'All statuses' },
-            ...Object.entries(STATUS_CONFIG).map(([key, config]) => ({
-              value: key,
-              label: config.label,
-              icon: <StageRing status={key as ApplicationStatus} size={15} />,
-            })),
-          ]}
+          options={statusOptions}
         />
       </div>
 

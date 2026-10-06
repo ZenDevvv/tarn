@@ -15,6 +15,7 @@ import {
 import { applicationApi } from '../api/application-api';
 import { resumeApi } from '@/features/resumes/api/resume-api';
 import { ApplicationStatusBadge, StageRing, STATUS_CONFIG } from '../components/application-status-badge';
+import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { PriorityGlyph } from '../components/priority-glyph';
 import { Select } from '@/components/ui/select';
 import { ApplicationTimeline } from '../components/application-timeline';
@@ -48,6 +49,8 @@ export function ApplicationDetailPage() {
     queryFn: () => resumeApi.getResumes({}),
   });
 
+  const { data: userStatuses } = useApplicationStatuses();
+
   const resumeMutation = useMutation({
     mutationFn: (resumeId: string | null) =>
       applicationApi.updateApplication(id!, { resumeId } as any),
@@ -59,7 +62,12 @@ export function ApplicationDetailPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (newStatus: ApplicationStatus) => applicationApi.updateStatus(id!, newStatus),
+    mutationFn: (newStatus: ApplicationStatus) => {
+      const matched = userStatuses?.find(
+        (s) => s.name === newStatus || s.id === newStatus || s.name.toUpperCase() === newStatus.toUpperCase()
+      );
+      return applicationApi.updateStatus(id!, matched ? matched.id : newStatus);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['application', id] });
       queryClient.invalidateQueries({ queryKey: ['applications'] });
@@ -161,11 +169,25 @@ export function ApplicationDetailPage() {
                 onChange={(val) => statusMutation.mutate(val)}
                 disabled={statusMutation.isPending}
                 aria-label="Change stage"
-                options={Object.entries(STATUS_CONFIG).map(([key, config]) => ({
-                  value: key as ApplicationStatus,
-                  label: config.label,
-                  icon: <StageRing status={key as ApplicationStatus} size={15} />,
-                }))}
+                options={
+                  userStatuses && userStatuses.length > 0
+                    ? userStatuses.map((s) => ({
+                        value: s.name as ApplicationStatus,
+                        label: s.name,
+                        icon: (
+                          <StageRing
+                            status={s}
+                            size={15}
+                            totalStages={userStatuses.filter((x) => x.closeType === null).length}
+                          />
+                        ),
+                      }))
+                    : Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+                        value: key as ApplicationStatus,
+                        label: config.label,
+                        icon: <StageRing status={key as ApplicationStatus} size={15} />,
+                      }))
+                }
               />
             </div>
 

@@ -1,0 +1,599 @@
+import React, { useState } from 'react';
+import {
+  useApplicationStatuses,
+  useCreateStatusMutation,
+  useUpdateStatusMutation,
+  useReorderStatusesMutation,
+  useDeleteStatusMutation,
+} from '../hooks/use-application-statuses';
+import { StageRing } from '@/features/applications/components/application-status-badge';
+import { CloseType } from '@tracker/types';
+import {
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  AlertCircle,
+  Loader2,
+  Lock,
+  GitBranch,
+} from 'lucide-react';
+import { cn } from '@/lib/cn';
+
+const ICON_STYLES: Array<{ type: CloseType; label: string }> = [
+  { type: 'CANCELLED', label: 'Slash (⊘)' },
+  { type: 'OTHER', label: 'Minus (⊖)' },
+  { type: 'WITHDRAWN', label: 'Dashed Ring' },
+  { type: 'REJECTED', label: 'Cross (✕)' },
+  { type: 'NO_RESPONSE', label: 'Dotted Ring' },
+];
+
+export function PipelineStagesSection() {
+  const { data: statuses, isLoading, error: queryError } = useApplicationStatuses();
+  const createMutation = useCreateStatusMutation();
+  const updateMutation = useUpdateStatusMutation();
+  const reorderMutation = useReorderStatusesMutation();
+  const deleteMutation = useDeleteStatusMutation();
+
+  const [newStageName, setNewStageName] = useState('');
+  const [newClosedName, setNewClosedName] = useState('');
+  const [newClosedType, setNewClosedType] = useState<CloseType>('CANCELLED');
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editingStageName, setEditingStageName] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 gap-3">
+        <Loader2 className="animate-spin text-primary" size={24} />
+        <span className="text-small text-muted-foreground font-sans">
+          Loading pipeline configuration...
+        </span>
+      </div>
+    );
+  }
+
+  if (queryError || !statuses) {
+    return (
+      <div className="p-6 border border-destructive/20 bg-destructive/5 rounded-lg text-center">
+        <p className="text-body font-medium text-destructive">
+          Failed to load pipeline stages
+        </p>
+        <p className="text-small text-muted-foreground mt-1">
+          {queryError instanceof Error ? queryError.message : 'Please check your connection and try again.'}
+        </p>
+      </div>
+    );
+  }
+
+  const activeStages = statuses
+    .filter((s) => s.closeType === null)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const closedOutcomes = statuses
+    .filter((s) => s.closeType !== null);
+
+  const totalActive = activeStages.length;
+
+  const showNotification = (msg: string, isErr = false) => {
+    if (isErr) {
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 6000);
+    } else {
+      setActionSuccess(msg);
+      setTimeout(() => setActionSuccess(null), 3500);
+    }
+  };
+
+  const handleAddStage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionError(null);
+    const trimmed = newStageName.trim();
+    if (!trimmed) return;
+
+    try {
+      await createMutation.mutateAsync({ name: trimmed });
+      setNewStageName('');
+      showNotification(`Added stage "${trimmed}" to active pipeline.`);
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to add stage.', true);
+    }
+  };
+
+  const handleAddClosedOutcome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionError(null);
+    const trimmed = newClosedName.trim();
+    if (!trimmed) return;
+
+    try {
+      await createMutation.mutateAsync({ name: trimmed, closeType: newClosedType });
+      setNewClosedName('');
+      showNotification(`Added closed outcome "${trimmed}".`);
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to add closed outcome.', true);
+    }
+  };
+
+  const handleStartEdit = (id: string, currentName: string) => {
+    setActionError(null);
+    setEditingStageId(id);
+    setEditingStageName(currentName);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    const trimmed = editingStageName.trim();
+    if (!trimmed) return;
+
+    try {
+      await updateMutation.mutateAsync({ id, input: { name: trimmed } });
+      setEditingStageId(null);
+      showNotification(`Renamed to "${trimmed}".`);
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to rename.', true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStageId(null);
+    setEditingStageName('');
+  };
+
+  const handleMove = async (currentIndex: number, direction: 'up' | 'down') => {
+    setActionError(null);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= activeStages.length) return;
+
+    const reordered = [...activeStages];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const payload = {
+      statusIds: reordered.map((stage) => stage.id),
+    };
+
+    try {
+      await reorderMutation.mutateAsync(payload);
+      showNotification('Updated pipeline sequence.');
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to reorder stages.', true);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    setActionError(null);
+    try {
+      await deleteMutation.mutateAsync(id);
+      setConfirmDeleteId(null);
+      showNotification(`Deleted "${name}".`);
+    } catch (err: any) {
+      setConfirmDeleteId(null);
+      showNotification(
+        err?.message || 'Cannot delete while applications are currently assigned to it.',
+        true
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-8 w-full">
+      {/* Section Header */}
+      <div>
+        <div className="flex items-center gap-2">
+          <GitBranch size={20} className="text-primary" />
+          <h2 className="font-display font-semibold text-heading text-foreground">
+            Pipeline & Stages
+          </h2>
+        </div>
+        <p className="text-small text-muted-foreground mt-1 max-w-2xl font-sans">
+          Configure the dynamic stages of your hiring process. Active stages appear in sequential order
+          on your Kanban board and funnel metrics. Closed outcomes track terminal results.
+        </p>
+      </div>
+
+      {/* Action Messages */}
+      {actionError && (
+        <div className="p-3.5 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-3 text-destructive animate-fade-in">
+          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+          <div className="flex-1 text-small leading-tight">
+            <span className="font-semibold">Unable to complete action: </span>
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="p-1 hover:bg-destructive/20 rounded cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between text-primary animate-fade-in">
+          <span className="text-small font-medium">{actionSuccess}</span>
+          <button
+            type="button"
+            onClick={() => setActionSuccess(null)}
+            className="p-1 hover:bg-primary/20 rounded cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* 1. Active Pipeline Stages */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-baseline justify-between border-b border-border/70 pb-2">
+          <div>
+            <h3 className="font-display font-semibold text-body text-foreground">
+              Active Pipeline Stages ({totalActive})
+            </h3>
+            <p className="text-caption text-muted-foreground mt-0.5">
+              Arranged in chronological progression. Stage Ring fill dynamically reflects each stage's position.
+            </p>
+          </div>
+        </div>
+
+        {/* Stage List */}
+        <div className="flex flex-col divide-y divide-border/60">
+          {activeStages.map((stage, idx) => {
+            const isEditing = editingStageId === stage.id;
+            const isConfirmingDelete = confirmDeleteId === stage.id;
+            const progressPct = Math.round(((stage.order ?? 0) / Math.max(1, totalActive - 1)) * 100);
+
+            return (
+              <div
+                key={stage.id}
+                className={cn(
+                  'flex items-center justify-between py-3 px-2 gap-3 transition-colors duration-150',
+                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80'
+                )}
+              >
+                {/* Left: Order, Ring, Name */}
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <span className="font-mono text-[12px] text-muted-foreground w-6 text-right shrink-0">
+                    #{idx + 1}
+                  </span>
+
+                  <StageRing status={stage} size={20} totalStages={totalActive} />
+
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 flex-1 max-w-[280px]">
+                      <input
+                        type="text"
+                        value={editingStageName}
+                        onChange={(e) => setEditingStageName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit(stage.id);
+                          if (e.key === 'Escape') handleCancelEdit();
+                        }}
+                        autoFocus
+                        className="h-8 px-2.5 text-body bg-background border border-primary rounded-md w-full focus-visible:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEdit(stage.id)}
+                        disabled={updateMutation.isPending || !editingStageName.trim()}
+                        className="p-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                        title="Save name"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="font-display font-medium text-[15px] text-foreground truncate">
+                        {stage.name}
+                      </span>
+                      {stage.isDefault && (
+                        <span className="text-[10px] font-mono uppercase tracking-wider bg-secondary text-muted-foreground px-1.5 py-0.5 rounded border border-border/70">
+                          Default
+                        </span>
+                      )}
+                      <span className="text-[11px] font-mono text-muted-foreground/70 hidden sm:inline">
+                        {progressPct}% fill
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Controls & Actions */}
+                {!isEditing && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Reorder Buttons */}
+                    <button
+                      type="button"
+                      disabled={idx === 0 || reorderMutation.isPending}
+                      onClick={() => handleMove(idx, 'up')}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                      title="Move stage earlier"
+                      aria-label={`Move ${stage.name} up`}
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === totalActive - 1 || reorderMutation.isPending}
+                      onClick={() => handleMove(idx, 'down')}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                      title="Move stage later"
+                      aria-label={`Move ${stage.name} down`}
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+
+                    {/* Edit Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(stage.id, stage.name)}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Rename stage"
+                      aria-label={`Rename ${stage.name}`}
+                    >
+                      <Pencil size={15} />
+                    </button>
+
+                    {/* Delete with inline confirmation */}
+                    {isConfirmingDelete ? (
+                      <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-border animate-fade-in">
+                        <span className="text-[11px] text-destructive font-medium hidden sm:inline">
+                          Delete?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(stage.id, stage.name)}
+                          disabled={deleteMutation.isPending}
+                          className="px-2 py-1 text-[11px] font-medium rounded bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Cancel delete"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(stage.id)}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
+                        title="Delete stage"
+                        aria-label={`Delete ${stage.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Add Stage Form */}
+        <form onSubmit={handleAddStage} className="flex items-center gap-2 pt-3 mt-1">
+          <input
+            type="text"
+            placeholder="Add new stage (e.g. Technical Assignment, Executive Chat)..."
+            value={newStageName}
+            onChange={(e) => setNewStageName(e.target.value)}
+            className="flex-1 h-9 px-3 text-body bg-background border border-input rounded-md focus-visible:outline-2 focus-visible:outline-primary transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={createMutation.isPending || !newStageName.trim()}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground font-medium text-small hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer shrink-0"
+          >
+            {createMutation.isPending ? (
+              <Loader2 className="animate-spin" size={15} />
+            ) : (
+              <Plus size={15} />
+            )}
+            <span>Add Stage</span>
+          </button>
+        </form>
+      </div>
+
+      {/* Hairline Divider */}
+      <div className="h-px bg-border my-2" />
+
+      {/* 2. Closed Outcomes */}
+      <div className="flex flex-col gap-4">
+        <div className="border-b border-border/70 pb-2">
+          <h3 className="font-display font-semibold text-body text-foreground">
+            Closed Outcomes ({closedOutcomes.length})
+          </h3>
+          <p className="text-caption text-muted-foreground mt-0.5">
+            Terminal status categories for concluded applications. You can customize display names or create custom closed outcomes with distinct icon styles.
+          </p>
+        </div>
+
+        <div className="flex flex-col divide-y divide-border/60">
+          {closedOutcomes.map((outcome) => {
+            const isEditing = editingStageId === outcome.id;
+            const isConfirmingDelete = confirmDeleteId === outcome.id;
+
+            return (
+              <div
+                key={outcome.id}
+                className={cn(
+                  'flex items-center justify-between py-3 px-2 gap-3 transition-colors duration-150',
+                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80'
+                )}
+              >
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <StageRing status={outcome} size={20} />
+
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 flex-1 max-w-[280px]">
+                      <input
+                        type="text"
+                        value={editingStageName}
+                        onChange={(e) => setEditingStageName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit(outcome.id);
+                          if (e.key === 'Escape') handleCancelEdit();
+                        }}
+                        autoFocus
+                        className="h-8 px-2.5 text-body bg-background border border-primary rounded-md w-full focus-visible:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEdit(outcome.id)}
+                        disabled={updateMutation.isPending || !editingStageName.trim()}
+                        className="p-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                        title="Save name"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="font-display font-medium text-[15px] text-foreground truncate">
+                        {outcome.name}
+                      </span>
+                      {outcome.isDefault && (
+                        <span className="text-[10px] font-mono uppercase tracking-wider bg-secondary text-muted-foreground px-1.5 py-0.5 rounded border border-border/70">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {!isEditing && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(outcome.id, outcome.name)}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Rename outcome"
+                      aria-label={`Rename ${outcome.name}`}
+                    >
+                      <Pencil size={15} />
+                    </button>
+
+                    {outcome.isDefault ? (
+                      <div
+                        className="p-1.5 text-muted-foreground/40 flex items-center justify-center w-7 h-7"
+                        title="Default system outcome (cannot be deleted)"
+                      >
+                        <Lock size={14} />
+                      </div>
+                    ) : isConfirmingDelete ? (
+                      <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-border animate-fade-in">
+                        <span className="text-[11px] text-destructive font-medium hidden sm:inline">
+                          Delete?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(outcome.id, outcome.name)}
+                          disabled={deleteMutation.isPending}
+                          className="px-2 py-1 text-[11px] font-medium rounded bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Cancel delete"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(outcome.id)}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
+                        title="Delete outcome"
+                        aria-label={`Delete ${outcome.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Add Closed Outcome Form */}
+        <div className="flex flex-col gap-2.5 pt-3 mt-1">
+          <div className="text-caption font-medium text-muted-foreground">Select Icon Style:</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {ICON_STYLES.map((style) => {
+              const isSelected = newClosedType === style.type;
+              return (
+                <button
+                  key={style.type}
+                  type="button"
+                  onClick={() => setNewClosedType(style.type)}
+                  className={cn(
+                    'flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-colors cursor-pointer text-small',
+                    isSelected
+                      ? 'border-primary bg-primary/10 text-foreground font-medium ring-1 ring-primary'
+                      : 'border-border/70 bg-card hover:bg-secondary/60 text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <StageRing status={{ closeType: style.type }} size={16} />
+                  <span className="truncate leading-none text-[12px]">{style.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <form onSubmit={handleAddClosedOutcome} className="flex items-center gap-2 mt-1">
+            <input
+              type="text"
+              placeholder="Add closed outcome (e.g. Hiring Freeze, Offer Declined)..."
+              value={newClosedName}
+              onChange={(e) => setNewClosedName(e.target.value)}
+              className="flex-1 h-9 px-3 text-body bg-background border border-input rounded-md focus-visible:outline-2 focus-visible:outline-primary transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={createMutation.isPending || !newClosedName.trim()}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground font-medium text-small hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer shrink-0"
+            >
+              {createMutation.isPending ? (
+                <Loader2 className="animate-spin" size={15} />
+              ) : (
+                <Plus size={15} />
+              )}
+              <span>Add Outcome</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

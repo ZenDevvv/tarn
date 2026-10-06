@@ -1,5 +1,5 @@
-import { prisma, ApplicationStatus } from '@tracker/database';
-import { DashboardAnalyticsDTO } from '@tracker/types';
+import { prisma } from '@tracker/database';
+import { DashboardAnalyticsDTO, AnalyticsOverviewDTO, PipelineSummaryDTO } from '@tracker/types';
 
 export const analyticsService = {
   async getDashboardAnalytics(userId: string): Promise<DashboardAnalyticsDTO & { upcomingInterviews: any[]; recentApplications: any[]; todayFollowUps: any[] }> {
@@ -17,30 +17,27 @@ export const analyticsService = {
     // Month boundary
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
 
-    const closedStatuses: ApplicationStatus[] = [
-      ApplicationStatus.REJECTED,
-      ApplicationStatus.WITHDRAWN,
-      ApplicationStatus.NO_RESPONSE,
-    ];
-
-    const interviewStatuses: ApplicationStatus[] = [
-      ApplicationStatus.INTERVIEWING,
-    ];
-
     // Parallel queries
     const [
+      userStatuses,
       allApplications,
       pendingFollowUps,
       recentApplications,
       realUpcomingInterviews,
     ] = await Promise.all([
-      // 1. All non-archived applications for user
-      prisma.application.findMany({
-        where: { userId, archivedAt: null },
-        include: { company: true, job: true },
+      // 1. User statuses
+      prisma.applicationStatus.findMany({
+        where: { userId },
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       }),
 
-      // 2. Pending follow-ups
+      // 2. All non-archived applications for user
+      prisma.application.findMany({
+        where: { userId, archivedAt: null },
+        include: { company: true, job: true, status: true },
+      }),
+
+      // 3. Pending follow-ups
       prisma.followUp.findMany({
         where: { userId, status: 'PENDING', application: { archivedAt: null } },
         include: {
@@ -54,15 +51,15 @@ export const analyticsService = {
         orderBy: { dueAt: 'asc' },
       }),
 
-      // 3. Top 6 recent applications
+      // 4. Top 6 recent applications
       prisma.application.findMany({
         where: { userId, archivedAt: null },
-        include: { company: true, job: true },
+        include: { company: true, job: true, status: true },
         orderBy: { appliedAt: 'desc' },
         take: 6,
       }),
 
-      // 4. Real scheduled upcoming interviews
+      // 5. Real scheduled upcoming interviews
       prisma.interview.findMany({
         where: {
           userId,
@@ -83,9 +80,11 @@ export const analyticsService = {
       }),
     ]);
 
-    // Active applications (not closed)
-    const activeApps = allApplications.filter((a) => !closedStatuses.includes(a.status));
-    const interviewApps = allApplications.filter((a) => interviewStatuses.includes(a.status));
+    // Active applications (closeType is null)
+    const activeApps = allApplications.filter((a) => a.status?.closeType === null);
+    const interviewApps = allApplications.filter(
+      (a) => a.status?.name?.toLowerCase().includes('interview') || a.status?.name?.toLowerCase().includes('screen')
+    );
 
     // Follow-ups due today & overdue
     const followUpsDue = pendingFollowUps.filter((f) => f.dueAt <= endOfToday);
@@ -99,21 +98,42 @@ export const analyticsService = {
       (a) => a.appliedAt && a.appliedAt >= startOfMonth
     ).length;
 
-    // Pipeline status map
-    const pipeline: Record<ApplicationStatus, number> = {
-      SAVED: 0,
-      APPLIED: 0,
-      INTERVIEWING: 0,
-      OFFER: 0,
-      ACCEPTED: 0,
-      REJECTED: 0,
-      WITHDRAWN: 0,
-      NO_RESPONSE: 0,
+    // Dynamic pipeline breakdown
+    const activeStages = userStatuses
+      .filter((s) => s.closeType === null)
+      .map((s) => ({
+        status: s as any,
+        count: allApplications.filter((a) => a.statusId === s.id).length,
+      }));
+
+    const closedOutcomes = userStatuses
+      .filter((s) => s.closeType !== null)
+      .map((s) => ({
+        status: s as any,
+        count: allApplications.filter((a) => a.statusId === s.id).length,
+      }));
+
+    const pipeline: any = {
+      activeStages,
+      closedOutcomes,
     };
 
-    for (const app of allApplications) {
-      if (pipeline[app.status] !== undefined) {
-        pipeline[app.status]++;
+    // Populate status-keyed counts for compatibility with legacy widgets & tests
+    for (const item of activeStages) {
+      const name = item.status?.name;
+      if (name) {
+        pipeline[name.toUpperCase()] = item.count;
+        pipeline[name] = item.count;
+      }
+    }
+    for (const item of closedOutcomes) {
+      if (item.status?.closeType) {
+        pipeline[item.status.closeType] = item.count;
+      }
+      const name = item.status?.name;
+      if (name) {
+        pipeline[name.toUpperCase()] = item.count;
+        pipeline[name] = item.count;
       }
     }
 
@@ -169,7 +189,7 @@ export const analyticsService = {
             applicationId: app.id,
             companyName: app.company.name,
             roleTitle: app.job.title,
-            stage: app.status.replace(/_/g, ' ').toLowerCase(),
+            stage: app.status?.name?.toLowerCase() || 'interview',
             date: interviewDate.toISOString(),
             location: app.job.workSetup === 'REMOTE' ? 'Google Meet' : app.job.location || 'Zoom',
             meetingUrl: null as string | null,
@@ -207,7 +227,7 @@ export const analyticsService = {
   async getAnalyticsOverview(
     userId: string,
     range: 'all' | '30d' | '90d' | 'ytd' = 'all'
-  ) {
+  ): Promise<AnalyticsOverviewDTO> {
     const now = new Date();
 
     let dateBoundary: Date | null = null;
@@ -224,65 +244,47 @@ export const analyticsService = {
       rangeLabel = `Year to date (${now.getFullYear()})`;
     }
 
-    const applications = await prisma.application.findMany({
-      where: {
-        userId,
-        archivedAt: null,
-        ...(dateBoundary
-          ? {
-              OR: [
-                { appliedAt: { gte: dateBoundary } },
-                { appliedAt: null, createdAt: { gte: dateBoundary } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        company: true,
-        job: true,
-        interviews: {
-          orderBy: { scheduledAt: 'asc' },
+    const [userStatuses, applications] = await Promise.all([
+      prisma.applicationStatus.findMany({
+        where: { userId },
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      }),
+      prisma.application.findMany({
+        where: {
+          userId,
+          archivedAt: null,
+          ...(dateBoundary
+            ? {
+                OR: [
+                  { appliedAt: { gte: dateBoundary } },
+                  { appliedAt: null, createdAt: { gte: dateBoundary } },
+                ],
+              }
+            : {}),
         },
-        timelineEvents: {
-          orderBy: { occurredAt: 'asc' },
+        include: {
+          company: true,
+          job: true,
+          status: true,
+          interviews: {
+            orderBy: { scheduledAt: 'asc' },
+          },
+          timelineEvents: {
+            orderBy: { occurredAt: 'asc' },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const closedStatuses: ApplicationStatus[] = [
-      ApplicationStatus.REJECTED,
-      ApplicationStatus.WITHDRAWN,
-      ApplicationStatus.NO_RESPONSE,
-    ];
-
-    const interviewStatuses: ApplicationStatus[] = [
-      ApplicationStatus.INTERVIEWING,
-      ApplicationStatus.OFFER,
-      ApplicationStatus.ACCEPTED,
-    ];
-
-    const offerStatuses: ApplicationStatus[] = [
-      ApplicationStatus.OFFER,
-      ApplicationStatus.ACCEPTED,
-    ];
-
-    const responseStatuses: ApplicationStatus[] = [
-      ApplicationStatus.INTERVIEWING,
-      ApplicationStatus.OFFER,
-      ApplicationStatus.ACCEPTED,
-      ApplicationStatus.REJECTED,
-      ApplicationStatus.WITHDRAWN,
-    ];
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     const totalApplications = applications.length;
-    const activeApplications = applications.filter((a) => !closedStatuses.includes(a.status)).length;
-    const closedApplications = applications.filter((a) => closedStatuses.includes(a.status)).length;
+    const activeApplications = applications.filter((a) => a.status?.closeType === null).length;
+    const closedApplications = applications.filter((a) => a.status?.closeType !== null).length;
 
-    // Responded applications
+    // Responded applications: moved past initial stage (order > 0), or closed, or had interview / milestone
     const respondedApps = applications.filter(
       (a) =>
-        responseStatuses.includes(a.status) ||
+        (a.status && ((a.status.order !== null && a.status.order > 0) || a.status.closeType !== null)) ||
         a.interviews.length > 0 ||
         a.timelineEvents.some(
           (e) =>
@@ -297,68 +299,55 @@ export const analyticsService = {
 
     // Interview applications
     const interviewApps = applications.filter(
-      (a) => interviewStatuses.includes(a.status) || a.interviews.length > 0
+      (a) =>
+        a.interviews.length > 0 ||
+        a.status?.name?.toLowerCase().includes('interview') ||
+        a.status?.name?.toLowerCase().includes('screen')
     );
     const interviewCount = interviewApps.length;
     const interviewRate = totalApplications > 0 ? Number(((interviewCount / totalApplications) * 100).toFixed(1)) : 0;
 
     // Offer applications
-    const offerApps = applications.filter((a) => offerStatuses.includes(a.status));
+    const offerApps = applications.filter(
+      (a) =>
+        a.status?.name?.toLowerCase().includes('offer') ||
+        a.status?.name?.toLowerCase().includes('accept')
+    );
     const offerCount = offerApps.length;
     const offerRate = totalApplications > 0 ? Number(((offerCount / totalApplications) * 100).toFixed(1)) : 0;
 
     // Rejection count
-    const rejectionApps = applications.filter((a) => a.status === ApplicationStatus.REJECTED);
+    const rejectionApps = applications.filter((a) => a.status?.closeType === 'REJECTED');
     const rejectionCount = rejectionApps.length;
     const rejectionRate = totalApplications > 0 ? Number(((rejectionCount / totalApplications) * 100).toFixed(1)) : 0;
 
-    // Funnel calculations
-    const appliedApps = applications.filter((a) => a.status !== ApplicationStatus.SAVED);
-    const funnelBase = Math.max(appliedApps.length, totalApplications);
-
-    const screenStages: ApplicationStatus[] = [
-      ApplicationStatus.INTERVIEWING,
-      ApplicationStatus.OFFER,
-      ApplicationStatus.ACCEPTED,
-    ];
-
-    const techStages: ApplicationStatus[] = [
-      ApplicationStatus.OFFER,
-      ApplicationStatus.ACCEPTED,
-    ];
-
-    const finalStages: ApplicationStatus[] = [
-      ApplicationStatus.OFFER,
-      ApplicationStatus.ACCEPTED,
-    ];
-
-    const screenApps = applications.filter(
-      (a) =>
-        screenStages.includes(a.status) ||
-        a.interviews.some((iv) => iv.type === 'HR' || iv.round >= 1)
+    // Dynamic funnel stages from active user pipeline stages
+    const pipelineStages = userStatuses.filter((s) => s.closeType === null);
+    const funnelBase = Math.max(
+      applications.filter((a) => a.status && a.status.order !== null && a.status.order > 0).length,
+      totalApplications
     );
 
-    const techApps = applications.filter(
-      (a) =>
-        techStages.includes(a.status) ||
-        a.interviews.some((iv) => iv.type === 'TECHNICAL' || iv.round >= 2)
-    );
-
-    const finalApps = applications.filter(
-      (a) =>
-        finalStages.includes(a.status) ||
-        a.interviews.some((iv) => iv.type === 'FINAL' || iv.round >= 3)
-    );
-
-
-    const funnelStagesRaw = [
-      { id: 'applied', name: 'Applications submitted', count: funnelBase },
-      { id: 'responded', name: 'Responses / Viewed', count: responseCount },
-      { id: 'screening', name: 'Screening / HR round', count: screenApps.length },
-      { id: 'technical', name: 'Technical interview', count: techApps.length },
-      { id: 'final', name: 'Final round', count: finalApps.length },
-      { id: 'offer', name: 'Offers received', count: offerCount },
-    ];
+    const funnelStagesRaw = pipelineStages.length > 0
+      ? pipelineStages.map((stage) => {
+          const count = applications.filter(
+            (a) =>
+              a.status &&
+              ((a.status.order !== null && stage.order !== null && a.status.order >= stage.order) ||
+                a.status.closeType !== null)
+          ).length;
+          return {
+            id: stage.id,
+            name: stage.name,
+            count: stage.order === 0 ? funnelBase : count,
+          };
+        })
+      : [
+          { id: 'applied', name: 'Applications submitted', count: funnelBase },
+          { id: 'responded', name: 'Responses / Viewed', count: responseCount },
+          { id: 'interview', name: 'Interview rounds', count: interviewCount },
+          { id: 'offer', name: 'Offers received', count: offerCount },
+        ];
 
     const funnel = funnelStagesRaw.map((stage, idx, arr) => {
       const prevCount = idx === 0 ? stage.count : arr[idx - 1].count;
@@ -383,9 +372,9 @@ export const analyticsService = {
       const platform = app.job?.source?.trim() || 'Direct / Other';
       const entry = platformMap.get(platform) || { total: 0, active: 0, interviews: 0, offers: 0 };
       entry.total++;
-      if (!closedStatuses.includes(app.status)) entry.active++;
-      if (interviewStatuses.includes(app.status) || app.interviews.length > 0) entry.interviews++;
-      if (offerStatuses.includes(app.status)) entry.offers++;
+      if (app.status?.closeType === null) entry.active++;
+      if (app.interviews.length > 0 || app.status?.name?.toLowerCase().includes('interview')) entry.interviews++;
+      if (app.status?.name?.toLowerCase().includes('offer') || app.status?.name?.toLowerCase().includes('accept')) entry.offers++;
       platformMap.set(platform, entry);
     }
 
@@ -413,145 +402,125 @@ export const analyticsService = {
       const setup = app.job?.workSetup || 'UNSPECIFIED';
       const key = setupCounts[setup] ? setup : 'UNSPECIFIED';
       setupCounts[key].count++;
-      if (interviewStatuses.includes(app.status) || app.interviews.length > 0) {
+      if (app.interviews.length > 0 || app.status?.name?.toLowerCase().includes('interview')) {
         setupCounts[key].interviews++;
       }
     }
 
-    const workSetupLabels: Record<string, string> = {
-      REMOTE: 'Remote',
-      HYBRID: 'Hybrid',
-      ONSITE: 'On-site',
-      UNSPECIFIED: 'Unspecified',
-    };
-
-    const workSetups = Object.entries(setupCounts)
-      .filter(([_, stats]) => stats.count > 0 || totalApplications === 0)
-      .map(([setup, stats]) => ({
-        setup: setup as any,
-        label: workSetupLabels[setup] || setup,
-        count: stats.count,
-        percentage: totalApplications > 0 ? Number(((stats.count / totalApplications) * 100).toFixed(1)) : 0,
-        interviewCount: stats.interviews,
-        interviewRate: stats.count > 0 ? Number(((stats.interviews / stats.count) * 100).toFixed(1)) : 0,
-      }));
+    const workSetups = Object.entries(setupCounts).map(([setup, stats]) => ({
+      setup: setup as any,
+      label: setup === 'UNSPECIFIED' ? 'Not specified' : setup.charAt(0) + setup.slice(1).toLowerCase(),
+      count: stats.count,
+      percentage: totalApplications > 0 ? Number(((stats.count / totalApplications) * 100).toFixed(1)) : 0,
+      interviewCount: stats.interviews,
+      interviewRate: stats.count > 0 ? Number(((stats.interviews / stats.count) * 100).toFixed(1)) : 0,
+    }));
 
     // Weekly velocity for 12 weeks
+    const weeklyVelocity: Array<{ label: string; count: number; isCurrent?: boolean }> = [];
     const currentDay = now.getDay();
     const distanceToMonday = (currentDay + 6) % 7;
     const startOfCurrentWeek = new Date(now);
     startOfCurrentWeek.setDate(now.getDate() - distanceToMonday);
     startOfCurrentWeek.setHours(0, 0, 0, 0);
 
-    const weeklyVelocity: Array<{ label: string; count: number; isCurrent?: boolean }> = [];
     for (let i = 11; i >= 0; i--) {
-      const wStart = new Date(startOfCurrentWeek);
-      wStart.setDate(wStart.getDate() - i * 7);
-      const wEnd = new Date(wStart);
-      wEnd.setDate(wEnd.getDate() + 7);
+      const weekStart = new Date(startOfCurrentWeek);
+      weekStart.setDate(weekStart.getDate() - i * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
 
       const count = applications.filter((a) => {
         const d = a.appliedAt || a.createdAt;
-        return d >= wStart && d < wEnd;
+        return d && d >= weekStart && d < weekEnd;
       }).length;
 
-      const m = wStart.toLocaleDateString('en-US', { month: 'short' });
-      const day = wStart.getDate();
+      const label = `${weekStart.toLocaleDateString('en-US', { month: 'short' })} ${weekStart.getDate()}`;
       weeklyVelocity.push({
-        label: `${m} ${day}`,
+        label,
         count,
         isCurrent: i === 0,
       });
     }
 
     // Monthly velocity for 6 months
-    const monthlyVelocity: Array<{ label: string; count: number }> = [];
+    const monthlyVelocity: Array<{ label: string; count: number; isCurrent?: boolean }> = [];
     for (let i = 5; i >= 0; i--) {
-      const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0);
-      const nextMDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1, 0, 0, 0);
+      const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextMDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
 
       const count = applications.filter((a) => {
         const d = a.appliedAt || a.createdAt;
-        return d >= mDate && d < nextMDate;
+        return d && d >= mDate && d < nextMDate;
       }).length;
 
-      const label = mDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      monthlyVelocity.push({ label, count });
+      const label = mDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      monthlyVelocity.push({
+        label,
+        count,
+        isCurrent: i === 0,
+      });
     }
 
     // Timing metrics
-    const responseDaysList: number[] = [];
-    const interviewDaysList: number[] = [];
-    const rejectionDaysList: number[] = [];
+    const responseDays: number[] = [];
+    const interviewDays: number[] = [];
+    const rejectionDays: number[] = [];
 
     for (const app of applications) {
-      const startDate = app.appliedAt || app.createdAt;
+      const baseline = app.appliedAt || app.createdAt;
+      if (!baseline) continue;
 
-      // Response timing
-      if (responseStatuses.includes(app.status) || app.interviews.length > 0) {
-        const firstEvent = app.timelineEvents.find(
-          (e) =>
-            e.type === 'INTERVIEW_SCHEDULED' ||
-            (e.type === 'STATUS_CHANGED' &&
-              !e.title.toLowerCase().includes('applied') &&
-              !e.title.toLowerCase().includes('saved'))
-        );
-        const eventDate = firstEvent ? firstEvent.occurredAt : app.updatedAt;
-        const days = Math.max(0, (eventDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        responseDaysList.push(days);
-      }
-
-      // Interview timing
       if (app.interviews.length > 0) {
-        const firstScheduled = app.interviews[0].scheduledAt;
-        const days = Math.max(0, (firstScheduled.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        interviewDaysList.push(days);
+        const firstInterview = app.interviews[0];
+        const days = Math.round((firstInterview.scheduledAt.getTime() - baseline.getTime()) / (1000 * 60 * 60 * 24));
+        if (days >= 0) {
+          responseDays.push(days);
+          interviewDays.push(days);
+        }
+      } else {
+        const firstStatusChange = app.timelineEvents.find((e) => e.type === 'STATUS_CHANGED');
+        if (firstStatusChange) {
+          const days = Math.round((firstStatusChange.occurredAt.getTime() - baseline.getTime()) / (1000 * 60 * 60 * 24));
+          if (days >= 0) responseDays.push(days);
+        }
       }
 
-      // Rejection timing
-      if (app.status === ApplicationStatus.REJECTED) {
+      if (app.status?.closeType === 'REJECTED') {
         const rejEvent = app.timelineEvents.find(
-          (e) => e.type === 'STATUS_CHANGED' && e.title.toLowerCase().includes('rejected')
+          (e) => e.type === 'STATUS_CHANGED' && e.title.toLowerCase().includes('reject')
         );
-        const rejDate = rejEvent ? rejEvent.occurredAt : app.updatedAt;
-        const days = Math.max(0, (rejDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        rejectionDaysList.push(days);
+        const rejDate = rejEvent?.occurredAt || app.updatedAt;
+        const days = Math.round((rejDate.getTime() - baseline.getTime()) / (1000 * 60 * 60 * 24));
+        if (days >= 0) rejectionDays.push(days);
       }
     }
 
-    const calcAvg = (arr: number[]) =>
-      arr.length > 0 ? Number((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)) : null;
-
+    const avg = (arr: number[]) => (arr.length > 0 ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
     const timing = {
-      avgDaysToResponse: calcAvg(responseDaysList),
-      avgDaysToInterview: calcAvg(interviewDaysList),
-      avgDaysToRejection: calcAvg(rejectionDaysList),
+      avgDaysToResponse: avg(responseDays),
+      avgDaysToInterview: avg(interviewDays),
+      avgDaysToRejection: avg(rejectionDays),
     };
 
     // Salary insights
-    const salaryJobs = applications
-      .map((a) => a.job)
-      .filter((j): j is NonNullable<typeof j> => !!j && (j.salaryMin != null || j.salaryMax != null));
+    let disclosedCount = 0;
+    const minSalaries: number[] = [];
+    const maxSalaries: number[] = [];
+    let currency = 'PHP';
 
-    const disclosedCount = salaryJobs.length;
-    const disclosedPercentage =
-      totalApplications > 0 ? Number(((disclosedCount / totalApplications) * 100).toFixed(1)) : 0;
-
-    let avgSalaryMin: number | null = null;
-    let avgSalaryMax: number | null = null;
-    const currency = salaryJobs[0]?.currency || 'PHP';
-
-    if (disclosedCount > 0) {
-      const minSalaries = salaryJobs.map((j) => j.salaryMin).filter((s): s is number => typeof s === 'number');
-      const maxSalaries = salaryJobs.map((j) => j.salaryMax).filter((s): s is number => typeof s === 'number');
-
-      if (minSalaries.length > 0) {
-        avgSalaryMin = Math.round(minSalaries.reduce((a, b) => a + b, 0) / minSalaries.length);
-      }
-      if (maxSalaries.length > 0) {
-        avgSalaryMax = Math.round(maxSalaries.reduce((a, b) => a + b, 0) / maxSalaries.length);
+    for (const app of applications) {
+      if (app.job?.salaryMin || app.job?.salaryMax) {
+        disclosedCount++;
+        if (app.job.salaryMin) minSalaries.push(app.job.salaryMin);
+        if (app.job.salaryMax) maxSalaries.push(app.job.salaryMax);
+        if (app.job.currency) currency = app.job.currency;
       }
     }
+
+    const disclosedPercentage = totalApplications > 0 ? Number(((disclosedCount / totalApplications) * 100).toFixed(1)) : 0;
+    const avgSalaryMin = minSalaries.length > 0 ? Math.round(minSalaries.reduce((a, b) => a + b, 0) / minSalaries.length) : null;
+    const avgSalaryMax = maxSalaries.length > 0 ? Math.round(maxSalaries.reduce((a, b) => a + b, 0) / maxSalaries.length) : null;
 
     const salaryInsights = {
       disclosedCount,
@@ -561,24 +530,17 @@ export const analyticsService = {
       currency,
     };
 
-    // Complete 12-status distribution
-    const allStatuses = Object.values(ApplicationStatus);
-    const statusCounts: Record<ApplicationStatus, number> = {} as any;
-    for (const s of allStatuses) {
-      statusCounts[s] = 0;
-    }
-    for (const app of applications) {
-      if (statusCounts[app.status] !== undefined) {
-        statusCounts[app.status]++;
-      }
-    }
-
-    const statusDistribution = allStatuses.map((status) => ({
-      status,
-      count: statusCounts[status],
-      percentage:
-        totalApplications > 0 ? Number(((statusCounts[status] / totalApplications) * 100).toFixed(1)) : 0,
-    }));
+    // Dynamic status distribution from user's statuses
+    const statusDistribution = userStatuses.map((status) => {
+      const count = applications.filter((a) => a.statusId === status.id).length;
+      return {
+        status: status as any,
+        name: status.name,
+        count,
+        percentage:
+          totalApplications > 0 ? Number(((count / totalApplications) * 100).toFixed(1)) : 0,
+      };
+    });
 
     return {
       range,
@@ -607,4 +569,3 @@ export const analyticsService = {
     };
   },
 };
-

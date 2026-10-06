@@ -121,8 +121,7 @@ describe('Analytics API Integration Tests', () => {
     // Funnel
     expect(data.funnel).toBeDefined();
     expect(Array.isArray(data.funnel)).toBe(true);
-    expect(data.funnel.length).toBe(6);
-    expect(data.funnel[0].id).toBe('applied');
+    expect(data.funnel.length).toBe(5);
     expect(data.funnel[0].count).toBe(3);
 
     // Platforms

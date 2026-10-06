@@ -86,7 +86,7 @@ export const resumeRepository = {
       applicationsCount: r.applications.length,
       applications: r.applications.map((app) => ({
         id: app.id,
-        status: app.status,
+        status: app.status?.name || 'Saved',
         priority: app.priority,
         appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
         company: app.company ? { id: app.company.id, name: app.company.name } : null,
@@ -145,7 +145,7 @@ export const resumeRepository = {
       applicationsCount: r.applications.length,
       applications: r.applications.map((app) => ({
         id: app.id,
-        status: app.status,
+        status: app.status?.name || 'Saved',
         priority: app.priority,
         appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
         company: app.company ? { id: app.company.id, name: app.company.name } : null,
@@ -264,7 +264,7 @@ export const resumeRepository = {
         applicationsCount: r.applications.length,
         applications: r.applications.map((app) => ({
           id: app.id,
-          status: app.status,
+          status: app.status?.name || 'Saved',
           priority: app.priority,
           appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
           company: app.company ? { id: app.company.id, name: app.company.name } : null,
@@ -322,7 +322,7 @@ export const resumeRepository = {
         applicationsCount: r.applications.length,
         applications: r.applications.map((app) => ({
           id: app.id,
-          status: app.status,
+          status: app.status?.name || 'Saved',
           priority: app.priority,
           appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
           company: app.company ? { id: app.company.id, name: app.company.name } : null,

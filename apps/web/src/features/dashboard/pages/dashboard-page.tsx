@@ -39,10 +39,13 @@ export function DashboardPage() {
 
   const { summary, weeklyVelocity, pipeline, upcomingInterviews, recentApplications, todayFollowUps } = data;
 
-  const totalApplications = Object.values(pipeline as Record<string, number>).reduce(
-    (a: number, b: number) => a + b,
-    0
-  );
+  const totalApplications = pipeline?.activeStages
+    ? ((pipeline.activeStages as any[]).reduce((a, b) => a + (b.count || 0), 0) +
+       ((pipeline.closedOutcomes as any[]) || []).reduce((a, b) => a + (b.count || 0), 0))
+    : Object.values((pipeline || {}) as Record<string, number>).reduce(
+        (a: number, b: number) => a + b,
+        0
+      );
 
   return (
     <div className="flex flex-col gap-10 w-full">

@@ -7,15 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ApplicationStatus {
-  SAVED
-  APPLIED
-  INTERVIEWING
-  OFFER
-  ACCEPTED
+enum CloseType {
   REJECTED
   WITHDRAWN
   NO_RESPONSE
+  CANCELLED
+  OTHER
 }
 
 enum Priority {
@@ -85,6 +82,7 @@ model User {
   interviews   Interview[]
   contacts     Contact[]
   resumes      Resume[]
+  statuses     ApplicationStatus[]
 
   @@map("users")
 }
@@ -142,7 +140,7 @@ model Application {
   userId          String
   companyId       String
   jobId           String
-  status          ApplicationStatus @default(SAVED)
+  statusId        String
   priority        Priority          @default(MEDIUM)
   appliedAt       DateTime?
   nextAction      String?
@@ -156,6 +154,7 @@ model Application {
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   job            Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status         ApplicationStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
   resume         Resume?           @relation(fields: [resumeId], references: [id], onDelete: SetNull)
   timelineEvents TimelineEvent[]
   followUps      FollowUp[]
@@ -163,11 +162,29 @@ model Application {
   contacts       Contact[]
 
   @@index([userId])
-  @@index([userId, status])
+  @@index([userId, statusId])
   @@index([userId, archivedAt])
   @@index([userId, nextActionDueAt])
   @@index([resumeId])
   @@map("applications")
+}
+
+model ApplicationStatus {
+  id        String     @id @default(cuid())
+  userId    String
+  name      String
+  order     Int?
+  closeType CloseType?
+  isDefault Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@unique([userId, name])
+  @@index([userId, order])
+  @@map("application_statuses")
 }
 
 model TimelineEvent {

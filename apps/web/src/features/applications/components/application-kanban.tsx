@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ApplicationDTO, ApplicationStatus } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from './application-status-badge';
+import { ApplicationDTO, ApplicationStatus, ApplicationStatusDTO } from '@tracker/types';
+import { StageRing } from './application-status-badge';
 import { PriorityGlyph } from './priority-glyph';
 import { useApplicationStatusMutation } from '../hooks/use-application-mutations';
+import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { ChevronLeft, ChevronRight, GripVertical, Calendar } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Select } from '@/components/ui/select';
@@ -13,24 +14,34 @@ interface ApplicationKanbanProps {
   applications: ApplicationDTO[];
 }
 
-const STAGES: Array<{ status: ApplicationStatus; label: string }> = [
-  { status: 'SAVED', label: 'Saved' },
-  { status: 'APPLIED', label: 'Applied' },
-  { status: 'INTERVIEWING', label: 'Interviewing' },
-  { status: 'OFFER', label: 'Offer' },
-  { status: 'ACCEPTED', label: 'Accepted' },
+const FALLBACK_STAGES: Array<{ id: string; name: string; order: number; closeType: null }> = [
+  { id: 'SAVED', name: 'Saved', order: 0, closeType: null },
+  { id: 'APPLIED', name: 'Applied', order: 1, closeType: null },
+  { id: 'INTERVIEWING', name: 'Interviewing', order: 2, closeType: null },
+  { id: 'OFFER', name: 'Offer', order: 3, closeType: null },
+  { id: 'ACCEPTED', name: 'Accepted', order: 4, closeType: null },
 ];
 
 export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
+  const { data: userStatuses } = useApplicationStatuses();
   const statusMutation = useApplicationStatusMutation();
   const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
-  const [dragOverStage, setDragOverStage] = useState<ApplicationStatus | null>(null);
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+
+  // Active stages strictly sorted by order
+  const activeStages =
+    userStatuses && userStatuses.length > 0
+      ? userStatuses
+          .filter((s) => s.closeType === null)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      : FALLBACK_STAGES;
+
+  const totalActiveStages = activeStages.length;
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'move';
 
-    // Ensure the entire translucent card is used as the drag preview
     const card = e.currentTarget as HTMLElement;
     if (card && e.dataTransfer.setDragImage) {
       const rect = card.getBoundingClientRect();
@@ -44,41 +55,53 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
 
   const handleDragEnd = () => {
     setDraggedAppId(null);
-    setDragOverStage(null);
+    setDragOverStageId(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, status: ApplicationStatus) => {
+  const handleDragOver = (e: React.DragEvent, stageId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragOverStage !== status) {
-      setDragOverStage(status);
+    if (dragOverStageId !== stageId) {
+      setDragOverStageId(stageId);
     }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    // Only clear if leaving the column itself
     if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) return;
-    setDragOverStage(null);
+    setDragOverStageId(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetStatus: ApplicationStatus) => {
+  const handleDrop = (e: React.DragEvent, targetStage: ApplicationStatusDTO | typeof FALLBACK_STAGES[0]) => {
     e.preventDefault();
-    setDragOverStage(null);
+    setDragOverStageId(null);
     const appId = e.dataTransfer.getData('text/plain') || draggedAppId;
     if (appId) {
-      statusMutation.mutate({ id: appId, status: targetStatus });
+      statusMutation.mutate({
+        id: appId,
+        statusId: targetStage.id,
+        status: targetStage.name as ApplicationStatus,
+      });
     }
   };
 
-  const moveStage = (appId: string, currentStatus: ApplicationStatus, direction: 'prev' | 'next') => {
-    const currentIndex = STAGES.findIndex((s) => s.status === currentStatus);
-    if (currentIndex === -1) return;
-    const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (nextIndex >= 0 && nextIndex < STAGES.length) {
-      statusMutation.mutate({ id: appId, status: STAGES[nextIndex].status });
+  const moveStage = (appId: string, currentStageIdx: number, direction: 'prev' | 'next') => {
+    const nextIndex = direction === 'next' ? currentStageIdx + 1 : currentStageIdx - 1;
+    if (nextIndex >= 0 && nextIndex < activeStages.length) {
+      const targetStage = activeStages[nextIndex];
+      statusMutation.mutate({
+        id: appId,
+        statusId: targetStage.id,
+        status: targetStage.name as ApplicationStatus,
+      });
     }
   };
 
+  // Full status list (active + closed) for the card dropdown
+  const allSelectOptions = (userStatuses || activeStages).map((s) => ({
+    value: s.id,
+    label: s.name,
+    icon: <StageRing status={s} size={12} totalStages={totalActiveStages} />,
+  }));
 
   return (
     <ScrollArea
@@ -87,16 +110,21 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
       containerClassName="max-[719px]:-mx-4"
       className="flex gap-4 pb-6 pt-1 max-[719px]:px-4 select-none"
     >
-      {STAGES.map(({ status, label }, stageIdx) => {
-        const stageApps = applications.filter((a) => a.status === status);
-        const isDragTarget = dragOverStage === status;
+      {activeStages.map((stage, stageIdx) => {
+        const stageApps = applications.filter(
+          (a) =>
+            a.statusId === stage.id ||
+            a.status === stage.name ||
+            (typeof a.status === 'string' && a.status.toUpperCase() === stage.name.toUpperCase())
+        );
+        const isDragTarget = dragOverStageId === stage.id;
 
         return (
           <div
-            key={status}
-            onDragOver={(e) => handleDragOver(e, status)}
+            key={stage.id}
+            onDragOver={(e) => handleDragOver(e, stage.id)}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, status)}
+            onDrop={(e) => handleDrop(e, stage)}
             className={cn(
               'min-w-[260px] flex-1 max-w-[360px] shrink-0 flex flex-col rounded-xl bg-card/60 border border-border transition-colors duration-150',
               isDragTarget && 'bg-primary/5 border-primary ring-1 ring-primary/40'
@@ -105,9 +133,9 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
             {/* Column Header */}
             <div className="flex items-center justify-between p-3.5 border-b border-border bg-card rounded-t-xl">
               <div className="flex items-center gap-2 min-w-0">
-                <StageRing status={status} size={18} />
+                <StageRing status={stage} size={18} totalStages={totalActiveStages} />
                 <span className="font-display font-semibold text-[14px] text-foreground truncate">
-                  {label}
+                  {stage.name}
                 </span>
               </div>
               <span className="text-[12px] font-mono font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
@@ -153,6 +181,8 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                       `Round ${activeInterview.round} • ${activeInterview.type.replace(/_/g, ' ').toLowerCase()}`
                     : null;
 
+                  const currentStatusId = app.statusId || stage.id;
+
                   return (
                     <div
                       key={app.id}
@@ -184,7 +214,7 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                         </div>
 
                         {/* Interview round badge */}
-                        {app.status === 'INTERVIEWING' && interviewLabel && (
+                        {(app.status === 'INTERVIEWING' || stage.name.toUpperCase() === 'INTERVIEWING') && interviewLabel && (
                           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground bg-secondary/80 border border-border/60 rounded px-1.5 py-0.5 w-fit max-w-full">
                             <Calendar size={11} className="shrink-0 text-foreground" />
                             <span className="truncate capitalize">{interviewLabel}</span>
@@ -213,7 +243,7 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                           <button
                             type="button"
                             disabled={stageIdx === 0}
-                            onClick={() => moveStage(app.id, status, 'prev')}
+                            onClick={() => moveStage(app.id, stageIdx, 'prev')}
                             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
                             title="Move to previous stage"
                           >
@@ -221,29 +251,29 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                           </button>
 
                           <div className="w-[115px]">
-                            <Select<ApplicationStatus>
+                            <Select<string>
                               size="sm"
-                              value={status}
-                              onChange={(newStatus) =>
-                                statusMutation.mutate({
-                                  id: app.id,
-                                  status: newStatus,
-                                })
-                              }
+                              value={currentStatusId}
+                              onChange={(newStatusId) => {
+                                const target = (userStatuses || activeStages).find((s) => s.id === newStatusId);
+                                if (target) {
+                                  statusMutation.mutate({
+                                    id: app.id,
+                                    statusId: target.id,
+                                    status: target.name as ApplicationStatus,
+                                  });
+                                }
+                              }}
                               aria-label="Change stage"
                               triggerClassName="h-6 px-1.5 text-[11px] bg-transparent border-border/40 hover:bg-secondary text-muted-foreground hover:text-foreground"
-                              options={STAGES.map((s) => ({
-                                value: s.status,
-                                label: s.label,
-                                icon: <StageRing status={s.status} size={12} />,
-                              }))}
+                              options={allSelectOptions}
                             />
                           </div>
 
                           <button
                             type="button"
-                            disabled={stageIdx === STAGES.length - 1}
-                            onClick={() => moveStage(app.id, status, 'next')}
+                            disabled={stageIdx === activeStages.length - 1}
+                            onClick={() => moveStage(app.id, stageIdx, 'next')}
                             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
                             title="Move to next stage"
                           >

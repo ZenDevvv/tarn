@@ -136,12 +136,13 @@ describe('Settings Feature - Unit Tests', () => {
   });
 
   it('validates settings tab routing logic defaults to profile', () => {
-    const validTabs = ['profile', 'preferences', 'security', 'data'];
+    const validTabs = ['profile', 'preferences', 'stages', 'security', 'data'];
     const getActiveTab = (raw: string | null) =>
       raw && validTabs.includes(raw) ? raw : 'profile';
 
     expect(getActiveTab('profile')).toBe('profile');
     expect(getActiveTab('preferences')).toBe('preferences');
+    expect(getActiveTab('stages')).toBe('stages');
     expect(getActiveTab('unknown')).toBe('profile');
     expect(getActiveTab(null)).toBe('profile');
   });

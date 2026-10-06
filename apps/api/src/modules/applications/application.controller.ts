@@ -63,7 +63,8 @@ export const applicationController = {
 
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const updated = await applicationService.updateStatus(req.user!.id, req.params.id, req.body.status);
+      const statusParam = req.body.statusId || req.body.status;
+      const updated = await applicationService.updateStatus(req.user!.id, req.params.id, statusParam);
       return res.status(200).json({ data: updated });
     } catch (error) {
       return next(error);

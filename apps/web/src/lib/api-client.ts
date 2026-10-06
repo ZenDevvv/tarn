@@ -75,6 +75,14 @@ export const apiClient = {
     });
   },
 
+  put<T>(endpoint: string, body?: unknown, options?: RequestInit) {
+    return request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  },
+
   delete<T>(endpoint: string, options?: RequestInit) {
     return request<T>(endpoint, { ...options, method: 'DELETE' });
   },

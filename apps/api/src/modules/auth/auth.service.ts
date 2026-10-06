@@ -4,6 +4,7 @@ import { prisma } from '@tracker/database';
 import { RegisterInput, LoginInput } from '@tracker/validation';
 import { env } from '../../config/env';
 import { AuthenticationError, ConflictError, NotFoundError } from '../../middleware/error-handler';
+import { statusService } from '../statuses/status.service';
 
 export const authService = {
   async register(input: RegisterInput) {
@@ -30,6 +31,9 @@ export const authService = {
         createdAt: true,
       },
     });
+
+    // Seed default application pipeline statuses
+    await statusService.seedDefaultStatuses(user.id);
 
     const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
       expiresIn: '7d',
