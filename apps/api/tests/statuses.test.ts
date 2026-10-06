@@ -173,6 +173,20 @@ describe('Application Statuses API Integration Tests', () => {
     expect(afterList.body.data.some((s: any) => s.name === 'Coding Challenge')).toBe(false);
   });
 
+  it('DELETE /api/v1/statuses/:id fails if attempting to delete a default status', async () => {
+    const listRes = await request(app)
+      .get('/api/v1/statuses')
+      .set('Cookie', userACookie);
+    const savedStatus = listRes.body.data.find((s: any) => s.isDefault);
+
+    const delRes = await request(app)
+      .delete(`/api/v1/statuses/${savedStatus.id}`)
+      .set('Cookie', userACookie);
+
+    expect(delRes.status).toBe(400);
+    expect(delRes.body.error.message).toContain('Cannot delete the default status');
+  });
+
   it('DELETE /api/v1/statuses/:id fails with 409 if applications use this status', async () => {
     const listRes = await request(app)
       .get('/api/v1/statuses')

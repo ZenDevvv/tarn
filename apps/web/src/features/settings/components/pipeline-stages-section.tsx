@@ -436,7 +436,14 @@ export function PipelineStagesSection() {
                     </button>
 
                     {/* Delete with inline check and cross confirmation */}
-                    {isConfirmingDelete ? (
+                    {stage.isDefault ? (
+                      <div
+                        className="p-1.5 text-muted-foreground/40 flex items-center justify-center w-7 h-7"
+                        title="Default pipeline stage (cannot be deleted)"
+                      >
+                        <Lock size={14} />
+                      </div>
+                    ) : isConfirmingDelete ? (
                       <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-scale-up">
                         <button
                           type="button"

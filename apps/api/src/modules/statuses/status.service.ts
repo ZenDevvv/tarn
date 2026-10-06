@@ -69,6 +69,10 @@ export const statusService = {
       throw new NotFoundError('Application status not found');
     }
 
+    if (status.isDefault) {
+      throw new BadRequestError(`Cannot delete the default status "${status.name}".`);
+    }
+
     const usageCount = await statusRepository.countApplicationsUsingStatus(userId, id);
     if (usageCount > 0) {
       throw new ConflictError(
