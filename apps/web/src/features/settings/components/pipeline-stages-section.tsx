@@ -22,13 +22,14 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Select, SelectOption } from '@/components/ui/select';
 
-const ICON_STYLES: Array<{ type: CloseType; label: string }> = [
-  { type: 'CANCELLED', label: 'Slash (⊘)' },
-  { type: 'OTHER', label: 'Minus (⊖)' },
-  { type: 'WITHDRAWN', label: 'Dashed Ring' },
-  { type: 'REJECTED', label: 'Cross (✕)' },
-  { type: 'NO_RESPONSE', label: 'Dotted Ring' },
+const ICON_OPTIONS: SelectOption<CloseType>[] = [
+  { value: 'CANCELLED', label: 'Slash (⊘)', icon: <StageRing status={{ closeType: 'CANCELLED' }} size={16} /> },
+  { value: 'OTHER', label: 'Minus (⊖)', icon: <StageRing status={{ closeType: 'OTHER' }} size={16} /> },
+  { value: 'WITHDRAWN', label: 'Dashed Ring', icon: <StageRing status={{ closeType: 'WITHDRAWN' }} size={16} /> },
+  { value: 'REJECTED', label: 'Cross (✕)', icon: <StageRing status={{ closeType: 'REJECTED' }} size={16} /> },
+  { value: 'NO_RESPONSE', label: 'Dotted Ring', icon: <StageRing status={{ closeType: 'NO_RESPONSE' }} size={16} /> },
 ];
 
 export function PipelineStagesSection() {
@@ -547,52 +548,35 @@ export function PipelineStagesSection() {
         </div>
 
         {/* Add Closed Outcome Form */}
-        <div className="flex flex-col gap-2.5 pt-3 mt-1">
-          <div className="text-caption font-medium text-muted-foreground">Select Icon Style:</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            {ICON_STYLES.map((style) => {
-              const isSelected = newClosedType === style.type;
-              return (
-                <button
-                  key={style.type}
-                  type="button"
-                  onClick={() => setNewClosedType(style.type)}
-                  className={cn(
-                    'flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-colors cursor-pointer text-small',
-                    isSelected
-                      ? 'border-primary bg-primary/10 text-foreground font-medium ring-1 ring-primary'
-                      : 'border-border/70 bg-card hover:bg-secondary/60 text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <StageRing status={{ closeType: style.type }} size={16} />
-                  <span className="truncate leading-none text-[12px]">{style.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <form onSubmit={handleAddClosedOutcome} className="flex items-center gap-2 mt-1">
-            <input
-              type="text"
-              placeholder="Add closed outcome (e.g. Hiring Freeze, Offer Declined)..."
-              value={newClosedName}
-              onChange={(e) => setNewClosedName(e.target.value)}
-              className="flex-1 h-9 px-3 text-body bg-background border border-input rounded-md focus-visible:outline-2 focus-visible:outline-primary transition-colors"
+        <form onSubmit={handleAddClosedOutcome} className="flex items-center gap-2 pt-3 mt-1">
+          <input
+            type="text"
+            placeholder="Add closed outcome (e.g. Hiring Freeze, Offer Declined)..."
+            value={newClosedName}
+            onChange={(e) => setNewClosedName(e.target.value)}
+            className="flex-1 h-9 px-3 text-body bg-background border border-input rounded-md focus-visible:outline-2 focus-visible:outline-primary transition-colors"
+          />
+          <div className="w-[170px] sm:w-[185px] shrink-0">
+            <Select<CloseType>
+              value={newClosedType}
+              onChange={(val) => setNewClosedType(val)}
+              options={ICON_OPTIONS}
+              aria-label="Select icon style"
             />
-            <button
-              type="submit"
-              disabled={createMutation.isPending || !newClosedName.trim()}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground font-medium text-small hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer shrink-0"
-            >
-              {createMutation.isPending ? (
-                <Loader2 className="animate-spin" size={15} />
-              ) : (
-                <Plus size={15} />
-              )}
-              <span>Add Outcome</span>
-            </button>
-          </form>
-        </div>
+          </div>
+          <button
+            type="submit"
+            disabled={createMutation.isPending || !newClosedName.trim()}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground font-medium text-small hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer shrink-0"
+          >
+            {createMutation.isPending ? (
+              <Loader2 className="animate-spin" size={15} />
+            ) : (
+              <Plus size={15} />
+            )}
+            <span>Add</span>
+          </button>
+        </form>
       </div>
     </div>
   );
