@@ -335,7 +335,17 @@
    -------------------------------------------------------------------------- */
 @utility marker {
   background: linear-gradient(var(--marker), var(--marker)) 0 50% / 100% 100% no-repeat;
-  color: var(--marker-foreground);
+  color: var(--marker-foreground) !important;
+  padding: 0.05em 0.35em;
+  margin-inline: -0.35em;
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.marker {
+  background: linear-gradient(var(--marker), var(--marker)) 0 50% / 100% 100% no-repeat;
+  color: var(--marker-foreground) !important;
   padding: 0.05em 0.35em;
   margin-inline: -0.35em;
   border-radius: 3px;

@@ -85,8 +85,8 @@ export function RecentApplicationsTable({ applications, totalCount }: RecentAppl
                       <div>
                         <span
                           className={cn(
-                            'text-[13px] leading-[18px] text-foreground',
-                            isActionable && 'marker'
+                            'text-[13px] leading-[18px]',
+                            isActionable ? 'marker font-medium' : 'text-foreground'
                           )}
                         >
                           {app.nextAction}

@@ -73,8 +73,8 @@ export function FollowUpItem({ followUp, onComplete, showApplication = true }: F
         <div className="flex items-baseline justify-between gap-2">
           <span
             className={cn(
-              'text-body font-medium text-foreground transition-all',
-              isActionable && 'marker',
+              'text-body font-medium transition-all',
+              isActionable ? 'marker' : 'text-foreground',
               completedLocally && 'line-through text-muted-foreground'
             )}
           >

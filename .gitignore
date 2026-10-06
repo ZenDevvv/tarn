@@ -16,6 +16,8 @@ venv/
 # Graphify Internal Caches (Keep reports/wiki, ignore cache hashes)
 graphify-out/cache/
 graphify-out/*.tmp
+graphify-out/*.lock
+graphify-out/.*.lock
 
 # Build Artifacts
 dist/
