@@ -110,7 +110,7 @@ export function AppLayout() {
           className="flex items-center gap-2.5 px-2 py-1 font-display font-semibold text-subheading text-foreground tracking-tight no-underline"
         >
           <StageRing status="OFFER" size={22} />
-          <span className="max-[1023px]:hidden">Tracker</span>
+          <span className="max-[1023px]:hidden">Tarn</span>
         </Link>
 
         {/* Global Primary Action Button */}

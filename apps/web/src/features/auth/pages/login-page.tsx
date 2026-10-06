@@ -42,7 +42,7 @@ export function LoginPage() {
         <div className="flex items-center gap-2 mb-6">
           <StageRing status="OFFER" size={24} />
           <span className="font-display font-semibold text-subheading text-foreground tracking-tight">
-            Tracker
+            Tarn
           </span>
         </div>
 

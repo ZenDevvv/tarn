@@ -1,8 +1,8 @@
 {
-  "name": "job-application-tracker",
+  "name": "tarn",
   "version": "1.0.0",
   "private": true,
-  "description": "Personal Job Application Tracker with Marker design system",
+  "description": "Tarn — Intelligent Personal ATS & Job Application Tracker with Marker design system",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "docker compose up -d && pnpm --parallel --filter \"@tracker/*\" dev",
