@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ResumeWithDetailsDTO } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from '@/features/applications/components/application-status-badge';
+import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import { resolveDocumentUrl } from '../api/resume-api';
 import {
   X,
@@ -230,7 +230,7 @@ export function ResumeDetailModal({
             {resume.applications && resume.applications.length > 0 ? (
               <div className="grid grid-cols-1 gap-2.5">
                 {resume.applications.map((app) => {
-                  const statusCfg = STATUS_CONFIG[app.status] || { label: app.status };
+                  const statusCfg = getStatusConfig(app.status);
                   const appliedDate = app.appliedAt
                     ? new Date(app.appliedAt).toLocaleDateString(undefined, {
                         month: 'short',

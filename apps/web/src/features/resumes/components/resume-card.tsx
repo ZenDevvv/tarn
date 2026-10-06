@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ResumeWithDetailsDTO } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from '@/features/applications/components/application-status-badge';
+import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import { resolveDocumentUrl } from '../api/resume-api';
 import {
   FileText,
@@ -213,7 +213,7 @@ export function ResumeCard({
                 <div
                   key={app.id}
                   className="w-4 h-4 rounded-full bg-background border border-border flex items-center justify-center p-0.5"
-                  title={`${app.company?.name || 'Company'} — ${STATUS_CONFIG[app.status]?.label || app.status}`}
+                  title={`${app.company?.name || 'Company'} — ${getStatusConfig(app.status).label}`}
                 >
                   <StageRing status={app.status} size={11} />
                 </div>

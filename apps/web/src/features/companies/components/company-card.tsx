@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CompanyWithDetailsDTO } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from '@/features/applications/components/application-status-badge';
+import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import {
   ExternalLink,
   MapPin,
@@ -122,7 +122,7 @@ export function CompanyCard({ company, onSelect, onEdit, onDelete }: CompanyCard
         {recentApplications.length > 0 ? (
           <div className="flex flex-col gap-1.5">
             {recentApplications.map((app) => {
-              const statusCfg = STATUS_CONFIG[app.status] || { label: app.status };
+              const statusCfg = getStatusConfig(app.status);
               return (
                 <div
                   key={app.id}

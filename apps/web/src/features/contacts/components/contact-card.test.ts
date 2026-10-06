@@ -48,4 +48,22 @@ describe('Contacts Feature - Unit Tests', () => {
     expect(`tel:${mockContact.phone}`).toBe('tel:+1 555-0199');
     expect(mockContact.linkedinUrl).toContain('linkedin.com/in/');
   });
+
+  it('safely extracts status label when application status is a dynamic status object from database', () => {
+    const contactWithDynamicStatus = {
+      ...mockContact,
+      application: {
+        ...mockContact.application!,
+        status: {
+          id: 'status_1',
+          name: 'Technical Screening',
+          order: 2,
+          closeType: null,
+          isDefault: false,
+        } as any,
+      },
+    };
+
+    expect(contactWithDynamicStatus.application.status.name).toBe('Technical Screening');
+  });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CompanyWithDetailsDTO } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from '@/features/applications/components/application-status-badge';
+import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import {
   X,
   Building2,
@@ -273,7 +273,7 @@ export function CompanyDetailModal({
             {company.applications.length > 0 ? (
               <div className="flex flex-col gap-2.5">
                 {company.applications.map((app) => {
-                  const statusCfg = STATUS_CONFIG[app.status] || { label: app.status };
+                  const statusCfg = getStatusConfig(app.status);
                   const appliedDate = app.appliedAt
                     ? new Date(app.appliedAt).toLocaleDateString(undefined, {
                         month: 'short',

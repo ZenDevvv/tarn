@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ContactWithDetailsDTO } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from '@/features/applications/components/application-status-badge';
+import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import {
   Mail,
   Phone,
@@ -172,7 +172,7 @@ export function ContactCard({ contact, onSelect, onEdit, onDelete }: ContactCard
                   {contact.application.job?.title || 'Job Application'}
                 </span>
                 <span className="text-[11px] text-muted-foreground block truncate">
-                  {STATUS_CONFIG[contact.application.status]?.label || contact.application.status}
+                  {getStatusConfig(contact.application.status).label}
                 </span>
               </div>
             </div>

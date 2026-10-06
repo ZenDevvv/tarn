@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ContactWithDetailsDTO } from '@tracker/types';
-import { StageRing, STATUS_CONFIG } from '@/features/applications/components/application-status-badge';
+import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import {
   X,
   Users,
@@ -183,7 +183,7 @@ export function ContactDetailModal({
                       {contact.application.job?.title || 'Job Application'}
                     </span>
                     <span className="text-micro text-muted-foreground block truncate mt-0.5">
-                      {STATUS_CONFIG[contact.application.status]?.label || contact.application.status} •{' '}
+                      {getStatusConfig(contact.application.status).label} •{' '}
                       {contact.company?.name || 'Company'}
                     </span>
                   </div>
