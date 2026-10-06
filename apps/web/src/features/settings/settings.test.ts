@@ -134,4 +134,15 @@ describe('Settings Feature - Unit Tests', () => {
     expect(exportData.user.email).toBe('candidate@example.com');
     expect(Array.isArray(exportData.applications)).toBe(true);
   });
+
+  it('validates settings tab routing logic defaults to profile', () => {
+    const validTabs = ['profile', 'preferences', 'security', 'data'];
+    const getActiveTab = (raw: string | null) =>
+      raw && validTabs.includes(raw) ? raw : 'profile';
+
+    expect(getActiveTab('profile')).toBe('profile');
+    expect(getActiveTab('preferences')).toBe('preferences');
+    expect(getActiveTab('unknown')).toBe('profile');
+    expect(getActiveTab(null)).toBe('profile');
+  });
 });

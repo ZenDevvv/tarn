@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { settingsApi } from '../api/settings-api';
 import { SettingsNav, SettingsTab } from '../components/settings-nav';
 import { ProfileSection } from '../components/profile-section';
@@ -14,8 +14,23 @@ import {
 } from '@tracker/types';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
+const VALID_TABS: readonly SettingsTab[] = ['profile', 'preferences', 'security', 'data'];
+
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab: SettingsTab = rawTab && (VALID_TABS as readonly string[]).includes(rawTab)
+    ? (rawTab as SettingsTab)
+    : 'profile';
+
+  const handleTabChange = (tab: SettingsTab) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    }, { replace: true });
+  };
+
   const queryClient = useQueryClient();
   const { updateCurrentUser } = useAuth();
 
@@ -105,7 +120,7 @@ export function SettingsPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <SettingsNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <SettingsNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Tab Panel */}
       <div className="p-6 md:p-8 rounded-xl border border-border bg-card">

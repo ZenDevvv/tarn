@@ -151,21 +151,26 @@ export function AppLayout() {
 
         {/* User Badge & Theme Toggle */}
         <div className="pt-3 border-t border-border w-full flex items-center justify-between gap-2 max-[1023px]:flex-col">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-[30px] h-[30px] rounded-full bg-success-tint text-success font-semibold text-[13px] grid place-items-center shrink-0">
+          <Link
+            to="/settings?tab=profile"
+            className="flex items-center gap-2.5 min-w-0 flex-1 p-1.5 -ml-1 rounded-md hover:bg-secondary transition-colors no-underline group cursor-pointer max-[1023px]:ml-0 max-[1023px]:p-1 max-[1023px]:flex-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            title="Profile settings"
+            aria-label="Profile settings"
+          >
+            <div className="w-[30px] h-[30px] rounded-full bg-success-tint text-success font-semibold text-[13px] grid place-items-center shrink-0 group-hover:ring-2 group-hover:ring-primary/20 transition-all">
               {userInitial}
             </div>
             <div className="min-w-0 max-[1023px]:hidden">
-              <span className="block font-medium text-[13px] leading-[18px] text-foreground truncate">
+              <span className="block font-medium text-[13px] leading-[18px] text-foreground truncate group-hover:text-primary transition-colors">
                 {user?.name || 'Candidate'}
               </span>
               <span className="block text-caption text-muted-foreground truncate">
                 {user?.email || ''}
               </span>
             </div>
-          </div>
+          </Link>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={toggleTheme}
