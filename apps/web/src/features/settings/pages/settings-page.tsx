@@ -72,7 +72,7 @@ export function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-8 w-full max-w-[800px] animate-pulse">
+      <div className="flex flex-col gap-8 w-full max-w-[800px] mx-auto animate-pulse">
         <div className="flex flex-col gap-2">
           <div className="h-8 w-44 bg-muted rounded-md" />
           <div className="h-4 w-72 bg-muted rounded-md" />
@@ -85,7 +85,7 @@ export function SettingsPage() {
 
   if (error || !settings) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center border border-border rounded-xl bg-card gap-4">
+      <div className="flex flex-col items-center justify-center p-12 text-center border border-border rounded-xl bg-card gap-4 w-full max-w-[800px] mx-auto">
         <AlertCircle size={32} className="text-destructive" />
         <div>
           <h2 className="text-heading font-display font-semibold text-foreground">
@@ -108,7 +108,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[800px]">
+    <div className="flex flex-col gap-8 w-full max-w-[800px] mx-auto">
       {/* Page Header */}
       <div className="pb-4 border-b border-border">
         <h1 className="font-display font-semibold text-display text-foreground tracking-tight">

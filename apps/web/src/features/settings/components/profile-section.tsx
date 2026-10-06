@@ -78,7 +78,7 @@ export function ProfileSection({ settings, onSave, isSaving }: ProfileSectionPro
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-8 max-w-[680px]">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8 w-full">
       <div>
         <h2 className="text-heading font-display font-semibold text-foreground tracking-tight">
           Personal profile
