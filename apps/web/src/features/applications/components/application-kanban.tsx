@@ -7,6 +7,7 @@ import { useApplicationStatusMutation } from '../hooks/use-application-mutations
 import { ChevronLeft, ChevronRight, GripVertical, Calendar } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Select } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui';
 
 interface ApplicationKanbanProps {
   applications: ApplicationDTO[];
@@ -28,6 +29,16 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'move';
+
+    // Ensure the entire translucent card is used as the drag preview
+    const card = e.currentTarget as HTMLElement;
+    if (card && e.dataTransfer.setDragImage) {
+      const rect = card.getBoundingClientRect();
+      const offsetX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const offsetY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      e.dataTransfer.setDragImage(card, offsetX, offsetY);
+    }
+
     setDraggedAppId(id);
   };
 
@@ -70,7 +81,12 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
 
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-6 pt-1 max-[719px]:-mx-4 max-[719px]:px-4 select-none scrollbar-thin">
+    <ScrollArea
+      orientation="horizontal"
+      hoverOnly
+      containerClassName="max-[719px]:-mx-4"
+      className="flex gap-4 pb-6 pt-1 max-[719px]:px-4 select-none"
+    >
       {STAGES.map(({ status, label }, stageIdx) => {
         const stageApps = applications.filter((a) => a.status === status);
         const isDragTarget = dragOverStage === status;
@@ -144,7 +160,7 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                       onDragStart={(e) => handleDragStart(e, app.id)}
                       onDragEnd={handleDragEnd}
                       className={cn(
-                        'group bg-card border border-border rounded-lg p-3 shadow-xs hover:border-input transition-all cursor-grab active:cursor-grabbing text-left flex flex-col justify-between min-h-[140px]',
+                        'group/card bg-card border border-border rounded-lg p-3 shadow-xs hover:border-input transition-all cursor-grab active:cursor-grabbing text-left flex flex-col justify-between min-h-[140px]',
                         draggedAppId === app.id && 'opacity-40 ring-1 ring-primary'
                       )}
                     >
@@ -158,6 +174,7 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                         {/* Heading: Company & Role */}
                         <Link
                           to={`/applications/${app.id}`}
+                          draggable={false}
                           className="block font-display font-semibold text-[14px] leading-tight text-foreground hover:text-primary no-underline truncate"
                         >
                           {app.company?.name || 'Company'}
@@ -191,8 +208,8 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                           )}
                         </div>
 
-                        {/* Stage Move Controls (accessible click / touch) */}
-                        <div className="flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Stage Move Controls (accessible click / touch / focus) */}
+                        <div className="flex items-center justify-between gap-1 opacity-0 group-hover/card:opacity-100 focus-within:opacity-100 transition-opacity">
                           <button
                             type="button"
                             disabled={stageIdx === 0}
@@ -242,6 +259,6 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
           </div>
         );
       })}
-    </div>
+    </ScrollArea>
   );
 }
