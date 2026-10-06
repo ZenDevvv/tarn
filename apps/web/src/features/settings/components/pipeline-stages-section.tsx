@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   useApplicationStatuses,
   useCreateStatusMutation,
@@ -44,10 +44,27 @@ export function PipelineStagesSection() {
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const activeStages = useMemo(() => {
+    if (!statuses) return [];
+    return statuses
+      .filter((s) => s.closeType === null)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [statuses]);
+
+  const [localStages, setLocalStages] = useState(activeStages);
+  const localStagesRef = useRef(localStages);
+  localStagesRef.current = localStages;
+  const initialOrderRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!draggedId) {
+      setLocalStages(activeStages);
+    }
+  }, [activeStages, draggedId]);
 
   if (isLoading) {
     return (
@@ -73,14 +90,10 @@ export function PipelineStagesSection() {
     );
   }
 
-  const activeStages = statuses
-    .filter((s) => s.closeType === null)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
   const closedOutcomes = statuses
     .filter((s) => s.closeType !== null);
 
-  const totalActive = activeStages.length;
+  const totalActive = localStages.length;
 
   const showNotification = (msg: string, isErr = false) => {
     if (isErr) {
@@ -146,46 +159,62 @@ export function PipelineStagesSection() {
     setEditingStageName('');
   };
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index);
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    initialOrderRef.current = localStagesRef.current.map((s) => s.id);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
+    e.dataTransfer.setData('text/plain', id);
+    requestAnimationFrame(() => {
+      setDraggedId(id);
+    });
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragOverIndex !== index) {
-      setDragOverIndex(index);
-    }
+
+    if (!draggedId || draggedId === targetId) return;
+
+    const sourceIndex = localStages.findIndex((s) => s.id === draggedId);
+    const targetIndex = localStages.findIndex((s) => s.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
+
+    const targetRect = e.currentTarget.getBoundingClientRect();
+    const midY = targetRect.top + targetRect.height / 2;
+
+    // Midpoint hysteresis: only swap once cursor passes target's vertical center
+    if (sourceIndex < targetIndex && e.clientY < midY) return;
+    if (sourceIndex > targetIndex && e.clientY > midY) return;
+
+    setLocalStages((prev) => {
+      const curSource = prev.findIndex((s) => s.id === draggedId);
+      const curTarget = prev.findIndex((s) => s.id === targetId);
+      if (curSource === -1 || curTarget === -1 || curSource === curTarget) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(curSource, 1);
+      next.splice(curTarget, 0, moved);
+      return next;
+    });
   };
 
-  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    const sourceIndex = draggedIndex;
-    setDraggedIndex(null);
-    setDragOverIndex(null);
+  const handleDragEnd = async () => {
+    const activeDraggedId = draggedId;
+    setDraggedId(null);
 
-    if (sourceIndex === null || sourceIndex === targetIndex) return;
+    if (!activeDraggedId) return;
 
-    const reordered = [...activeStages];
-    const [moved] = reordered.splice(sourceIndex, 1);
-    reordered.splice(targetIndex, 0, moved);
+    const newIds = localStagesRef.current.map((s) => s.id);
+    const initialIds = initialOrderRef.current;
+    const hasChanged = newIds.some((id, idx) => id !== initialIds[idx]);
 
-    const payload = {
-      statusIds: reordered.map((stage) => stage.id),
-    };
-
-    try {
-      await reorderMutation.mutateAsync(payload);
-    } catch (err: any) {
-      showNotification(err?.message || 'Failed to reorder stages.', true);
+    if (hasChanged) {
+      try {
+        await reorderMutation.mutateAsync({ statusIds: newIds });
+      } catch (err: any) {
+        showNotification(err?.message || 'Failed to reorder stages.', true);
+        setLocalStages(activeStages);
+      }
     }
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -261,26 +290,29 @@ export function PipelineStagesSection() {
         </div>
 
         {/* Stage List */}
-        <div className="flex flex-col divide-y divide-border/60">
-          {activeStages.map((stage, idx) => {
+        <div
+          className="flex flex-col divide-y divide-border/60"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => e.preventDefault()}
+        >
+          {localStages.map((stage, idx) => {
             const isEditing = editingStageId === stage.id;
             const isConfirmingDelete = confirmDeleteId === stage.id;
-            const isDragging = draggedIndex === idx;
-            const isDragTarget = dragOverIndex === idx && draggedIndex !== idx;
+            const isDragging = draggedId === stage.id;
 
             return (
               <div
                 key={stage.id}
                 draggable={!isEditing}
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={(e) => handleDragOver(e, idx)}
-                onDrop={(e) => handleDrop(e, idx)}
+                onDragStart={(e) => handleDragStart(e, stage.id)}
+                onDragOver={(e) => handleDragOver(e, stage.id)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  'flex items-center justify-between py-3 px-2 gap-3 transition-colors duration-150',
-                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80',
-                  isDragging && 'opacity-40 bg-secondary/30',
-                  isDragTarget && 'border-t-2 border-primary bg-primary/5'
+                  'flex items-center justify-between py-3 px-2.5 gap-3 transition-all duration-150',
+                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80 cursor-grab active:cursor-grabbing',
+                  isDragging
+                    ? 'opacity-40 bg-secondary/70 border border-dashed border-primary/30 rounded-lg scale-[0.99] shadow-xs'
+                    : 'opacity-100'
                 )}
               >
                 {/* Left: Grip, Order, Ring, Name */}
@@ -297,7 +329,7 @@ export function PipelineStagesSection() {
                     #{idx + 1}
                   </span>
 
-                  <StageRing status={stage} size={20} totalStages={totalActive} />
+                  <StageRing status={{ ...stage, order: idx }} size={20} totalStages={totalActive} />
 
                   {isEditing ? (
                     <div className="flex items-center gap-2 flex-1 max-w-[280px]">
@@ -314,6 +346,8 @@ export function PipelineStagesSection() {
                       />
                       <button
                         type="button"
+                        draggable={false}
+                        onDragStart={(e) => e.stopPropagation()}
                         onClick={() => handleSaveEdit(stage.id)}
                         disabled={updateMutation.isPending || !editingStageName.trim()}
                         className="p-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
@@ -323,6 +357,8 @@ export function PipelineStagesSection() {
                       </button>
                       <button
                         type="button"
+                        draggable={false}
+                        onDragStart={(e) => e.stopPropagation()}
                         onClick={handleCancelEdit}
                         className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
                         title="Cancel"
@@ -350,6 +386,8 @@ export function PipelineStagesSection() {
                     {/* Edit Button */}
                     <button
                       type="button"
+                      draggable={false}
+                      onDragStart={(e) => e.stopPropagation()}
                       onClick={() => handleStartEdit(stage.id, stage.name)}
                       className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
                       title="Rename stage"
@@ -363,6 +401,8 @@ export function PipelineStagesSection() {
                       <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-fade-in">
                         <button
                           type="button"
+                          draggable={false}
+                          onDragStart={(e) => e.stopPropagation()}
                           onClick={() => handleDelete(stage.id, stage.name)}
                           disabled={deleteMutation.isPending}
                           className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-colors"
@@ -377,6 +417,8 @@ export function PipelineStagesSection() {
                         </button>
                         <button
                           type="button"
+                          draggable={false}
+                          onDragStart={(e) => e.stopPropagation()}
                           onClick={() => setConfirmDeleteId(null)}
                           className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                           title="Cancel delete"
@@ -388,6 +430,8 @@ export function PipelineStagesSection() {
                     ) : (
                       <button
                         type="button"
+                        draggable={false}
+                        onDragStart={(e) => e.stopPropagation()}
                         onClick={() => setConfirmDeleteId(stage.id)}
                         className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
                         title="Delete stage"
