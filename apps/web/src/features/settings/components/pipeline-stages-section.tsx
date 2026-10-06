@@ -257,9 +257,6 @@ export function PipelineStagesSection() {
             <h3 className="font-display font-semibold text-body text-foreground">
               Active Pipeline Stages ({totalActive})
             </h3>
-            <p className="text-caption text-muted-foreground mt-0.5">
-              Arranged in chronological progression. Stage Ring fill dynamically reflects each stage's position.
-            </p>
           </div>
         </div>
 
@@ -439,9 +436,6 @@ export function PipelineStagesSection() {
           <h3 className="font-display font-semibold text-body text-foreground">
             Closed Outcomes ({closedOutcomes.length})
           </h3>
-          <p className="text-caption text-muted-foreground mt-0.5">
-            Terminal status categories for concluded applications. You can customize display names or create custom closed outcomes with distinct icon styles.
-          </p>
         </div>
 
         <div className="flex flex-col divide-y divide-border/60">
