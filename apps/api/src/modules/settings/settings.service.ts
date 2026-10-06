@@ -11,11 +11,7 @@ import { AuthenticationError, NotFoundError } from '../../middleware/error-handl
 
 const ACTIVE_STATUSES = [
   'APPLIED',
-  'APPLICATION_VIEWED',
-  'RECRUITER_CONTACTED',
-  'HR_INTERVIEW',
-  'TECHNICAL_INTERVIEW',
-  'FINAL_INTERVIEW',
+  'INTERVIEWING',
   'OFFER',
 ] as const;
 

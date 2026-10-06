@@ -10,11 +10,7 @@ interface PipelineStripProps {
 const ACTIVE_STAGES: Array<{ status: ApplicationStatus; label: string }> = [
   { status: 'SAVED', label: 'Saved' },
   { status: 'APPLIED', label: 'Applied' },
-  { status: 'APPLICATION_VIEWED', label: 'Viewed' },
-  { status: 'RECRUITER_CONTACTED', label: 'Screen' },
-  { status: 'HR_INTERVIEW', label: 'HR interview' },
-  { status: 'TECHNICAL_INTERVIEW', label: 'Tech interview' },
-  { status: 'FINAL_INTERVIEW', label: 'Final round' },
+  { status: 'INTERVIEWING', label: 'Interviewing' },
   { status: 'OFFER', label: 'Offer' },
   { status: 'ACCEPTED', label: 'Accepted' },
 ];
@@ -38,8 +34,8 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
         </Link>
       </div>
 
-      {/* Active Pipeline: 9 Columns */}
-      <div className="grid grid-cols-9 max-[1023px]:grid-cols-5 max-[719px]:grid-cols-3 max-[719px]:gap-y-5">
+      {/* Active Pipeline: 5 Columns */}
+      <div className="grid grid-cols-5 max-[719px]:grid-cols-3 max-[719px]:gap-y-5">
         {ACTIVE_STAGES.map(({ status, label }) => {
           const count = pipeline[status] || 0;
           const isZero = count === 0;

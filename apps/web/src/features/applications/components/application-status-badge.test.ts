@@ -3,15 +3,11 @@ import { STATUS_CONFIG } from './application-status-badge';
 import { ApplicationStatus } from '@tracker/types';
 
 describe('Marker Design System - Status & Stage Ring Specifications', () => {
-  it('defines valid labels and ring styles for all 12 ApplicationStatus values', () => {
+  it('defines valid labels and ring styles for all 8 ApplicationStatus values', () => {
     const expectedStatuses: ApplicationStatus[] = [
       'SAVED',
       'APPLIED',
-      'APPLICATION_VIEWED',
-      'RECRUITER_CONTACTED',
-      'HR_INTERVIEW',
-      'TECHNICAL_INTERVIEW',
-      'FINAL_INTERVIEW',
+      'INTERVIEWING',
       'OFFER',
       'ACCEPTED',
       'REJECTED',
@@ -35,7 +31,7 @@ describe('Marker Design System - Status & Stage Ring Specifications', () => {
     expect(STATUS_CONFIG['NO_RESPONSE'].kind).toBe('no-response');
     // Active pipeline stages must use progress kind
     expect(STATUS_CONFIG['APPLIED'].kind).toBe('progress');
-    expect(STATUS_CONFIG['HR_INTERVIEW'].kind).toBe('progress');
+    expect(STATUS_CONFIG['INTERVIEWING'].kind).toBe('progress');
     expect(STATUS_CONFIG['OFFER'].kind).toBe('progress');
     // ACCEPTED must be done with progress = 1
     expect(STATUS_CONFIG['ACCEPTED'].kind).toBe('done');

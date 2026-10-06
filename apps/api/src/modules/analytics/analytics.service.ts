@@ -24,9 +24,7 @@ export const analyticsService = {
     ];
 
     const interviewStatuses: ApplicationStatus[] = [
-      ApplicationStatus.HR_INTERVIEW,
-      ApplicationStatus.TECHNICAL_INTERVIEW,
-      ApplicationStatus.FINAL_INTERVIEW,
+      ApplicationStatus.INTERVIEWING,
     ];
 
     // Parallel queries
@@ -105,11 +103,7 @@ export const analyticsService = {
     const pipeline: Record<ApplicationStatus, number> = {
       SAVED: 0,
       APPLIED: 0,
-      APPLICATION_VIEWED: 0,
-      RECRUITER_CONTACTED: 0,
-      HR_INTERVIEW: 0,
-      TECHNICAL_INTERVIEW: 0,
-      FINAL_INTERVIEW: 0,
+      INTERVIEWING: 0,
       OFFER: 0,
       ACCEPTED: 0,
       REJECTED: 0,
@@ -263,9 +257,7 @@ export const analyticsService = {
     ];
 
     const interviewStatuses: ApplicationStatus[] = [
-      ApplicationStatus.HR_INTERVIEW,
-      ApplicationStatus.TECHNICAL_INTERVIEW,
-      ApplicationStatus.FINAL_INTERVIEW,
+      ApplicationStatus.INTERVIEWING,
       ApplicationStatus.OFFER,
       ApplicationStatus.ACCEPTED,
     ];
@@ -276,11 +268,7 @@ export const analyticsService = {
     ];
 
     const responseStatuses: ApplicationStatus[] = [
-      ApplicationStatus.APPLICATION_VIEWED,
-      ApplicationStatus.RECRUITER_CONTACTED,
-      ApplicationStatus.HR_INTERVIEW,
-      ApplicationStatus.TECHNICAL_INTERVIEW,
-      ApplicationStatus.FINAL_INTERVIEW,
+      ApplicationStatus.INTERVIEWING,
       ApplicationStatus.OFFER,
       ApplicationStatus.ACCEPTED,
       ApplicationStatus.REJECTED,
@@ -329,22 +317,17 @@ export const analyticsService = {
     const funnelBase = Math.max(appliedApps.length, totalApplications);
 
     const screenStages: ApplicationStatus[] = [
-      ApplicationStatus.HR_INTERVIEW,
-      ApplicationStatus.TECHNICAL_INTERVIEW,
-      ApplicationStatus.FINAL_INTERVIEW,
+      ApplicationStatus.INTERVIEWING,
       ApplicationStatus.OFFER,
       ApplicationStatus.ACCEPTED,
     ];
 
     const techStages: ApplicationStatus[] = [
-      ApplicationStatus.TECHNICAL_INTERVIEW,
-      ApplicationStatus.FINAL_INTERVIEW,
       ApplicationStatus.OFFER,
       ApplicationStatus.ACCEPTED,
     ];
 
     const finalStages: ApplicationStatus[] = [
-      ApplicationStatus.FINAL_INTERVIEW,
       ApplicationStatus.OFFER,
       ApplicationStatus.ACCEPTED,
     ];

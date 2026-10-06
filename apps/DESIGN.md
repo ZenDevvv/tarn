@@ -217,10 +217,10 @@ A child should never be rounder than its parent.
 Content order, top to bottom:
 1. Stage ring + status label (left), priority glyph (right)
 2. Company (display face, 16px 600), position below in `text-muted-foreground`
-3. Facts row: work setup, salary range, date applied, platform. Separate with 14px gaps, **not** middle dots
-4. Divider, then next action text and its due time. Marker only if today/overdue. If none, show "No next action" in muted text
+3. Facts row: work setup, salary range, platform. Separate with 14px gaps, **not** middle dots (single line, no wrapping)
+4. Divider, then applied date with calendar icon (left) and relative age (right).
 
-Surface: `bg-card border rounded-lg`, padding 14/16. The whole card is one link to `/applications/:id`. Card actions go in a `More actions` menu.
+Surface: `bg-card border rounded-lg`, uniform height across grid (`h-full flex flex-col justify-between`). The whole card is one link to `/applications/:id`.
 
 ### Priority
 Three-bar glyph (1, 2, or 3 bars filled in `text-foreground`). Never color-coded. Always has an `aria-label` ("High priority"). Priority is user-defined, not a recommendation.

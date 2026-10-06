@@ -4,7 +4,7 @@ import { ApplicationDTO, ApplicationStatus } from '@tracker/types';
 import { StageRing, STATUS_CONFIG } from './application-status-badge';
 import { PriorityGlyph } from './priority-glyph';
 import { useApplicationStatusMutation } from '../hooks/use-application-mutations';
-import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical, Calendar } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Select } from '@/components/ui/select';
 
@@ -15,11 +15,7 @@ interface ApplicationKanbanProps {
 const STAGES: Array<{ status: ApplicationStatus; label: string }> = [
   { status: 'SAVED', label: 'Saved' },
   { status: 'APPLIED', label: 'Applied' },
-  { status: 'APPLICATION_VIEWED', label: 'Viewed' },
-  { status: 'RECRUITER_CONTACTED', label: 'Screen' },
-  { status: 'HR_INTERVIEW', label: 'HR Interview' },
-  { status: 'TECHNICAL_INTERVIEW', label: 'Tech Interview' },
-  { status: 'FINAL_INTERVIEW', label: 'Final Round' },
+  { status: 'INTERVIEWING', label: 'Interviewing' },
   { status: 'OFFER', label: 'Offer' },
   { status: 'ACCEPTED', label: 'Accepted' },
 ];
@@ -72,11 +68,9 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
     }
   };
 
-  const now = new Date();
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-6 pt-1 -mx-4 px-4 sm:-mx-6 sm:px-6 select-none scrollbar-thin">
+    <div className="flex gap-4 overflow-x-auto pb-6 pt-1 max-[719px]:-mx-4 max-[719px]:px-4 select-none scrollbar-thin">
       {STAGES.map(({ status, label }, stageIdx) => {
         const stageApps = applications.filter((a) => a.status === status);
         const isDragTarget = dragOverStage === status;
@@ -88,7 +82,7 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, status)}
             className={cn(
-              'w-[280px] shrink-0 flex flex-col rounded-xl bg-card/60 border border-border transition-colors duration-150',
+              'min-w-[260px] flex-1 max-w-[360px] shrink-0 flex flex-col rounded-xl bg-card/60 border border-border transition-colors duration-150',
               isDragTarget && 'bg-primary/5 border-primary ring-1 ring-primary/40'
             )}
           >
@@ -113,11 +107,35 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                 </div>
               ) : (
                 stageApps.map((app) => {
-                  const isActionable = Boolean(
-                    app.nextAction &&
-                    app.nextActionDueAt &&
-                    new Date(app.nextActionDueAt) <= todayEnd
-                  );
+                  const relevantDate = app.appliedAt || app.createdAt;
+                  const isApplied = Boolean(app.appliedAt);
+                  const dateLabel = isApplied ? 'Applied' : 'Created';
+                  const formattedDate = relevantDate
+                    ? new Date(relevantDate).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : null;
+
+                  const relativeTime = (() => {
+                    if (!relevantDate) return null;
+                    const diffDays = Math.floor(
+                      (Date.now() - new Date(relevantDate).getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    if (diffDays === 0) return 'Today';
+                    if (diffDays === 1) return 'Yesterday';
+                    if (diffDays < 30) return `${diffDays}d ago`;
+                    const diffMonths = Math.floor(diffDays / 30);
+                    return `${diffMonths}mo ago`;
+                  })();
+
+                  const activeInterview =
+                    app.interviews?.find((iv) => iv.status === 'SCHEDULED') || app.interviews?.[0];
+                  const interviewLabel = activeInterview
+                    ? activeInterview.title ||
+                      `Round ${activeInterview.round} • ${activeInterview.type.replace(/_/g, ' ').toLowerCase()}`
+                    : null;
 
                   return (
                     <div
@@ -126,77 +144,95 @@ export function ApplicationKanban({ applications }: ApplicationKanbanProps) {
                       onDragStart={(e) => handleDragStart(e, app.id)}
                       onDragEnd={handleDragEnd}
                       className={cn(
-                        'group bg-card border border-border rounded-lg p-3 shadow-xs hover:border-input transition-all cursor-grab active:cursor-grabbing text-left',
+                        'group bg-card border border-border rounded-lg p-3 shadow-xs hover:border-input transition-all cursor-grab active:cursor-grabbing text-left flex flex-col justify-between min-h-[140px]',
                         draggedAppId === app.id && 'opacity-40 ring-1 ring-primary'
                       )}
                     >
-                      {/* Top: Drag handle + Priority */}
-                      <div className="flex items-center justify-between gap-1 mb-1.5 text-muted-foreground">
-                        <GripVertical size={13} className="text-muted-foreground/60" />
-                        <PriorityGlyph priority={app.priority} />
+                      <div>
+                        {/* Top: Drag handle + Priority */}
+                        <div className="flex items-center justify-between gap-1 mb-1.5 text-muted-foreground">
+                          <GripVertical size={13} className="text-muted-foreground/60" />
+                          <PriorityGlyph priority={app.priority} />
+                        </div>
+
+                        {/* Heading: Company & Role */}
+                        <Link
+                          to={`/applications/${app.id}`}
+                          className="block font-display font-semibold text-[14px] leading-tight text-foreground hover:text-primary no-underline truncate"
+                        >
+                          {app.company?.name || 'Company'}
+                        </Link>
+                        <div className="text-[12px] text-muted-foreground mt-0.5 truncate">
+                          {app.job?.title || 'Position'}
+                        </div>
+
+                        {/* Interview round badge */}
+                        {app.status === 'INTERVIEWING' && interviewLabel && (
+                          <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground bg-secondary/80 border border-border/60 rounded px-1.5 py-0.5 w-fit max-w-full">
+                            <Calendar size={11} className="shrink-0 text-foreground" />
+                            <span className="truncate capitalize">{interviewLabel}</span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Heading: Company & Role */}
-                      <Link
-                        to={`/applications/${app.id}`}
-                        className="block font-display font-semibold text-[14px] leading-tight text-foreground hover:text-primary no-underline truncate"
-                      >
-                        {app.company?.name || 'Company'}
-                      </Link>
-                      <div className="text-[12px] text-muted-foreground mt-0.5 truncate">
-                        {app.job?.title || 'Position'}
-                      </div>
-
-                      {/* Next action */}
-                      {app.nextAction && (
-                        <div className="mt-2.5 pt-2 border-t border-border text-[12px]">
-                          <span className={cn('block truncate', isActionable && 'marker')}>
-                            {app.nextAction}
+                      {/* Bottom section: Date footer + Stage Move Controls */}
+                      <div className="mt-2.5 pt-2 border-t border-border flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-1 truncate">
+                            <Calendar size={11} className="shrink-0 text-muted-foreground/70" />
+                            <span className="truncate">
+                              {dateLabel} {formattedDate}
+                            </span>
                           </span>
-                        </div>
-                      )}
-
-                      {/* Stage Move Controls (accessible click / touch) */}
-                      <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          disabled={stageIdx === 0}
-                          onClick={() => moveStage(app.id, status, 'prev')}
-                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
-                          title="Move to previous stage"
-                        >
-                          <ChevronLeft size={14} />
-                        </button>
-
-                        <div className="w-[115px]">
-                          <Select<ApplicationStatus>
-                            size="sm"
-                            value={status}
-                            onChange={(newStatus) =>
-                              statusMutation.mutate({
-                                id: app.id,
-                                status: newStatus,
-                              })
-                            }
-                            aria-label="Change stage"
-                            triggerClassName="h-6 px-1.5 text-[11px] bg-transparent border-border/40 hover:bg-secondary text-muted-foreground hover:text-foreground"
-                            options={STAGES.map((s) => ({
-                              value: s.status,
-                              label: s.label,
-                              icon: <StageRing status={s.status} size={12} />,
-                            }))}
-                          />
+                          {relativeTime && (
+                            <span className="shrink-0 text-[10px] text-muted-foreground/80 font-mono">
+                              {relativeTime}
+                            </span>
+                          )}
                         </div>
 
-                        <button
-                          type="button"
-                          disabled={stageIdx === STAGES.length - 1}
-                          onClick={() => moveStage(app.id, status, 'next')}
-                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
-                          title="Move to next stage"
-                        >
-                          <ChevronRight size={14} />
-                        </button>
+                        {/* Stage Move Controls (accessible click / touch) */}
+                        <div className="flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            disabled={stageIdx === 0}
+                            onClick={() => moveStage(app.id, status, 'prev')}
+                            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                            title="Move to previous stage"
+                          >
+                            <ChevronLeft size={14} />
+                          </button>
+
+                          <div className="w-[115px]">
+                            <Select<ApplicationStatus>
+                              size="sm"
+                              value={status}
+                              onChange={(newStatus) =>
+                                statusMutation.mutate({
+                                  id: app.id,
+                                  status: newStatus,
+                                })
+                              }
+                              aria-label="Change stage"
+                              triggerClassName="h-6 px-1.5 text-[11px] bg-transparent border-border/40 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                              options={STAGES.map((s) => ({
+                                value: s.status,
+                                label: s.label,
+                                icon: <StageRing status={s.status} size={12} />,
+                              }))}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={stageIdx === STAGES.length - 1}
+                            onClick={() => moveStage(app.id, status, 'next')}
+                            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                            title="Move to next stage"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

@@ -69,7 +69,7 @@ describe('Companies API Integration Tests', () => {
       .send({
         companyName: 'Vercel Inc',
         position: 'Full Stack Engineer',
-        status: 'TECHNICAL_INTERVIEW',
+        status: 'INTERVIEWING',
         priority: 'HIGH',
       });
 

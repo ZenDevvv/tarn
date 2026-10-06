@@ -23,25 +23,8 @@ export function InterviewCard({
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  // Map interview type to ApplicationStatus for StageRing
-  const stageRingStatus: ApplicationStatus = (() => {
-    switch (interview.type) {
-      case 'HR':
-        return 'HR_INTERVIEW';
-      case 'TECHNICAL':
-      case 'CODING_ASSESSMENT':
-      case 'SYSTEM_DESIGN':
-        return 'TECHNICAL_INTERVIEW';
-      case 'FINAL':
-      case 'HIRING_MANAGER':
-      case 'CLIENT':
-        return 'FINAL_INTERVIEW';
-      case 'RECRUITER':
-        return 'RECRUITER_CONTACTED';
-      default:
-        return 'HR_INTERVIEW';
-    }
-  })();
+  // Map interview status for StageRing
+  const stageRingStatus: ApplicationStatus = 'INTERVIEWING';
 
   const scheduledDate = new Date(interview.scheduledAt);
   const now = new Date();

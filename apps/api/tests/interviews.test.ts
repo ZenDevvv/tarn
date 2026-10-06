@@ -36,7 +36,7 @@ describe('Interviews API Integration Tests', () => {
       .send({
         companyName: 'Anthropic',
         position: 'Prompt Engineer',
-        status: 'TECHNICAL_INTERVIEW',
+        status: 'INTERVIEWING',
         priority: 'HIGH',
       });
     applicationId = appRes.body.data.id;

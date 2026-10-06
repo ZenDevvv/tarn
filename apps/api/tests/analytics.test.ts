@@ -39,7 +39,7 @@ describe('Analytics API Integration Tests', () => {
         salaryMin: 120000,
         salaryMax: 150000,
         currency: 'USD',
-        status: 'TECHNICAL_INTERVIEW',
+        status: 'INTERVIEWING',
         priority: 'HIGH',
       });
     expect(app1.status).toBe(201);
@@ -93,7 +93,7 @@ describe('Analytics API Integration Tests', () => {
     expect(res.body.data.summary).toBeDefined();
     expect(res.body.data.weeklyVelocity).toBeDefined();
     expect(res.body.data.pipeline).toBeDefined();
-    expect(res.body.data.pipeline.TECHNICAL_INTERVIEW).toBe(1);
+    expect(res.body.data.pipeline.INTERVIEWING).toBe(1);
     expect(res.body.data.pipeline.OFFER).toBe(1);
     expect(res.body.data.pipeline.REJECTED).toBe(1);
   });
@@ -153,7 +153,7 @@ describe('Analytics API Integration Tests', () => {
 
     // Status distribution
     expect(data.statusDistribution).toBeDefined();
-    expect(data.statusDistribution.length).toBe(12);
+    expect(data.statusDistribution.length).toBe(8);
   });
 
   it('GET /api/v1/analytics/overview supports range filters (30d, 90d, ytd)', async () => {

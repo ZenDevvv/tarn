@@ -10,11 +10,7 @@ interface StatusDistributionProps {
 const STAGE_LABELS: Record<ApplicationStatus, string> = {
   SAVED: 'Saved',
   APPLIED: 'Applied',
-  APPLICATION_VIEWED: 'Viewed',
-  RECRUITER_CONTACTED: 'Contacted',
-  HR_INTERVIEW: 'HR round',
-  TECHNICAL_INTERVIEW: 'Tech round',
-  FINAL_INTERVIEW: 'Final round',
+  INTERVIEWING: 'Interviewing',
   OFFER: 'Offer',
   ACCEPTED: 'Accepted',
   REJECTED: 'Rejected',
@@ -31,7 +27,7 @@ export function StatusDistribution({ distribution }: StatusDistributionProps) {
             Stage distribution
           </h2>
           <p className="text-[13px] text-muted-foreground font-sans mt-0.5">
-            Full inventory across all 12 pipeline stages.
+            Full inventory across all 8 pipeline stages.
           </p>
         </div>
         <Link

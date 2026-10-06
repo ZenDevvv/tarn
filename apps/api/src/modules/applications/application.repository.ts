@@ -132,6 +132,9 @@ export const applicationRepository = {
           company: true,
           job: true,
           resume: true,
+          interviews: {
+            orderBy: { scheduledAt: 'desc' },
+          },
         },
         orderBy: {
           [filters.sortBy || 'appliedAt']: filters.sortOrder || 'desc',

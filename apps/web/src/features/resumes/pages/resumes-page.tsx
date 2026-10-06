@@ -159,12 +159,9 @@ export function ResumesPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <div className="flex items-center gap-2.5">
-            <FileText size={24} className="text-primary" />
-            <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
-              Resumes
-            </h1>
-          </div>
+          <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
+            Resumes
+          </h1>
           <p className="text-small text-muted-foreground mt-1">
             Manage multiple tailored resume versions and track which opportunities they were used for.
           </p>

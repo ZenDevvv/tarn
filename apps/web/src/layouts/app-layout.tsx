@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Outlet, NavLink, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { StageRing } from '@/features/applications/components/application-status-badge';
@@ -34,7 +34,11 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const isKanban =
+    location.pathname === '/applications' && searchParams.get('view') === 'pipeline';
 
   // Global '/' key focuses search
   useEffect(() => {
@@ -192,8 +196,13 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="w-full flex-1 p-8 max-[1023px]:px-6 max-[719px]:px-4 max-[719px]:pb-28 min-w-0">
-        <div className="w-full max-w-[1040px] mx-auto flex flex-col gap-10">
+      <main className="w-full flex-1 min-w-0 p-8 max-[1023px]:px-6 max-[719px]:px-4 max-[719px]:pb-28">
+        <div
+          className={cn(
+            'w-full mx-auto flex flex-col gap-10 transition-[max-width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+            isKanban ? 'max-w-full' : 'max-w-[1040px]'
+          )}
+        >
           <Outlet />
         </div>
       </main>

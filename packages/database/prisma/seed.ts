@@ -51,7 +51,7 @@ async function main() {
     {
       company: 'Halcyon Labs',
       role: 'Frontend Developer',
-      status: ApplicationStatus.TECHNICAL_INTERVIEW,
+      status: ApplicationStatus.INTERVIEWING,
       priority: Priority.HIGH,
       source: 'LinkedIn',
       sourceUrl: 'https://linkedin.com/jobs/view/12345',
@@ -66,7 +66,7 @@ async function main() {
     {
       company: 'Northbeam',
       role: 'React Engineer',
-      status: ApplicationStatus.HR_INTERVIEW,
+      status: ApplicationStatus.INTERVIEWING,
       priority: Priority.MEDIUM,
       source: 'JobStreet',
       sourceUrl: 'https://jobstreet.com/jobs/view/23456',

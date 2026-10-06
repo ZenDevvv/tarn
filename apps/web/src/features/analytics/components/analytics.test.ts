@@ -58,7 +58,7 @@ describe('Analytics Feature - Unit Tests', () => {
     },
     statusDistribution: [
       { status: 'APPLIED', count: 6, percentage: 30.0 },
-      { status: 'HR_INTERVIEW', count: 2, percentage: 10.0 },
+      { status: 'INTERVIEWING', count: 2, percentage: 10.0 },
       { status: 'OFFER', count: 2, percentage: 10.0 },
       { status: 'REJECTED', count: 6, percentage: 30.0 },
       { status: 'SAVED', count: 4, percentage: 20.0 },

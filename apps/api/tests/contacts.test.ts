@@ -49,7 +49,7 @@ describe('Contacts API Integration Tests', () => {
       .send({
         companyName: 'Stripe Inc',
         position: 'Backend Engineer',
-        status: 'RECRUITER_CONTACTED',
+        status: 'INTERVIEWING',
         priority: 'HIGH',
       });
     userAApplicationId = appRes.body.data.id;

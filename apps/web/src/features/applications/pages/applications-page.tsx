@@ -234,16 +234,18 @@ export function ApplicationsPage() {
           </div>
         </div>
       ) : viewMode === 'pipeline' ? (
-        <ApplicationKanban applications={applications} />
+        <div className="animate-fade-in w-full">
+          <ApplicationKanban applications={applications} />
+        </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
           {applications.map((app) => (
             <ApplicationCard key={app.id} application={app} />
           ))}
         </div>
       ) : (
         /* Table / Compact List View */
-        <div className="border border-border rounded-lg overflow-x-auto bg-card">
+        <div className="border border-border rounded-lg overflow-x-auto bg-card animate-fade-in">
           <table className="w-full text-left text-small border-collapse">
             <thead>
               <tr className="border-b border-border bg-secondary/50 text-caption uppercase tracking-wider text-muted-foreground font-medium">

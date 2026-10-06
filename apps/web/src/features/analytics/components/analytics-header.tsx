@@ -1,4 +1,3 @@
-import { BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 interface AnalyticsHeaderProps {
@@ -20,17 +19,12 @@ export function AnalyticsHeader({
   ];
 
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pb-6 border-b border-border">
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pb-4 border-b border-border">
       <div>
-        <div className="flex items-center gap-2 mb-1.5">
-          <div className="w-8 h-8 rounded-md bg-primary/10 text-primary grid place-items-center">
-            <BarChart2 size={18} strokeWidth={1.5} />
-          </div>
-          <h1 className="font-display font-semibold text-[26px] sm:text-[30px] leading-[1.2] tracking-tight text-foreground">
-            Analytics & Insights
-          </h1>
-        </div>
-        <p className="text-[14px] text-muted-foreground font-sans">
+        <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
+          Analytics
+        </h1>
+        <p className="text-small text-muted-foreground mt-1">
           Descriptive conversion dynamics, platform breakdown, and cycle velocity for your search.
         </p>
       </div>

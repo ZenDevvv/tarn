@@ -3,11 +3,7 @@ import { z } from 'zod';
 export const applicationStatusEnum = z.enum([
   'SAVED',
   'APPLIED',
-  'APPLICATION_VIEWED',
-  'RECRUITER_CONTACTED',
-  'HR_INTERVIEW',
-  'TECHNICAL_INTERVIEW',
-  'FINAL_INTERVIEW',
+  'INTERVIEWING',
   'OFFER',
   'ACCEPTED',
   'REJECTED',

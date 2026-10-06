@@ -21,7 +21,7 @@ describe('Resumes Feature - Unit Tests', () => {
     applications: [
       {
         id: 'app_1',
-        status: 'TECHNICAL_INTERVIEW',
+        status: 'INTERVIEWING',
         priority: 'HIGH',
         appliedAt: new Date().toISOString(),
         company: { id: 'comp_1', name: 'Linear' },

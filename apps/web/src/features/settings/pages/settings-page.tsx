@@ -110,11 +110,11 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-8 w-full max-w-[800px]">
       {/* Page Header */}
-      <div>
-        <h1 className="text-title font-display font-semibold text-foreground tracking-tight">
+      <div className="pb-4 border-b border-border">
+        <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
           Settings
         </h1>
-        <p className="text-body text-muted-foreground mt-1">
+        <p className="text-small text-muted-foreground mt-1">
           Manage your account profile, application defaults, security, and personal data.
         </p>
       </div>

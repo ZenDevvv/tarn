@@ -22,7 +22,7 @@ describe('Contacts Feature - Unit Tests', () => {
     },
     application: {
       id: 'app_123',
-      status: 'RECRUITER_CONTACTED',
+      status: 'INTERVIEWING',
       priority: 'HIGH',
       company: {
         id: 'comp_123',
@@ -40,7 +40,7 @@ describe('Contacts Feature - Unit Tests', () => {
     expect(mockContact.role).toBe('Senior Technical Recruiter');
     expect(mockContact.company?.name).toBe('Stripe Inc');
     expect(mockContact.application?.job?.title).toBe('Backend Engineer');
-    expect(mockContact.application?.status).toBe('RECRUITER_CONTACTED');
+    expect(mockContact.application?.status).toBe('INTERVIEWING');
   });
 
   it('formats communication action URIs correctly', () => {

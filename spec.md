@@ -216,18 +216,14 @@ Status is rendered via `ApplicationStatusBadge` (ring + label) or `StageRing` (r
 
 ```typescript
 export const STATUS_CONFIG: Record<ApplicationStatus, StatusConfig> = {
-  SAVED:               { label: "Saved",               kind: "progress",    progress: 0 },
-  APPLIED:             { label: "Applied",             kind: "progress",    progress: 1 / 8 },
-  APPLICATION_VIEWED:  { label: "Application viewed",  kind: "progress",    progress: 2 / 8 },
-  RECRUITER_CONTACTED: { label: "Recruiter contacted", kind: "progress",    progress: 3 / 8 },
-  HR_INTERVIEW:        { label: "HR interview",        kind: "progress",    progress: 4 / 8 },
-  TECHNICAL_INTERVIEW: { label: "Technical interview", kind: "progress",    progress: 5 / 8 },
-  FINAL_INTERVIEW:     { label: "Final interview",     kind: "progress",    progress: 6 / 8 },
-  OFFER:               { label: "Offer",               kind: "progress",    progress: 7 / 8 },
-  ACCEPTED:            { label: "Accepted",            kind: "done",        progress: 1 },
-  REJECTED:            { label: "Rejected",            kind: "rejected",    progress: 0 },
-  WITHDRAWN:           { label: "Withdrawn",           kind: "withdrawn",   progress: 0 },
-  NO_RESPONSE:         { label: "No response",         kind: "no-response", progress: 0 },
+  SAVED:        { label: "Saved",        kind: "progress",    progress: 0 },
+  APPLIED:      { label: "Applied",      kind: "progress",    progress: 1 / 4 },
+  INTERVIEWING: { label: "Interviewing", kind: "progress",    progress: 2 / 4 },
+  OFFER:        { label: "Offer",        kind: "progress",    progress: 3 / 4 },
+  ACCEPTED:     { label: "Accepted",     kind: "done",        progress: 1 },
+  REJECTED:     { label: "Rejected",     kind: "rejected",    progress: 0 },
+  WITHDRAWN:    { label: "Withdrawn",    kind: "withdrawn",   progress: 0 },
+  NO_RESPONSE:  { label: "No response",  kind: "no-response", progress: 0 },
 };
 ```
 - Ring sizes: 16px inline, 20px in pipeline strips, 22-24px in status selector lists, 44px for empty states.
@@ -334,7 +330,7 @@ The dashboard page (`/dashboard`) must strictly match the DOM structure, visual 
 ## 7. Data Model & Database Schema (Prisma)
 
 ### Enums
-- **`ApplicationStatus`**: `SAVED`, `APPLIED`, `APPLICATION_VIEWED`, `RECRUITER_CONTACTED`, `HR_INTERVIEW`, `TECHNICAL_INTERVIEW`, `FINAL_INTERVIEW`, `OFFER`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `NO_RESPONSE`
+- **`ApplicationStatus`**: `SAVED`, `APPLIED`, `INTERVIEWING`, `OFFER`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `NO_RESPONSE`
 - **`Priority`**: `LOW`, `MEDIUM`, `HIGH`
 - **`WorkSetup`**: `REMOTE`, `HYBRID`, `ONSITE`
 - **`EmploymentType`**: `FULL_TIME`, `PART_TIME`, `CONTRACT`, `INTERNSHIP`, `FREELANCE`
@@ -505,12 +501,8 @@ model FollowUp {
     },
     "pipeline": {
       "SAVED": 5,
-      "APPLIED": 6,
-      "APPLICATION_VIEWED": 2,
-      "RECRUITER_CONTACTED": 1,
-      "HR_INTERVIEW": 2,
-      "TECHNICAL_INTERVIEW": 1,
-      "FINAL_INTERVIEW": 0,
+      "APPLIED": 8,
+      "INTERVIEWING": 3,
       "OFFER": 0,
       "ACCEPTED": 0,
       "REJECTED": 5,

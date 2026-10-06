@@ -1,11 +1,7 @@
 export type ApplicationStatus =
   | 'SAVED'
   | 'APPLIED'
-  | 'APPLICATION_VIEWED'
-  | 'RECRUITER_CONTACTED'
-  | 'HR_INTERVIEW'
-  | 'TECHNICAL_INTERVIEW'
-  | 'FINAL_INTERVIEW'
+  | 'INTERVIEWING'
   | 'OFFER'
   | 'ACCEPTED'
   | 'REJECTED'

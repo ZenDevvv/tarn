@@ -46,10 +46,10 @@ describe('Timeline & Follow-ups Integration Tests', () => {
     const res = await request(app)
       .patch(`/api/v1/applications/${applicationId}/status`)
       .set('Cookie', userACookie)
-      .send({ status: 'HR_INTERVIEW' });
+      .send({ status: 'INTERVIEWING' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.status).toBe('HR_INTERVIEW');
+    expect(res.body.data.status).toBe('INTERVIEWING');
 
     // Verify timeline
     const timelineRes = await request(app)
@@ -62,7 +62,7 @@ describe('Timeline & Follow-ups Integration Tests', () => {
       (e: any) => e.type === 'STATUS_CHANGED'
     );
     expect(statusEvent).toBeDefined();
-    expect(statusEvent.description).toContain('APPLIED to HR_INTERVIEW');
+    expect(statusEvent.description).toContain('APPLIED to INTERVIEWING');
   });
 
   it('POST /api/v1/applications/:id/timeline/note adds custom note to timeline', async () => {

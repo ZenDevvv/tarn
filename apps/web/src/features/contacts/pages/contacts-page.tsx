@@ -159,12 +159,9 @@ export function ContactsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <div className="flex items-center gap-2.5">
-            <Users size={24} className="text-primary" />
-            <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
-              Contacts
-            </h1>
-          </div>
+          <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
+            Contacts
+          </h1>
           <p className="text-small text-muted-foreground mt-1">
             Directory of recruiters, hiring managers, and professional contacts.
           </p>

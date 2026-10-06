@@ -12,18 +12,14 @@ export interface StatusConfig {
 
 // Order here is the Kanban column order for the active pipeline.
 export const STATUS_CONFIG: Record<ApplicationStatus, StatusConfig> = {
-  SAVED:               { label: 'Saved',               kind: 'progress',    progress: 0 },
-  APPLIED:             { label: 'Applied',             kind: 'progress',    progress: 1 / 8 },
-  APPLICATION_VIEWED:  { label: 'Application viewed',  kind: 'progress',    progress: 2 / 8 },
-  RECRUITER_CONTACTED: { label: 'Recruiter contacted', kind: 'progress',    progress: 3 / 8 },
-  HR_INTERVIEW:        { label: 'HR interview',        kind: 'progress',    progress: 4 / 8 },
-  TECHNICAL_INTERVIEW: { label: 'Technical interview', kind: 'progress',    progress: 5 / 8 },
-  FINAL_INTERVIEW:     { label: 'Final interview',     kind: 'progress',    progress: 6 / 8 },
-  OFFER:               { label: 'Offer',               kind: 'progress',    progress: 7 / 8 },
-  ACCEPTED:            { label: 'Accepted',            kind: 'done',        progress: 1 },
-  REJECTED:            { label: 'Rejected',            kind: 'rejected',    progress: 0 },
-  WITHDRAWN:           { label: 'Withdrawn',           kind: 'withdrawn',   progress: 0 },
-  NO_RESPONSE:         { label: 'No response',         kind: 'no-response', progress: 0 },
+  SAVED:        { label: 'Saved',        kind: 'progress',    progress: 0 },
+  APPLIED:      { label: 'Applied',      kind: 'progress',    progress: 1 / 4 },
+  INTERVIEWING: { label: 'Interviewing', kind: 'progress',    progress: 2 / 4 },
+  OFFER:        { label: 'Offer',        kind: 'progress',    progress: 3 / 4 },
+  ACCEPTED:     { label: 'Accepted',     kind: 'done',        progress: 1 },
+  REJECTED:     { label: 'Rejected',     kind: 'rejected',    progress: 0 },
+  WITHDRAWN:    { label: 'Withdrawn',    kind: 'withdrawn',   progress: 0 },
+  NO_RESPONSE:  { label: 'No response',  kind: 'no-response', progress: 0 },
 };
 
 const kindColor: Record<RingKind, string> = {
