@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   useApplicationStatuses,
   useCreateStatusMutation,
@@ -59,6 +59,41 @@ export function PipelineStagesSection() {
   const localStagesRef = useRef(localStages);
   localStagesRef.current = localStages;
   const initialOrderRef = useRef<string[]>([]);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const prevPositionsRef = useRef<Map<string, number>>(new Map());
+
+  // FLIP layout animation: smooth slide transitions when rows reorder in real time
+  useLayoutEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    localStages.forEach((stage) => {
+      const el = itemRefs.current.get(stage.id);
+      if (!el) return;
+
+      const newTop = el.getBoundingClientRect().top;
+      const prevTop = prevPositionsRef.current.get(stage.id);
+
+      if (prevTop !== undefined && !prefersReducedMotion) {
+        const deltaY = prevTop - newTop;
+        if (deltaY !== 0 && stage.id !== draggedId) {
+          el.animate(
+            [
+              { transform: `translateY(${deltaY}px)` },
+              { transform: 'translateY(0px)' },
+            ],
+            {
+              duration: 200,
+              easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            }
+          );
+        }
+      }
+
+      prevPositionsRef.current.set(stage.id, newTop);
+    });
+  }, [localStages, draggedId]);
 
   useEffect(() => {
     if (!draggedId) {
@@ -303,29 +338,33 @@ export function PipelineStagesSection() {
             return (
               <div
                 key={stage.id}
+                ref={(el) => {
+                  if (el) itemRefs.current.set(stage.id, el);
+                  else itemRefs.current.delete(stage.id);
+                }}
                 draggable={!isEditing}
                 onDragStart={(e) => handleDragStart(e, stage.id)}
                 onDragOver={(e) => handleDragOver(e, stage.id)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  'flex items-center justify-between py-3 px-2.5 gap-3 transition-all duration-150',
-                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80 cursor-grab active:cursor-grabbing',
+                  'flex items-center justify-between py-3 px-2.5 gap-3 rounded-lg transition-colors duration-150 ease-out select-none',
+                  isEditing ? 'bg-secondary/40' : 'hover:bg-card/80 cursor-grab active:cursor-grabbing',
                   isDragging
-                    ? 'opacity-40 bg-secondary/70 border border-dashed border-primary/30 rounded-lg scale-[0.99] shadow-xs'
+                    ? 'opacity-35 bg-secondary/80 border border-dashed border-primary/30 scale-[0.99] shadow-xs'
                     : 'opacity-100'
                 )}
               >
                 {/* Left: Grip, Order, Ring, Name */}
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div
-                    className="text-muted-foreground/40 hover:text-foreground cursor-grab active:cursor-grabbing p-1 -ml-1 rounded transition-colors shrink-0"
+                    className="text-muted-foreground/35 hover:text-foreground cursor-grab active:cursor-grabbing p-1 -ml-1 rounded transition-all duration-150 hover:scale-110 active:scale-95 shrink-0"
                     title="Drag to reorder"
                     aria-label={`Drag ${stage.name} to reorder`}
                   >
                     <GripVertical size={16} />
                   </div>
 
-                  <span className="font-mono text-[12px] text-muted-foreground w-5 text-right shrink-0">
+                  <span className="font-mono text-[12px] text-muted-foreground w-5 text-right shrink-0 tabular-nums transition-colors duration-150">
                     #{idx + 1}
                   </span>
 
@@ -350,7 +389,7 @@ export function PipelineStagesSection() {
                         onDragStart={(e) => e.stopPropagation()}
                         onClick={() => handleSaveEdit(stage.id)}
                         disabled={updateMutation.isPending || !editingStageName.trim()}
-                        className="p-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                        className="p-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all duration-150 active:scale-90"
                         title="Save name"
                       >
                         <Check size={14} />
@@ -360,7 +399,7 @@ export function PipelineStagesSection() {
                         draggable={false}
                         onDragStart={(e) => e.stopPropagation()}
                         onClick={handleCancelEdit}
-                        className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                        className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-150 active:scale-90"
                         title="Cancel"
                       >
                         <X size={14} />
@@ -389,7 +428,7 @@ export function PipelineStagesSection() {
                       draggable={false}
                       onDragStart={(e) => e.stopPropagation()}
                       onClick={() => handleStartEdit(stage.id, stage.name)}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-150 active:scale-90"
                       title="Rename stage"
                       aria-label={`Rename ${stage.name}`}
                     >
@@ -398,14 +437,14 @@ export function PipelineStagesSection() {
 
                     {/* Delete with inline check and cross confirmation */}
                     {isConfirmingDelete ? (
-                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-fade-in">
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-scale-up">
                         <button
                           type="button"
                           draggable={false}
                           onDragStart={(e) => e.stopPropagation()}
                           onClick={() => handleDelete(stage.id, stage.name)}
                           disabled={deleteMutation.isPending}
-                          className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-colors"
+                          className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-all duration-150 active:scale-90"
                           title="Confirm delete"
                           aria-label={`Confirm delete ${stage.name}`}
                         >
@@ -420,7 +459,7 @@ export function PipelineStagesSection() {
                           draggable={false}
                           onDragStart={(e) => e.stopPropagation()}
                           onClick={() => setConfirmDeleteId(null)}
-                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-150 active:scale-90"
                           title="Cancel delete"
                           aria-label="Cancel delete"
                         >
@@ -433,7 +472,7 @@ export function PipelineStagesSection() {
                         draggable={false}
                         onDragStart={(e) => e.stopPropagation()}
                         onClick={() => setConfirmDeleteId(stage.id)}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5 transition-all duration-150 active:scale-90"
                         title="Delete stage"
                         aria-label={`Delete ${stage.name}`}
                       >
@@ -548,7 +587,7 @@ export function PipelineStagesSection() {
                     <button
                       type="button"
                       onClick={() => handleStartEdit(outcome.id, outcome.name)}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-150 active:scale-90"
                       title="Rename outcome"
                       aria-label={`Rename ${outcome.name}`}
                     >
@@ -563,12 +602,12 @@ export function PipelineStagesSection() {
                         <Lock size={14} />
                       </div>
                     ) : isConfirmingDelete ? (
-                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-fade-in">
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-scale-up">
                         <button
                           type="button"
                           onClick={() => handleDelete(outcome.id, outcome.name)}
                           disabled={deleteMutation.isPending}
-                          className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-colors"
+                          className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-all duration-150 active:scale-90"
                           title="Confirm delete"
                           aria-label={`Confirm delete ${outcome.name}`}
                         >
@@ -581,7 +620,7 @@ export function PipelineStagesSection() {
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-150 active:scale-90"
                           title="Cancel delete"
                           aria-label="Cancel delete"
                         >
@@ -592,7 +631,7 @@ export function PipelineStagesSection() {
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(outcome.id)}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer ml-0.5 transition-all duration-150 active:scale-90"
                         title="Delete outcome"
                         aria-label={`Delete ${outcome.name}`}
                       >

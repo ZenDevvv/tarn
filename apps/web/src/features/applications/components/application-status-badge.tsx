@@ -148,6 +148,7 @@ export function StageRing({
           strokeWidth={PIE_R * 2}
           strokeDasharray={`${progress * PIE_C} ${PIE_C}`}
           transform="rotate(-90 8 8)"
+          style={{ transition: 'stroke-dasharray 200ms cubic-bezier(0.16, 1, 0.3, 1)' }}
         />
       )}
 
