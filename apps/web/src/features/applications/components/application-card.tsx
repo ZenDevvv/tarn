@@ -1,4 +1,4 @@
-import { ApplicationDTO } from '@tracker/types';
+import { ApplicationDTO, formatWorkSetup } from '@tracker/types';
 import { ApplicationStatusBadge } from './application-status-badge';
 import { PriorityGlyph } from './priority-glyph';
 import { Link } from 'react-router-dom';
@@ -50,7 +50,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
     application.job?.currency || 'PHP'
   );
   const workSetup = application.job?.workSetup
-    ? application.job.workSetup.charAt(0) + application.job.workSetup.slice(1).toLowerCase()
+    ? formatWorkSetup(application.job.workSetup)
     : null;
   const source = application.job?.source || null;
 

@@ -21,6 +21,8 @@ import {
   WorkSetup,
   EmploymentType,
   ApplicationDTO,
+  WORK_SETUP_OPTIONS,
+  EMPLOYMENT_TYPE_OPTIONS,
 } from '@tracker/types';
 import { CreateApplicationInput } from '@tracker/validation';
 
@@ -611,12 +613,7 @@ export function ApplicationForm({
               value={workSetup}
               onChange={setWorkSetup}
               placeholder="Not specified"
-              options={[
-                { value: '', label: 'Not specified' },
-                { value: 'REMOTE', label: 'Remote' },
-                { value: 'HYBRID', label: 'Hybrid' },
-                { value: 'ONSITE', label: 'Onsite' },
-              ]}
+              options={WORK_SETUP_OPTIONS}
             />
           </div>
 
@@ -629,14 +626,7 @@ export function ApplicationForm({
               value={employmentType}
               onChange={setEmploymentType}
               placeholder="Not specified"
-              options={[
-                { value: '', label: 'Not specified' },
-                { value: 'FULL_TIME', label: 'Full-time' },
-                { value: 'PART_TIME', label: 'Part-time' },
-                { value: 'CONTRACT', label: 'Contract' },
-                { value: 'FREELANCE', label: 'Freelance' },
-                { value: 'INTERNSHIP', label: 'Internship' },
-              ]}
+              options={EMPLOYMENT_TYPE_OPTIONS}
             />
           </div>
         </div>

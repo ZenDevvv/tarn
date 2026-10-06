@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
-import { ApplicationDTO } from '@tracker/types';
+import { ApplicationDTO, formatWorkSetup } from '@tracker/types';
 import { StageRing } from '@/features/applications/components/application-status-badge';
 import { PriorityGlyph } from '@/features/applications/components/priority-glyph';
 import { ExternalLink, Check, Trash2, Calendar, MapPin, DollarSign, Building } from 'lucide-react';
@@ -87,7 +87,7 @@ export function SavedJobCard({
         {job?.workSetup && (
           <div className="flex items-center gap-1">
             <Building size={13} strokeWidth={1.5} />
-            <span className="capitalize">{job.workSetup.toLowerCase()}</span>
+            <span>{formatWorkSetup(job.workSetup)}</span>
           </div>
         )}
 

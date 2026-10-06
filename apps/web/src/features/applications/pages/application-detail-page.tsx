@@ -22,7 +22,7 @@ import { ApplicationTimeline } from '../components/application-timeline';
 import { ApplicationInterviewsTab } from '../components/application-interviews-tab';
 import { FollowUpItem } from '@/features/follow-ups/components/follow-up-item';
 import { apiClient } from '@/lib/api-client';
-import { ApplicationStatus } from '@tracker/types';
+import { ApplicationStatus, formatEmploymentType, formatWorkSetup } from '@tracker/types';
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -218,11 +218,11 @@ export function ApplicationDetailPage() {
             <div className="grid grid-cols-2 gap-4 text-small">
               <div>
                 <span className="block text-caption text-muted-foreground">Work Setup</span>
-                <span className="font-medium text-foreground">{job?.workSetup || 'Not specified'}</span>
+                <span className="font-medium text-foreground">{formatWorkSetup(job?.workSetup)}</span>
               </div>
               <div>
                 <span className="block text-caption text-muted-foreground">Employment Type</span>
-                <span className="font-medium text-foreground">{job?.employmentType || 'Full-time'}</span>
+                <span className="font-medium text-foreground">{formatEmploymentType(job?.employmentType)}</span>
               </div>
               <div>
                 <span className="block text-caption text-muted-foreground">Location</span>

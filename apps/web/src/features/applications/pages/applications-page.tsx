@@ -8,7 +8,7 @@ import { ApplicationFilters } from '../components/application-filters';
 import { ApplicationStatusBadge } from '../components/application-status-badge';
 import { PriorityGlyph } from '../components/priority-glyph';
 import { ApplicationKanban } from '../components/application-kanban';
-import { ApplicationStatus, WorkSetup } from '@tracker/types';
+import { ApplicationStatus, WorkSetup, formatWorkSetup } from '@tracker/types';
 import { cn } from '@/lib/cn';
 
 export function ApplicationsPage() {
@@ -284,7 +284,7 @@ export function ApplicationsPage() {
                     <PriorityGlyph priority={app.priority} />
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">
-                    {app.job?.workSetup || '—'}
+                    {formatWorkSetup(app.job?.workSetup, '—')}
                   </td>
                   <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
                     {app.appliedAt

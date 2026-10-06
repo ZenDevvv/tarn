@@ -39,12 +39,58 @@ export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type WorkSetup = 'REMOTE' | 'HYBRID' | 'ONSITE';
 
+export const WORK_SETUP_LABELS: Record<WorkSetup, string> = {
+  REMOTE: 'Remote',
+  HYBRID: 'Hybrid',
+  ONSITE: 'Onsite',
+};
+
+export const WORK_SETUP_OPTIONS: Array<{ value: WorkSetup | ''; label: string }> = [
+  { value: '', label: 'Not specified' },
+  { value: 'REMOTE', label: 'Remote' },
+  { value: 'HYBRID', label: 'Hybrid' },
+  { value: 'ONSITE', label: 'Onsite' },
+];
+
+export function formatWorkSetup(
+  setup?: WorkSetup | string | null,
+  fallback = 'Not specified'
+): string {
+  if (!setup) return fallback;
+  return WORK_SETUP_LABELS[setup as WorkSetup] || setup;
+}
+
 export type EmploymentType =
   | 'FULL_TIME'
   | 'PART_TIME'
   | 'CONTRACT'
   | 'INTERNSHIP'
   | 'FREELANCE';
+
+export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  FULL_TIME: 'Full-time',
+  PART_TIME: 'Part-time',
+  CONTRACT: 'Contract',
+  FREELANCE: 'Freelance',
+  INTERNSHIP: 'Internship',
+};
+
+export const EMPLOYMENT_TYPE_OPTIONS: Array<{ value: EmploymentType | ''; label: string }> = [
+  { value: '', label: 'Not specified' },
+  { value: 'FULL_TIME', label: 'Full-time' },
+  { value: 'PART_TIME', label: 'Part-time' },
+  { value: 'CONTRACT', label: 'Contract' },
+  { value: 'FREELANCE', label: 'Freelance' },
+  { value: 'INTERNSHIP', label: 'Internship' },
+];
+
+export function formatEmploymentType(
+  type?: EmploymentType | string | null,
+  fallback = 'Not specified'
+): string {
+  if (!type) return fallback;
+  return EMPLOYMENT_TYPE_LABELS[type as EmploymentType] || type;
+}
 
 export type FollowUpStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
 

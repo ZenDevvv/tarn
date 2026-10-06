@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { UserSettingsDTO, UpdatePreferencesInput, WorkSetup, ResumeDTO } from '@tracker/types';
+import { UserSettingsDTO, UpdatePreferencesInput, WorkSetup, ResumeDTO, WORK_SETUP_LABELS } from '@tracker/types';
 import { apiClient } from '@/lib/api-client';
 import { useTheme } from '@/app/providers';
 import { Select } from '@/components/ui/select';
@@ -31,9 +31,9 @@ const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({
 
 const WORK_SETUPS: Array<{ value: WorkSetup | ''; label: string }> = [
   { value: '', label: 'No default (choose per job)' },
-  { value: 'REMOTE', label: 'Remote' },
-  { value: 'HYBRID', label: 'Hybrid' },
-  { value: 'ONSITE', label: 'Onsite' },
+  { value: 'REMOTE', label: WORK_SETUP_LABELS.REMOTE },
+  { value: 'HYBRID', label: WORK_SETUP_LABELS.HYBRID },
+  { value: 'ONSITE', label: WORK_SETUP_LABELS.ONSITE },
 ];
 
 const WORK_SETUP_OPTIONS = WORK_SETUPS.map((setup) => ({

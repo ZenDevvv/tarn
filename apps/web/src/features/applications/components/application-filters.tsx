@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { ApplicationStatus, WorkSetup } from '@tracker/types';
+import { ApplicationStatus, WorkSetup, WORK_SETUP_OPTIONS } from '@tracker/types';
 import { STATUS_CONFIG, StageRing } from './application-status-badge';
 import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { Select } from '@/components/ui/select';
@@ -85,9 +85,7 @@ export function ApplicationFilters({
           aria-label="Filter by work setup"
           options={[
             { value: '', label: 'All setups' },
-            { value: 'REMOTE', label: 'Remote' },
-            { value: 'HYBRID', label: 'Hybrid' },
-            { value: 'ONSITE', label: 'Onsite' },
+            ...WORK_SETUP_OPTIONS.filter((o) => o.value !== ''),
           ]}
         />
       </div>

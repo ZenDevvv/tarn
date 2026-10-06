@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CompanyWithDetailsDTO } from '@tracker/types';
+import { CompanyWithDetailsDTO, formatWorkSetup } from '@tracker/types';
 import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import {
   X,
@@ -297,9 +297,9 @@ export function CompanyDetailModal({
                           <div className="flex flex-wrap items-center gap-3 mt-1 text-micro text-muted-foreground">
                             <span>Applied: {appliedDate}</span>
                             {app.job?.workSetup && (
-                              <span className="inline-flex items-center gap-1 capitalize">
+                              <span className="inline-flex items-center gap-1">
                                 <Laptop size={11} />
-                                {app.job.workSetup.toLowerCase()}
+                                {formatWorkSetup(app.job.workSetup)}
                               </span>
                             )}
                             {(app.job?.salaryMin || app.job?.salaryMax) && (
