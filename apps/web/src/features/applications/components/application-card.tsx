@@ -9,7 +9,7 @@ interface ApplicationCardProps {
   className?: string;
 }
 
-function formatSalary(min?: number | null, max?: number | null, currency = 'USD') {
+function formatSalary(min?: number | null, max?: number | null, currency = 'PHP') {
   if (!min && !max) return null;
   const sym = currency === 'PHP' ? '₱' : '$';
   const formatNum = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
@@ -60,7 +60,7 @@ function formatDueText(dateStr?: string | null) {
 export function ApplicationCard({ application, className }: ApplicationCardProps) {
   const companyName = application.company?.name || 'Unknown Company';
   const roleTitle = application.job?.title || 'Unknown Position';
-  const salaryText = formatSalary(application.job?.salaryMin, application.job?.salaryMax, application.job?.currency || 'USD');
+  const salaryText = formatSalary(application.job?.salaryMin, application.job?.salaryMax, application.job?.currency || 'PHP');
   const appliedDate = formatDate(application.appliedAt);
   const workSetup = application.job?.workSetup ? application.job.workSetup.charAt(0) + application.job.workSetup.slice(1).toLowerCase() : null;
   const source = application.job?.source || null;

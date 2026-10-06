@@ -70,7 +70,7 @@ export function ApplicationForm({
   const [source, setSource] = useState('LinkedIn');
   const [salaryMin, setSalaryMin] = useState<string>('');
   const [salaryMax, setSalaryMax] = useState<string>('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('PHP');
   const [description, setDescription] = useState('');
   const [appliedAt, setAppliedAt] = useState(() => new Date().toISOString().split('T')[0]);
   const [nextAction, setNextAction] = useState('');
@@ -283,7 +283,7 @@ export function ApplicationForm({
       sourceUrl: sourceUrl.trim() || null,
       salaryMin: salaryMin ? parseInt(salaryMin, 10) : null,
       salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
-      currency: currency || 'USD',
+      currency: currency || 'PHP',
       description: description.trim() || null,
       appliedAt: !isSaved && appliedAt ? new Date(appliedAt).toISOString() : null,
       nextAction: !isSaved && nextAction.trim() ? nextAction.trim() : null,
@@ -627,8 +627,8 @@ export function ApplicationForm({
               value={currency}
               onChange={setCurrency}
               options={[
-                { value: 'USD', label: 'USD ($)' },
                 { value: 'PHP', label: 'PHP (₱)' },
+                { value: 'USD', label: 'USD ($)' },
                 { value: 'EUR', label: 'EUR (€)' },
                 { value: 'GBP', label: 'GBP (£)' },
                 { value: 'SGD', label: 'SGD (S$)' },

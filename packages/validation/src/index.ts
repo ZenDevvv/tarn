@@ -6,3 +6,4 @@ export * from './interview.schema';
 export * from './contact.schema';
 export * from './resume.schema';
 export * from './analytics.schema';
+export * from './settings.schema';

@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "bio" TEXT,
+ADD COLUMN     "defaultCurrency" TEXT DEFAULT 'USD',
+ADD COLUMN     "defaultResumeId" TEXT,
+ADD COLUMN     "defaultWorkSetup" "WorkSetup",
+ADD COLUMN     "emailNotifications" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "followUpAlerts" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "headline" TEXT,
+ADD COLUMN     "interviewReminders" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "linkedinUrl" TEXT,
+ADD COLUMN     "location" TEXT,
+ADD COLUMN     "phone" TEXT,
+ADD COLUMN     "themePreference" TEXT DEFAULT 'system',
+ADD COLUMN     "timezone" TEXT DEFAULT 'UTC',
+ADD COLUMN     "website" TEXT,
+ADD COLUMN     "weeklyDigest" BOOLEAN NOT NULL DEFAULT false;

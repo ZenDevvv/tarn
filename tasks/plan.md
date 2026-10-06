@@ -309,6 +309,37 @@ Build a personal Applicant Tracking System (ATS) as a full-stack TypeScript modu
 - [x] 97 total workspace automated tests passing (100% green)
 - [x] Clean production build with zero errors
 
+---
 
+## Phase 12: Account Settings, Profile & Preferences (`settings`)
 
+### Task 12.1: Prisma Schema Migration for User Profile & Settings [COMPLETED]
+- **Description:** Add profile and preference fields to `User` model: `headline`, `location`, `timezone`, `phone`, `website`, `linkedinUrl`, `bio`, `defaultCurrency`, `defaultWorkSetup`, `defaultResumeId`, `emailNotifications`, `interviewReminders`, `followUpAlerts`, `weeklyDigest`, `themePreference`. Run migration and generate Prisma Client.
+- **Verify:** `pnpm --filter @tracker/database exec prisma migrate dev --name add_settings`
 
+### Task 12.2: Shared Types & Validation Schemas [COMPLETED]
+- **Description:** Export `UserSettingsDTO`, `UpdateProfileInput`, `UpdatePreferencesInput`, `ChangePasswordInput`, `UserDataExportDTO` from `@tracker/types` and validation schemas from `@tracker/validation`.
+- **Verify:** `pnpm --filter @tracker/types build; pnpm --filter @tracker/validation build`
+
+### Task 12.3: Backend Settings Module & Automated Tests [COMPLETED]
+- **Description:** Implement `settingsService`, `settingsController`, and `settingsRouter` with Supertest integration tests in `apps/api/tests/settings.test.ts`.
+- **Verify:** `pnpm --filter @tracker/api test tests/settings.test.ts` (9 tests passing)
+
+### Task 12.4: Frontend UI Components, Settings Page & Router Integration [COMPLETED]
+- **Description:** Implement `SettingsPage`, `SettingsNav`, `ProfileSection`, `PreferencesSection`, `SecuritySection`, `DataSection`, register `/settings` in `AppRouter`, and link profile update to `AuthContext`.
+- **Verify:** `pnpm --filter @tracker/web test && pnpm --filter @tracker/web build`
+
+### Task 12.5: Full Verification & Polish [COMPLETED]
+- **Description:** Full test suite passes across workspace with 0 errors. Clean build.
+- **Verify:** `pnpm test && pnpm build` (111 tests passing, 0 build errors)
+
+#### Checkpoint: Phase 12 Account Settings & Preferences Complete [PASSED]
+- [x] Dedicated `/settings` route live and integrated with AppLayout navigation
+- [x] Profile management (name, headline, location, timezone, phone, links, bio)
+- [x] Application defaults (currency, work setup, default resume version)
+- [x] Notification preferences (follow-up alerts, interview reminders, weekly digest)
+- [x] Security credentials (current password verification with bcrypt, new password hash)
+- [x] 1-click JSON data export and account footprint statistics
+- [x] Marker design system compliance across paper light and night pine dark themes
+- [x] 111 total workspace automated tests passing (100% green)
+- [x] Clean production build across monorepo packages with zero errors

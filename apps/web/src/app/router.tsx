@@ -13,6 +13,7 @@ import { CompaniesPage } from '@/features/companies/pages/companies-page';
 import { ContactsPage } from '@/features/contacts/pages/contacts-page';
 import { ResumesPage } from '@/features/resumes/pages/resumes-page';
 import { AnalyticsPage } from '@/features/analytics/pages/analytics-page';
+import { SettingsPage } from '@/features/settings/pages/settings-page';
 
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
 
@@ -80,8 +81,11 @@ const router = createBrowserRouter([
             path: '/analytics',
             element: <AnalyticsPage />,
           },
+          {
+            path: '/settings',
+            element: <SettingsPage />,
+          },
         ],
-
       },
     ],
   },

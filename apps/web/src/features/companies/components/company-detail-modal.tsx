@@ -308,7 +308,7 @@ export function CompanyDetailModal({
                                 {app.job.salaryMin ? `${app.job.salaryMin.toLocaleString()}` : ''}
                                 {app.job.salaryMin && app.job.salaryMax ? ' – ' : ''}
                                 {app.job.salaryMax ? `${app.job.salaryMax.toLocaleString()}` : ''}
-                                {' '}{app.job.currency || 'USD'}
+                                {' '}{app.job.currency || 'PHP'}
                               </span>
                             )}
                           </div>

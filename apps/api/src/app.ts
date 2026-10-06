@@ -48,6 +48,7 @@ import { interviewRouter } from './modules/interviews/interview.routes';
 import { companyRouter } from './modules/companies/company.routes';
 import { contactRouter } from './modules/contacts/contact.routes';
 import { resumeRouter } from './modules/resumes/resume.routes';
+import { settingsRouter } from './modules/settings/settings.routes';
 
 // Root routes placeholder
 export const apiRouter = express.Router();
@@ -56,6 +57,7 @@ apiRouter.use('/applications', applicationRouter);
 apiRouter.use('/companies', companyRouter);
 apiRouter.use('/contacts', contactRouter);
 apiRouter.use('/resumes', resumeRouter);
+apiRouter.use('/settings', settingsRouter);
 apiRouter.use('/follow-ups', followUpRouter);
 apiRouter.use('/analytics', analyticsRouter);
 apiRouter.use('/interviews', interviewRouter);

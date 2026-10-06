@@ -276,7 +276,7 @@ export function Select<T = string>({
           )}
           <span
             className={cn(
-              'truncate font-sans',
+              'truncate font-sans font-normal',
               !selectedOption && 'text-muted-foreground'
             )}
           >
@@ -303,7 +303,7 @@ export function Select<T = string>({
           className={cn(
             'absolute left-0 z-50 w-full min-w-[160px] max-h-60 overflow-y-auto custom-scrollbar rounded-lg border border-border bg-card p-1 shadow-float text-foreground',
             placement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
-            'animate-scale-up',
+            'animate-fade-in',
             menuClassName
           )}
         >
@@ -326,23 +326,34 @@ export function Select<T = string>({
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setHighlightedIndex(idx)}
                   className={cn(
-                    'px-2.5 py-1.5 rounded-md text-small flex items-center justify-between gap-2 cursor-pointer transition-colors select-none font-sans',
+                    'px-2.5 py-1.5 rounded-md flex items-center justify-between gap-2 cursor-pointer transition-colors select-none font-sans font-normal',
+                    size === 'sm' ? 'text-caption' : 'text-small',
                     opt.disabled && 'opacity-40 cursor-not-allowed',
                     isHighlighted && !opt.disabled && 'bg-secondary text-foreground',
-                    isSelected && 'font-medium text-foreground bg-accent/60',
+                    isSelected && 'text-foreground bg-accent/60',
                     isSelected && isHighlighted && 'bg-accent/80'
                   )}
+                  style={{ transform: 'none' }}
                 >
                   <span className="flex items-center gap-2 truncate">
                     {opt.icon && (
                       <span className="shrink-0 flex items-center">{opt.icon}</span>
                     )}
-                    <span className="truncate">{opt.label}</span>
+                    <span
+                      className={cn(
+                        'truncate font-normal',
+                        size === 'sm' ? 'text-caption' : 'text-small'
+                      )}
+                    >
+                      {opt.label}
+                    </span>
                   </span>
 
-                  {isSelected && (
-                    <Check size={14} className="text-primary shrink-0 ml-auto" />
-                  )}
+                  <span className="w-4 h-4 shrink-0 flex items-center justify-center ml-auto">
+                    {isSelected && (
+                      <Check size={14} className="text-primary" />
+                    )}
+                  </span>
                 </div>
               );
             })

@@ -407,7 +407,86 @@ export interface AnalyticsOverviewDTO {
   statusDistribution: StatusDistributionDTO[];
 }
 
+export interface UserSettingsDTO {
+  id: string;
+  email: string;
+  name: string;
+  headline: string | null;
+  location: string | null;
+  timezone: string;
+  phone: string | null;
+  website: string | null;
+  linkedinUrl: string | null;
+  bio: string | null;
+  defaultCurrency: string;
+  defaultWorkSetup: WorkSetup | null;
+  defaultResumeId: string | null;
+  defaultResumeName?: string | null;
+  emailNotifications: boolean;
+  interviewReminders: boolean;
+  followUpAlerts: boolean;
+  weeklyDigest: boolean;
+  themePreference: 'light' | 'dark' | 'system';
+  createdAt: string;
+  updatedAt: string;
+  stats: {
+    totalApplications: number;
+    activeApplications: number;
+    totalInterviews: number;
+    totalContacts: number;
+    totalCompanies: number;
+    totalResumes: number;
+  };
+}
 
+export interface UpdateProfileInput {
+  name: string;
+  headline?: string | null;
+  location?: string | null;
+  timezone?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  linkedinUrl?: string | null;
+  bio?: string | null;
+}
 
+export interface UpdatePreferencesInput {
+  defaultCurrency?: string;
+  defaultWorkSetup?: WorkSetup | null;
+  defaultResumeId?: string | null;
+  emailNotifications?: boolean;
+  interviewReminders?: boolean;
+  followUpAlerts?: boolean;
+  weeklyDigest?: boolean;
+  themePreference?: 'light' | 'dark' | 'system';
+}
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UserDataExportDTO {
+  exportDate: string;
+  version: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    headline: string | null;
+    location: string | null;
+    timezone: string | null;
+    phone: string | null;
+    website: string | null;
+    linkedinUrl: string | null;
+    bio: string | null;
+    createdAt: string;
+  };
+  applications: any[];
+  companies: any[];
+  contacts: any[];
+  interviews: any[];
+  followUps: any[];
+  resumes: any[];
+}
 

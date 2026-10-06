@@ -556,7 +556,7 @@ export const analyticsService = {
 
     let avgSalaryMin: number | null = null;
     let avgSalaryMax: number | null = null;
-    const currency = salaryJobs[0]?.currency || 'USD';
+    const currency = salaryJobs[0]?.currency || 'PHP';
 
     if (disclosedCount > 0) {
       const minSalaries = salaryJobs.map((j) => j.salaryMin).filter((s): s is number => typeof s === 'number');

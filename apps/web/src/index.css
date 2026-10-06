@@ -283,6 +283,15 @@
     background: var(--marker);
     color: var(--marker-foreground);
   }
+
+  /* Dropdown options stability: prevent transform shifts and freeze font weight */
+  [role="option"],
+  [role="option"]:hover,
+  [role="option"]:active,
+  [role="option"]:focus {
+    transform: none;
+    font-weight: 400;
+  }
 }
 
 /* --------------------------------------------------------------------------

@@ -9,6 +9,8 @@ interface AuthContextType {
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  updateCurrentUser: (user: UserDTO) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +18,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserDTO | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshUser = async () => {
+    try {
+      const { user: currentUser } = await authApi.fetchMe();
+      setUser(currentUser);
+    } catch {
+      // Keep existing user state if network error
+    }
+  };
+
+  const updateCurrentUser = (updatedUser: UserDTO) => {
+    setUser(updatedUser);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -57,7 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        register,
+        logout,
+        updateCurrentUser,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

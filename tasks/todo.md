@@ -276,6 +276,38 @@
 - [x] Pre-fills company name in application creation
 - [x] All 63 backend integration tests and all frontend tests passing (100% green)
 
+---
 
+## Phase 12: Account Settings, Profile & Preferences (`settings`)
 
+- [x] **Task 12.1: Prisma Schema Migration for User Profile & Settings**
+  - **Acceptance:** `User` model extended with profile and preference fields (`headline`, `location`, `timezone`, `phone`, `website`, `linkedinUrl`, `bio`, `defaultCurrency`, `defaultWorkSetup`, `defaultResumeId`, `emailNotifications`, `interviewReminders`, `followUpAlerts`, `weeklyDigest`, `themePreference`). Migration applied cleanly.
+  - **Verify:** `pnpm --filter @tracker/database exec prisma migrate status`
+  - **Files:** `packages/database/prisma/schema.prisma`
 
+- [x] **Task 12.2: Shared Types & Validation Schemas**
+  - **Acceptance:** `UserSettingsDTO`, `UpdateProfileInput`, `UpdatePreferencesInput`, `ChangePasswordInput`, `UserDataExportDTO` exported from `@tracker/types`. Validation schemas exported from `@tracker/validation`.
+  - **Verify:** `pnpm --filter @tracker/types build; pnpm --filter @tracker/validation build`
+  - **Files:** `packages/types/src/entities.ts`, `packages/validation/src/settings.schema.ts`, `packages/validation/src/index.ts`
+
+- [x] **Task 12.3: Backend Settings Module & Automated Integration Tests**
+  - **Acceptance:** Full REST API endpoints (`GET /api/v1/settings`, `PATCH /api/v1/settings/profile`, `PATCH /api/v1/settings/preferences`, `POST /api/v1/settings/password`, `GET /api/v1/settings/export`) with multi-tenant isolation, bcrypt password validation, and 9 automated Supertest tests.
+  - **Verify:** `pnpm --filter @tracker/api test tests/settings.test.ts`
+  - **Files:** `apps/api/src/modules/settings/*`, `apps/api/tests/settings.test.ts`, `apps/api/src/app.ts`
+
+- [x] **Task 12.4: Frontend UI Components, Settings Page & Router Integration**
+  - **Acceptance:** `SettingsPage` accessible at `/settings` with tabbed navigation (Profile, Preferences, Security, Data & Account). Theme switcher (Paper Light vs. Night Pine Dark). 1-click JSON export. Real-time sync with `AuthContext` and sidebar.
+  - **Verify:** `pnpm --filter @tracker/web test && pnpm --filter @tracker/web build`
+  - **Files:** `apps/web/src/features/settings/*`, `apps/web/src/app/router.tsx`
+
+---
+
+### Checkpoint: Phase 12 Account Settings Complete
+- [x] Dedicated `/settings` route live and integrated with AppLayout navigation
+- [x] Profile management (name, headline, location, timezone, phone, links, bio)
+- [x] Application defaults (currency, work setup, default resume version)
+- [x] Notification preferences (follow-up alerts, interview reminders, weekly digest)
+- [x] Security credentials (current password verification with bcrypt, new password hash)
+- [x] 1-click JSON data export and account footprint statistics
+- [x] 111 total workspace automated tests passing (100% green)
+- [x] Clean production build across monorepo packages with zero errors

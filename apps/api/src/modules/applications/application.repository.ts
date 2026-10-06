@@ -36,7 +36,7 @@ export const applicationRepository = {
           employmentType: input.employmentType as any,
           salaryMin: input.salaryMin,
           salaryMax: input.salaryMax,
-          currency: input.currency || 'USD',
+          currency: input.currency || 'PHP',
         },
       });
 
