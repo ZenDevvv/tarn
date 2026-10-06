@@ -10,8 +10,6 @@ import { StageRing } from '@/features/applications/components/application-status
 import { CloseType } from '@tracker/types';
 import {
   Plus,
-  ChevronUp,
-  ChevronDown,
   Pencil,
   Trash2,
   Check,
@@ -20,6 +18,7 @@ import {
   Loader2,
   Lock,
   GitBranch,
+  GripVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Select, SelectOption } from '@/components/ui/select';
@@ -45,6 +44,8 @@ export function PipelineStagesSection() {
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
@@ -145,13 +146,30 @@ export function PipelineStagesSection() {
     setEditingStageName('');
   };
 
-  const handleMove = async (currentIndex: number, direction: 'up' | 'down') => {
-    setActionError(null);
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= activeStages.length) return;
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const sourceIndex = draggedIndex;
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    if (sourceIndex === null || sourceIndex === targetIndex) return;
 
     const reordered = [...activeStages];
-    const [moved] = reordered.splice(currentIndex, 1);
+    const [moved] = reordered.splice(sourceIndex, 1);
     reordered.splice(targetIndex, 0, moved);
 
     const payload = {
@@ -160,10 +178,14 @@ export function PipelineStagesSection() {
 
     try {
       await reorderMutation.mutateAsync(payload);
-      showNotification('Updated pipeline sequence.');
     } catch (err: any) {
       showNotification(err?.message || 'Failed to reorder stages.', true);
     }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -246,19 +268,35 @@ export function PipelineStagesSection() {
           {activeStages.map((stage, idx) => {
             const isEditing = editingStageId === stage.id;
             const isConfirmingDelete = confirmDeleteId === stage.id;
-            const progressPct = Math.round(((stage.order ?? 0) / Math.max(1, totalActive - 1)) * 100);
+            const isDragging = draggedIndex === idx;
+            const isDragTarget = dragOverIndex === idx && draggedIndex !== idx;
 
             return (
               <div
                 key={stage.id}
+                draggable={!isEditing}
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
                 className={cn(
                   'flex items-center justify-between py-3 px-2 gap-3 transition-colors duration-150',
-                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80'
+                  isEditing ? 'bg-secondary/40 rounded-lg' : 'hover:bg-card/80',
+                  isDragging && 'opacity-40 bg-secondary/30',
+                  isDragTarget && 'border-t-2 border-primary bg-primary/5'
                 )}
               >
-                {/* Left: Order, Ring, Name */}
-                <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                  <span className="font-mono text-[12px] text-muted-foreground w-6 text-right shrink-0">
+                {/* Left: Grip, Order, Ring, Name */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    className="text-muted-foreground/40 hover:text-foreground cursor-grab active:cursor-grabbing p-1 -ml-1 rounded transition-colors shrink-0"
+                    title="Drag to reorder"
+                    aria-label={`Drag ${stage.name} to reorder`}
+                  >
+                    <GripVertical size={16} />
+                  </div>
+
+                  <span className="font-mono text-[12px] text-muted-foreground w-5 text-right shrink-0">
                     #{idx + 1}
                   </span>
 
@@ -305,9 +343,6 @@ export function PipelineStagesSection() {
                           Default
                         </span>
                       )}
-                      <span className="text-[11px] font-mono text-muted-foreground/70 hidden sm:inline">
-                        {progressPct}% fill
-                      </span>
                     </div>
                   )}
                 </div>
@@ -315,28 +350,6 @@ export function PipelineStagesSection() {
                 {/* Right: Controls & Actions */}
                 {!isEditing && (
                   <div className="flex items-center gap-1 shrink-0">
-                    {/* Reorder Buttons */}
-                    <button
-                      type="button"
-                      disabled={idx === 0 || reorderMutation.isPending}
-                      onClick={() => handleMove(idx, 'up')}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
-                      title="Move stage earlier"
-                      aria-label={`Move ${stage.name} up`}
-                    >
-                      <ChevronUp size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === totalActive - 1 || reorderMutation.isPending}
-                      onClick={() => handleMove(idx, 'down')}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
-                      title="Move stage later"
-                      aria-label={`Move ${stage.name} down`}
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-
                     {/* Edit Button */}
                     <button
                       type="button"
@@ -348,27 +361,31 @@ export function PipelineStagesSection() {
                       <Pencil size={15} />
                     </button>
 
-                    {/* Delete with inline confirmation */}
+                    {/* Delete with inline check and cross confirmation */}
                     {isConfirmingDelete ? (
-                      <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-border animate-fade-in">
-                        <span className="text-[11px] text-destructive font-medium hidden sm:inline">
-                          Delete?
-                        </span>
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-fade-in">
                         <button
                           type="button"
                           onClick={() => handleDelete(stage.id, stage.name)}
                           disabled={deleteMutation.isPending}
-                          className="px-2 py-1 text-[11px] font-medium rounded bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                          className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-colors"
+                          title="Confirm delete"
+                          aria-label={`Confirm delete ${stage.name}`}
                         >
-                          Confirm
+                          {deleteMutation.isPending ? (
+                            <Loader2 className="animate-spin" size={15} />
+                          ) : (
+                            <Check size={15} />
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                           title="Cancel delete"
+                          aria-label="Cancel delete"
                         >
-                          <X size={13} />
+                          <X size={15} />
                         </button>
                       </div>
                     ) : (
@@ -508,25 +525,29 @@ export function PipelineStagesSection() {
                         <Lock size={14} />
                       </div>
                     ) : isConfirmingDelete ? (
-                      <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-border animate-fade-in">
-                        <span className="text-[11px] text-destructive font-medium hidden sm:inline">
-                          Delete?
-                        </span>
+                      <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-border animate-fade-in">
                         <button
                           type="button"
                           onClick={() => handleDelete(outcome.id, outcome.name)}
                           disabled={deleteMutation.isPending}
-                          className="px-2 py-1 text-[11px] font-medium rounded bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                          className="p-1.5 rounded hover:bg-destructive/15 text-destructive cursor-pointer disabled:opacity-50 transition-colors"
+                          title="Confirm delete"
+                          aria-label={`Confirm delete ${outcome.name}`}
                         >
-                          Confirm
+                          {deleteMutation.isPending ? (
+                            <Loader2 className="animate-spin" size={15} />
+                          ) : (
+                            <Check size={15} />
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                           title="Cancel delete"
+                          aria-label="Cancel delete"
                         >
-                          <X size={13} />
+                          <X size={15} />
                         </button>
                       </div>
                     ) : (
