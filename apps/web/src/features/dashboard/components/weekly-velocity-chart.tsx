@@ -1,10 +1,14 @@
 import { WeeklyVelocityDTO } from '@tracker/types';
+import { useInView, useReducedMotion } from '@/hooks';
 
 interface WeeklyVelocityChartProps {
   velocity: WeeklyVelocityDTO;
 }
 
 export function WeeklyVelocityChart({ velocity }: WeeklyVelocityChartProps) {
+  const { ref, isInView } = useInView<HTMLElement>({ threshold: 0.15, triggerOnce: true });
+  const reducedMotion = useReducedMotion();
+
   const weeks = velocity.weeks || [];
   const maxCount = Math.max(...weeks.map((w) => w.count), 10);
 
@@ -13,7 +17,7 @@ export function WeeklyVelocityChart({ velocity }: WeeklyVelocityChartProps) {
     .join(', ')}. The current week is still in progress.`;
 
   return (
-    <section aria-labelledby="h-act">
+    <section ref={ref} aria-labelledby="h-act">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 id="h-act" className="font-display font-semibold text-[20px] leading-[26px] tracking-tight text-foreground">
           Applications per week
@@ -32,19 +36,39 @@ export function WeeklyVelocityChart({ velocity }: WeeklyVelocityChartProps) {
         {weeks.map((w, i) => {
           const isCurrent = i === weeks.length - 1;
           const heightPercent = Math.max(12, Math.round((w.count / maxCount) * 85));
+          const delayMs = i * 60;
+
+          const isAnimated = reducedMotion || isInView;
 
           return (
             <div
               key={w.weekLabel || i}
               className="flex-1 flex flex-col justify-end items-center gap-1.5 h-full text-[12px] text-muted-foreground font-sans"
             >
-              <span className="leading-none">{w.count}</span>
+              <span
+                className="leading-none transition-all duration-400"
+                style={{
+                  opacity: isAnimated ? 1 : 0,
+                  transform: isAnimated ? 'translateY(0)' : 'translateY(4px)',
+                  transitionDelay: reducedMotion ? '0ms' : `${delayMs + 260}ms`,
+                }}
+              >
+                {w.count}
+              </span>
               <i
-                style={{ height: `${heightPercent}%` }}
+                style={{
+                  height: `${heightPercent}%`,
+                  transform: isAnimated ? 'scaleY(1)' : 'scaleY(0)',
+                  transformOrigin: 'bottom',
+                  opacity: isAnimated ? 1 : 0.3,
+                  transition: reducedMotion
+                    ? 'none'
+                    : `transform 850ms cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, opacity 500ms ease-out ${delayMs}ms`,
+                }}
                 className={
                   isCurrent
                     ? 'block w-full bg-[var(--marker)] rounded-t-sm ring-1 ring-border/80 ring-inset'
-                    : 'block w-full bg-primary rounded-t-sm transition-all'
+                    : 'block w-full bg-primary rounded-t-sm'
                 }
               />
             </div>

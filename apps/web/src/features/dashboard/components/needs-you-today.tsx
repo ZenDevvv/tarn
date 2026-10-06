@@ -4,6 +4,7 @@ import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/cn';
 import { Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useInView, useReducedMotion } from '@/hooks';
 
 interface NeedsYouTodayProps {
   items: Array<{
@@ -21,6 +22,8 @@ interface NeedsYouTodayProps {
 export function NeedsYouToday({ items }: NeedsYouTodayProps) {
   const queryClient = useQueryClient();
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const { ref, isInView } = useInView<HTMLElement>({ threshold: 0.15, triggerOnce: true });
+  const reducedMotion = useReducedMotion();
 
   const completeMutation = useMutation({
     mutationFn: (id: string) => apiClient.patch(`/follow-ups/${id}/complete`),
@@ -44,7 +47,7 @@ export function NeedsYouToday({ items }: NeedsYouTodayProps) {
   const activeCount = items.filter((item) => !completedIds.has(item.id)).length;
 
   return (
-    <section aria-labelledby="h-today">
+    <section ref={ref} aria-labelledby="h-today">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 id="h-today" className="font-display font-semibold text-[20px] leading-[26px] tracking-tight text-foreground">
           Needs you today
@@ -61,7 +64,7 @@ export function NeedsYouToday({ items }: NeedsYouTodayProps) {
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {items.map((item) => {
+            {items.map((item, i) => {
               const isDone = completedIds.has(item.id);
               const due = new Date(item.dueAt);
               const isToday = due >= todayStart && due <= todayEnd;
@@ -80,6 +83,12 @@ export function NeedsYouToday({ items }: NeedsYouTodayProps) {
               return (
                 <li
                   key={item.id}
+                  style={{
+                    opacity: reducedMotion || isInView ? 1 : 0.4,
+                    transform: reducedMotion || isInView ? 'translateY(0)' : 'translateY(4px)',
+                    transition: reducedMotion ? 'none' : 'opacity 400ms ease-out, transform 400ms cubic-bezier(0.16, 1, 0.3, 1)',
+                    transitionDelay: reducedMotion ? '0ms' : `${i * 50}ms`,
+                  }}
                   className={cn(
                     'grid grid-cols-[22px_minmax(0,1fr)_auto] max-[719px]:grid-cols-[22px_minmax(0,1fr)] gap-3.5 items-start py-4 transition-opacity',
                     isDone && 'opacity-60'
@@ -88,55 +97,56 @@ export function NeedsYouToday({ items }: NeedsYouTodayProps) {
                   {/* Circular Checkbox */}
                   <button
                     type="button"
-                    role="checkbox"
-                    aria-checked={isDone}
-                    aria-label={`Mark done: ${item.action}`}
                     onClick={() => handleToggle(item.id)}
-                    disabled={isDone}
+                    disabled={isDone || completeMutation.isPending}
+                    aria-label={`Mark "${item.action}" as completed`}
                     className={cn(
-                      'w-5 h-5 rounded-full border border-input bg-card mt-0.5 grid place-items-center transition-colors cursor-pointer shrink-0',
+                      'mt-0.5 w-[18px] h-[18px] rounded-full border flex items-center justify-center transition-colors cursor-pointer',
                       isDone
-                        ? 'bg-primary border-primary text-primary-foreground cursor-default'
-                        : 'hover:border-primary'
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : 'border-input hover:border-primary hover:bg-primary/5'
                     )}
                   >
                     {isDone && <Check size={12} strokeWidth={2.5} />}
                   </button>
 
-                  {/* Task details */}
-                  <div className="min-w-0">
-                    <div className="text-[15px] leading-[22px] text-foreground">
-                      <span
-                        className={cn(
-                          'transition-colors',
-                          !isDone && (isToday || isOverdue) && 'marker',
-                          isDone && 'line-through text-muted-foreground'
-                        )}
-                      >
-                        {item.action}
-                      </span>
+                  {/* Body: Action + Application */}
+                  <div className="min-w-0 pr-2">
+                    <div
+                      className={cn(
+                        'text-[14px] leading-[20px] font-medium text-foreground',
+                        isDone && 'line-through text-muted-foreground'
+                      )}
+                    >
+                      {item.action}
                     </div>
-                    <div className="text-[13px] leading-[18px] text-muted-foreground mt-0.5 truncate">
+                    <div className="text-[12px] leading-[16px] text-muted-foreground mt-0.5 truncate">
                       <Link
                         to={`/applications/${item.applicationId}`}
-                        className="hover:text-foreground no-underline transition-colors"
+                        className="hover:text-primary transition-colors no-underline text-muted-foreground"
                       >
-                        {company}, {role}
+                        {company}
                       </Link>
+                      <span className="mx-1.5">•</span>
+                      <span>{role}</span>
                     </div>
                   </div>
 
-                  {/* Due badge */}
-                  <span
-                    className={cn(
-                      'text-[13px] leading-[22px] whitespace-nowrap text-right max-[719px]:col-start-2 max-[719px]:text-left max-[719px]:-mt-1 max-[719px]:text-[12px]',
-                      isOverdue && !isDone
-                        ? 'text-destructive font-medium'
-                        : 'text-muted-foreground'
-                    )}
-                  >
-                    {dueText}
-                  </span>
+                  {/* Due date tag */}
+                  <div className="pt-0.5 flex justify-end max-[719px]:col-start-2 max-[719px]:pt-0">
+                    <span
+                      className={cn(
+                        'text-[12px] leading-[16px] font-medium px-2 py-0.5 rounded-[4px]',
+                        isOverdue
+                          ? 'bg-destructive/10 text-destructive'
+                          : isToday
+                          ? 'bg-[var(--marker)] text-[var(--marker-foreground)] font-semibold'
+                          : 'text-muted-foreground'
+                      )}
+                    >
+                      {dueText}
+                    </span>
+                  </div>
                 </li>
               );
             })}

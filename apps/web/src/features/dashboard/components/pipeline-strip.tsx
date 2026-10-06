@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { StageRing } from '@/features/applications/components/application-status-badge';
 import { PipelineSummaryDTO, ApplicationStatusDTO } from '@tracker/types';
 import { cn } from '@/lib/cn';
+import { useInView, AnimatedNumber, useReducedMotion } from '@/hooks';
 
 interface PipelineStripProps {
   pipeline?: PipelineSummaryDTO | Record<string, number>;
@@ -22,6 +23,9 @@ const DEFAULT_CLOSED_OUTCOMES: Array<{ name: string; closeType: 'REJECTED' | 'WI
 ];
 
 export function PipelineStrip({ pipeline }: PipelineStripProps) {
+  const { ref, isInView } = useInView<HTMLElement>({ threshold: 0.15, triggerOnce: true });
+  const reducedMotion = useReducedMotion();
+
   // Normalize pipeline data whether it is PipelineSummaryDTO or Record<string, number>
   let activeStages: Array<{ status: ApplicationStatusDTO | { name: string; order: number; closeType: null }; count: number }> = [];
   let closedOutcomes: Array<{ status: ApplicationStatusDTO | { name: string; closeType: 'REJECTED' | 'WITHDRAWN' | 'NO_RESPONSE' }; count: number }> = [];
@@ -53,7 +57,7 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
   const totalActive = activeStages.length;
 
   return (
-    <section aria-labelledby="h-pipe">
+    <section ref={ref} aria-labelledby="h-pipe">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 id="h-pipe" className="font-display font-semibold text-[20px] leading-[26px] tracking-tight text-foreground">
           Pipeline
@@ -77,7 +81,7 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
           totalActive > 6 && 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7'
         )}
       >
-        {activeStages.map(({ status, count }) => {
+        {activeStages.map(({ status, count }, i) => {
           const isZero = count === 0;
           const statusName = status.name;
           const statusId = 'id' in status ? status.id : undefined;
@@ -89,6 +93,12 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
             <Link
               key={statusId || statusName}
               to={linkTarget}
+              style={{
+                opacity: reducedMotion || isInView ? 1 : 0.4,
+                transform: reducedMotion || isInView ? 'translateY(0)' : 'translateY(4px)',
+                transition: reducedMotion ? 'none' : 'all 450ms ease-out',
+                transitionDelay: reducedMotion ? '0ms' : `${i * 45}ms`,
+              }}
               className={cn(
                 'flex flex-col gap-1.5 items-start pr-2 py-0.5 no-underline group',
                 isZero && 'opacity-65 hover:opacity-100 transition-opacity'
@@ -97,11 +107,11 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
               <StageRing status={status as any} size={22} totalStages={totalActive} />
               <div
                 className={cn(
-                  'font-display font-semibold text-[24px] leading-[28px] tracking-tight transition-colors',
+                  'font-display font-semibold text-[24px] leading-[28px] tracking-tight transition-colors tabular-nums',
                   isZero ? 'text-muted-foreground font-medium' : 'text-foreground group-hover:text-primary'
                 )}
               >
-                {count}
+                <AnimatedNumber value={count} isInView={isInView} duration={950} />
               </div>
               <div className="text-[12px] leading-[15px] text-muted-foreground truncate max-w-full">
                 {statusName}
@@ -114,7 +124,7 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
       {/* Closed Outcomes Strip */}
       {closedOutcomes.length > 0 && (
         <div className="flex gap-6 flex-wrap mt-4 pt-3.5 border-t border-border text-[13px] font-sans">
-          {closedOutcomes.map(({ status, count }) => {
+          {closedOutcomes.map(({ status, count }, i) => {
             const statusName = status.name;
             const statusId = 'id' in status ? status.id : undefined;
             const linkTarget = statusId
@@ -125,10 +135,18 @@ export function PipelineStrip({ pipeline }: PipelineStripProps) {
               <Link
                 key={statusId || statusName}
                 to={linkTarget}
+                style={{
+                  opacity: reducedMotion || isInView ? 1 : 0.4,
+                  transform: reducedMotion || isInView ? 'translateY(0)' : 'translateY(3px)',
+                  transition: reducedMotion ? 'none' : 'all 400ms ease-out',
+                  transitionDelay: reducedMotion ? '0ms' : `${(activeStages.length + i) * 40}ms`,
+                }}
                 className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground no-underline"
               >
                 <StageRing status={status as any} size={16} />
-                <span className="text-foreground font-semibold">{count}</span>
+                <span className="text-foreground font-semibold tabular-nums">
+                  <AnimatedNumber value={count} isInView={isInView} duration={850} />
+                </span>
                 <span>{statusName}</span>
               </Link>
             );

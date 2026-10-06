@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Video, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
+import { useInView, useReducedMotion } from '@/hooks';
 
 interface InterviewItem {
   id: string;
@@ -19,10 +20,13 @@ interface UpcomingInterviewsProps {
 }
 
 export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
+  const { ref, isInView } = useInView<HTMLElement>({ threshold: 0.15, triggerOnce: true });
+  const reducedMotion = useReducedMotion();
+
   return (
-    <section aria-labelledby="h-iv">
+    <section ref={ref} aria-labelledby="h-iv">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 id="h-iv" className="font-display font-semibold text-[20px] leading-[26px] tracking-tight text-foreground">
+        <h2 id="h-act" className="font-display font-semibold text-[20px] leading-[26px] tracking-tight text-foreground">
           Upcoming interviews
         </h2>
         <Link
@@ -53,10 +57,17 @@ export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
             });
 
             const prepPercent = Math.round((iv.prepDone / (iv.prepTotal || 1)) * 100);
+            const isAnimated = reducedMotion || isInView;
 
             return (
               <li
                 key={iv.id || index}
+                style={{
+                  opacity: isAnimated ? 1 : 0.4,
+                  transform: isAnimated ? 'translateY(0)' : 'translateY(4px)',
+                  transition: reducedMotion ? 'none' : 'opacity 400ms ease-out, transform 400ms cubic-bezier(0.16, 1, 0.3, 1)',
+                  transitionDelay: reducedMotion ? '0ms' : `${index * 60}ms`,
+                }}
                 className="grid grid-cols-[64px_minmax(0,1fr)] gap-4 py-3.5 first:pt-0"
               >
                 <div>
@@ -106,13 +117,14 @@ export function UpcomingInterviews({ interviews }: UpcomingInterviewsProps) {
                     <span className="w-[72px] h-1 rounded-sm bg-secondary overflow-hidden inline-block shrink-0">
                       <i
                         className="block h-full bg-primary rounded-sm transition-all"
-                        style={{ width: `${prepPercent}%` }}
+                        style={{
+                          width: isAnimated ? `${prepPercent}%` : '0%',
+                          transition: reducedMotion ? 'none' : 'width 500ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
                       />
                     </span>
                     <span>
-                      {iv.prepDone > 0
-                        ? `${iv.prepDone} of ${iv.prepTotal} prep items done`
-                        : 'Prep not started'}
+                      {iv.prepDone}/{iv.prepTotal} prep tasks
                     </span>
                   </div>
                 </div>
