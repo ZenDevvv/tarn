@@ -23,7 +23,6 @@ export function ResumesPage() {
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
-  const [defaultOnly, setDefaultOnly] = useState(false);
   const [sortBy, setSortBy] = useState('recent_desc');
 
   // Modal states
@@ -49,12 +48,11 @@ export function ResumesPage() {
 
   // Fetch Resumes
   const { data: resumes = [], isLoading } = useQuery({
-    queryKey: ['resumes', search, selectedRole, defaultOnly, apiSortParams],
+    queryKey: ['resumes', search, selectedRole, apiSortParams],
     queryFn: () =>
       resumeApi.getResumes({
         search: search.trim() || undefined,
         targetRole: selectedRole || undefined,
-        isDefault: defaultOnly ? 'true' : undefined,
         sortBy: apiSortParams.sortBy,
         sortOrder: apiSortParams.sortOrder,
       }),
@@ -150,7 +148,6 @@ export function ResumesPage() {
   const handleResetFilters = () => {
     setSearch('');
     setSelectedRole('');
-    setDefaultOnly(false);
     setSortBy('recent_desc');
   };
 
@@ -223,8 +220,6 @@ export function ResumesPage() {
         selectedRole={selectedRole}
         onRoleChange={setSelectedRole}
         availableRoles={availableRoles}
-        defaultOnly={defaultOnly}
-        onDefaultOnlyChange={setDefaultOnly}
         sortBy={sortBy}
         onSortByChange={setSortBy}
         onReset={handleResetFilters}
@@ -250,15 +245,15 @@ export function ResumesPage() {
           </div>
           <div>
             <h3 className="font-display font-semibold text-subheading text-foreground">
-              {search || selectedRole || defaultOnly ? 'No matching resumes found' : 'No resumes added yet'}
+              {search || selectedRole ? 'No matching resumes found' : 'No resumes added yet'}
             </h3>
             <p className="text-small text-muted-foreground max-w-sm mt-1">
-              {search || selectedRole || defaultOnly
+              {search || selectedRole
                 ? 'Try adjusting your filters or search keywords to find what you are looking for.'
                 : 'Upload or link tailored resume versions to track which version you submitted to each employer.'}
             </p>
           </div>
-          {search || selectedRole || defaultOnly ? (
+          {search || selectedRole ? (
             <button
               type="button"
               onClick={handleResetFilters}

@@ -77,9 +77,6 @@ export function ApplicationForm({
   const [salaryMax, setSalaryMax] = useState<string>('');
   const [currency, setCurrency] = useState('PHP');
   const [description, setDescription] = useState('');
-  const [appliedAt, setAppliedAt] = useState(() => new Date().toISOString().split('T')[0]);
-  const [nextAction, setNextAction] = useState('');
-  const [nextActionDueAt, setNextActionDueAt] = useState('');
   const [notes, setNotes] = useState('');
 
   // UI State
@@ -311,9 +308,9 @@ export function ApplicationForm({
       salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
       currency: currency || 'PHP',
       description: description.trim() || null,
-      appliedAt: !isSaved && appliedAt ? new Date(appliedAt).toISOString() : null,
-      nextAction: !isSaved && nextAction.trim() ? nextAction.trim() : null,
-      nextActionDueAt: !isSaved && nextActionDueAt ? new Date(nextActionDueAt).toISOString() : null,
+      appliedAt: !isSaved ? new Date().toISOString() : null,
+      nextAction: null,
+      nextActionDueAt: null,
       notes: notes.trim() || null,
     };
 
@@ -532,58 +529,7 @@ export function ApplicationForm({
         </div>
       </div>
 
-      {/* Section 2: Application Details (Shown only when status !== 'SAVED') */}
-      {!isSaved && (
-        <div className="space-y-4 animate-fade-in">
-          <h2 className="font-display font-semibold text-subheading text-foreground pb-2 border-b border-border">
-            Application Progress & Follow-up
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="form-applied-at" className="block text-small font-medium text-foreground mb-1.5">
-                Date Applied
-              </label>
-              <input
-                id="form-applied-at"
-                type="date"
-                value={appliedAt}
-                onChange={(e) => setAppliedAt(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="form-next-action" className="block text-small font-medium text-foreground mb-1.5">
-                Next Action / Task
-              </label>
-              <input
-                id="form-next-action"
-                type="text"
-                placeholder="e.g. Follow up with recruiter"
-                value={nextAction}
-                onChange={(e) => setNextAction(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-background border border-input text-body text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="form-action-due-date" className="block text-small font-medium text-foreground mb-1.5">
-                Action Due Date
-              </label>
-              <input
-                id="form-action-due-date"
-                type="date"
-                value={nextActionDueAt}
-                onChange={(e) => setNextActionDueAt(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-background border border-input text-small text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Section 3: Workplace & Compensation */}
+      {/* Section 2: Workplace & Compensation */}
       <div className="space-y-4">
         <h2 className="font-display font-semibold text-subheading text-foreground pb-2 border-b border-border">
           Workplace & Compensation
@@ -701,7 +647,7 @@ export function ApplicationForm({
         </div>
       </div>
 
-      {/* Section 4: Description & Notes */}
+      {/* Section 3: Description & Notes */}
       <div className="space-y-4">
         <h2 className="font-display font-semibold text-subheading text-foreground pb-2 border-b border-border">
           Description & Notes
@@ -736,7 +682,7 @@ export function ApplicationForm({
         </div>
       </div>
 
-      {/* Section 5: Action Buttons */}
+      {/* Section 4: Action Buttons */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-2">
         {onCancel && (
           <button

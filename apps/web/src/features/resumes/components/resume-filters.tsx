@@ -8,8 +8,6 @@ export interface ResumeFiltersProps {
   selectedRole: string;
   onRoleChange: (value: string) => void;
   availableRoles: string[];
-  defaultOnly: boolean;
-  onDefaultOnlyChange: (value: boolean) => void;
   sortBy: string;
   onSortByChange: (value: string) => void;
   onReset: () => void;
@@ -21,14 +19,12 @@ export function ResumeFilters({
   selectedRole,
   onRoleChange,
   availableRoles,
-  defaultOnly,
-  onDefaultOnlyChange,
   sortBy,
   onSortByChange,
   onReset,
 }: ResumeFiltersProps) {
   const hasActiveFilters = Boolean(
-    search || selectedRole || defaultOnly || sortBy !== 'recent_desc'
+    search || selectedRole || sortBy !== 'recent_desc'
   );
 
   const roleOptions = [
@@ -82,18 +78,6 @@ export function ResumeFilters({
           />
         </div>
 
-        {/* Default toggle button */}
-        <button
-          type="button"
-          onClick={() => onDefaultOnlyChange(!defaultOnly)}
-          className={`px-3 py-2 text-small font-medium rounded-lg border transition-colors ${
-            defaultOnly
-              ? 'bg-primary/10 border-primary/40 text-primary'
-              : 'bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
-          }`}
-        >
-          Default only
-        </button>
 
         {/* Sort Filter */}
         <div className="w-full sm:w-[170px]">
