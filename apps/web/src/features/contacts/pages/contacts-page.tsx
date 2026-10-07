@@ -4,6 +4,7 @@ import { contactApi } from '../api/contact-api';
 import { companyApi } from '@/features/companies/api/company-api';
 import { applicationApi } from '@/features/applications/api/application-api';
 import { ContactCard } from '../components/contact-card';
+import { ContactListView } from '../components/contact-list-view';
 import { ContactFilters } from '../components/contact-filters';
 import { ContactFormModal } from '../components/contact-form-modal';
 import { ContactDetailModal } from '../components/contact-detail-modal';
@@ -20,6 +21,7 @@ export function ContactsPage() {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [hasApplicationFilter, setHasApplicationFilter] = useState('all'); // 'all' | 'linked' | 'unlinked'
   const [sortBy, setSortBy] = useState('name_asc');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Modal states
   const [selectedContact, setSelectedContact] = useState<ContactWithDetailsDTO | null>(null);
@@ -228,39 +230,69 @@ export function ContactsPage() {
         sortBy={sortBy}
         onSortByChange={setSortBy}
         onReset={handleResetFilters}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
-      {/* Contacts List Grid */}
+      {/* Contacts List / Grid View */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="bg-card border border-border rounded-xl p-5 h-48 animate-pulse flex flex-col justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary" />
-                <div className="flex-1 flex flex-col gap-2">
+        viewMode === 'list' ? (
+          <div className="border border-border rounded-lg overflow-hidden bg-card animate-pulse shadow-xs">
+            <div className="h-10 bg-secondary/30 border-b border-border" />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3.5 border-b border-border last:border-b-0"
+              >
+                <div className="flex flex-col gap-1.5 w-1/4">
                   <div className="h-4 bg-secondary rounded w-3/4" />
                   <div className="h-3 bg-secondary rounded w-1/2" />
                 </div>
+                <div className="h-4 bg-secondary rounded w-1/6" />
+                <div className="h-6 bg-secondary rounded w-1/4" />
+                <div className="h-4 bg-secondary rounded w-1/6" />
+                <div className="h-6 bg-secondary rounded w-14" />
               </div>
-              <div className="h-8 bg-secondary rounded w-full" />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="bg-card border border-border rounded-lg p-4 h-40 animate-pulse flex flex-col justify-between"
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="h-4 bg-secondary rounded w-1/2" />
+                  <div className="h-3 bg-secondary rounded w-1/3" />
+                  <div className="h-5 bg-secondary rounded w-1/4 mt-1" />
+                </div>
+                <div className="h-4 bg-secondary rounded w-2/3 pt-2 border-t border-border" />
+              </div>
+            ))}
+          </div>
+        )
       ) : contacts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {contacts.map((contact) => (
-            <ContactCard
-              key={contact.id}
-              contact={contact}
-              onSelect={setSelectedContact}
-              onEdit={setEditingContact}
-              onDelete={setDeletingContact}
-            />
-          ))}
-        </div>
+        viewMode === 'list' ? (
+          <ContactListView
+            contacts={contacts}
+            onSelect={setSelectedContact}
+            onEdit={setEditingContact}
+            onDelete={setDeletingContact}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {contacts.map((contact) => (
+              <ContactCard
+                key={contact.id}
+                contact={contact}
+                onSelect={setSelectedContact}
+                onEdit={setEditingContact}
+                onDelete={setDeletingContact}
+              />
+            ))}
+          </div>
+        )
       ) : (
         /* Empty State */
         <div className="flex flex-col items-center justify-center p-12 text-center bg-card border border-border rounded-xl">

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Search, X, RotateCcw } from 'lucide-react';
+import { Search, X, RotateCcw, List, LayoutGrid } from 'lucide-react';
 import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/cn';
 
 export interface ContactFiltersProps {
   search: string;
@@ -13,6 +14,8 @@ export interface ContactFiltersProps {
   sortBy: string;
   onSortByChange: (value: string) => void;
   onReset: () => void;
+  viewMode?: 'list' | 'grid';
+  onViewModeChange?: (mode: 'list' | 'grid') => void;
 }
 
 export function ContactFilters({
@@ -26,6 +29,8 @@ export function ContactFilters({
   sortBy,
   onSortByChange,
   onReset,
+  viewMode = 'list',
+  onViewModeChange,
 }: ContactFiltersProps) {
   const hasActiveFilters = Boolean(
     search || selectedCompany || hasApplicationFilter !== 'all' || sortBy !== 'name_asc'
@@ -123,6 +128,40 @@ export function ContactFilters({
             <RotateCcw size={13} />
             <span className="hidden sm:inline">Reset</span>
           </button>
+        )}
+
+        {/* View Mode Toggle (List vs Grid) */}
+        {onViewModeChange && (
+          <div className="flex items-center gap-0.5 border border-input rounded-md p-0.5 bg-background shrink-0">
+            <button
+              type="button"
+              onClick={() => onViewModeChange('list')}
+              className={cn(
+                'p-1.5 rounded transition-colors cursor-pointer',
+                viewMode === 'list'
+                  ? 'bg-secondary text-foreground font-medium shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="List view"
+              aria-label="List view"
+            >
+              <List size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange('grid')}
+              className={cn(
+                'p-1.5 rounded transition-colors cursor-pointer',
+                viewMode === 'grid'
+                  ? 'bg-secondary text-foreground font-medium shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
         )}
       </div>
     </div>

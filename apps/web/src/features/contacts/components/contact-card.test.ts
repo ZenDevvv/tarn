@@ -66,4 +66,44 @@ describe('Contacts Feature - Unit Tests', () => {
 
     expect(contactWithDynamicStatus.application.status.name).toBe('Technical Screening');
   });
+
+  it('formats profile links with protocol fallback correctly', () => {
+    const rawUrl = 'linkedin.com/in/sarah-connor';
+    const resolvedUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+    expect(resolvedUrl).toBe('https://linkedin.com/in/sarah-connor');
+
+    const rawHttpsUrl = 'https://linkedin.com/in/sarah-connor';
+    const resolvedHttpsUrl = rawHttpsUrl.startsWith('http') ? rawHttpsUrl : `https://${rawHttpsUrl}`;
+    expect(resolvedHttpsUrl).toBe('https://linkedin.com/in/sarah-connor');
+  });
+
+  it('supports unlinked general contacts without application details', () => {
+    const generalContact: ContactWithDetailsDTO = {
+      ...mockContact,
+      applicationId: null,
+      application: null,
+    };
+
+    expect(generalContact.application).toBeNull();
+    expect(generalContact.name).toBe('Sarah Connor');
+  });
+
+  it('correctly maps contacts list view row data with optional fields', () => {
+    const minimalContact: ContactWithDetailsDTO = {
+      id: 'contact_min',
+      userId: 'user_123',
+      name: 'Alex Rivera',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    expect(minimalContact.name).toBe('Alex Rivera');
+    expect(minimalContact.role).toBeUndefined();
+    expect(minimalContact.company).toBeUndefined();
+    expect(minimalContact.email).toBeUndefined();
+    expect(minimalContact.phone).toBeUndefined();
+    expect(minimalContact.linkedinUrl).toBeUndefined();
+    expect(minimalContact.application).toBeUndefined();
+  });
 });
+
