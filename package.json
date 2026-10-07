@@ -5,7 +5,8 @@
   "description": "Tarn — Intelligent Personal ATS & Job Application Tracker with Marker design system",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "docker compose up -d && pnpm --parallel --filter \"@tracker/*\" dev",
+    "setup": "node -e \"if (!require('fs').existsSync('.env')) require('fs').copyFileSync('.env.example', '.env'); if (!require('fs').existsSync('packages/database/.env')) require('fs').symlinkSync('../../.env', 'packages/database/.env')\" && docker compose up -d --wait && pnpm db:migrate:deploy && pnpm db:seed",
+    "dev": "docker compose up -d && pnpm db:migrate:deploy && pnpm --parallel --filter \"@tracker/*\" dev",
     "dev:api": "pnpm --filter @tracker/api dev",
     "dev:web": "pnpm --filter @tracker/web dev",
     "build": "pnpm --recursive --filter \"./packages/*\" --filter \"./apps/*\" build",
@@ -13,9 +14,12 @@
     "lint": "pnpm --recursive --filter \"./packages/*\" --filter \"./apps/*\" lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "db:setup": "pnpm run setup",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter @tracker/database prisma migrate dev",
+    "db:migrate:deploy": "pnpm --filter @tracker/database prisma migrate deploy",
+    "db:push": "pnpm --filter @tracker/database prisma db push",
     "db:seed": "pnpm --filter @tracker/database prisma db seed",
     "db:studio": "pnpm --filter @tracker/database prisma studio"
   },

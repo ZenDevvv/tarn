@@ -5,10 +5,15 @@
   "main": "./src/client.ts",
   "types": "./src/client.ts",
   "scripts": {
+    "prisma": "prisma",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",
     "studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1"

@@ -25,31 +25,38 @@ Applying across dozens of platforms—LinkedIn, Indeed, JobStreet, company caree
 ## ✨ Key Features
 
 ### 📋 12-Stage Application Lifecycle & Kanban
+
 - Seamlessly transition applications across 12 distinct lifecycle states:
   `Saved` → `Applied` → `Application Viewed` → `Recruiter Contacted` → `HR Interview` → `Technical Interview` → `Final Interview` → `Offer` → `Accepted` / `Rejected` / `Withdrawn` / `No Response`.
 - Toggle effortlessly between an interactive **Kanban Board** and a high-density **Data Table** with sorting, filtering, and rapid search.
 
 ### 📌 Permanent Job Description Preservation
+
 - Capture and lock the full original job description, source URL, salary brackets, and work setup (`Remote`, `Hybrid`, `Onsite`) so you never get caught unprepared when a posting returns 404.
 
 ### ⏱️ Timeline & Activity History
+
 - Automated chronological activity logs record status updates, notes, interview milestones, and follow-up completions for every application.
 
 ### 🗓️ Interview Hub & Recruiter CRM
+
 - Log upcoming and past interview rounds, record interviewers, and capture instant debrief notes.
 - Built-in mini-CRM for tracking company profiles, recruiter points of contact, and direct communication history.
 
 ### 📄 Resume & Document Version Tracking
+
 - Associate the exact resume variant and portfolio submitted with each job application to ensure pitch consistency during callbacks.
 
 ### 📊 Search Velocity & Funnel Analytics
+
 - Real-time analytics tracking conversion rates across pipeline stages, response times, weekly application velocity, and top application sources.
 
 ### 🤖 AI-Ready Foundation
+
 - Architected for intelligent job search automation:
   - Automated job posting parsing and metadata extraction from URLs.
-  - Resume-to-job keyword alignment & skills-gap analysis *(roadmap)*.
-  - AI-assisted interview preparation and tailored follow-up drafting *(roadmap)*.
+  - Resume-to-job keyword alignment & skills-gap analysis _(roadmap)_.
+  - AI-assisted interview preparation and tailored follow-up drafting _(roadmap)_.
 
 ---
 
@@ -86,11 +93,13 @@ tarn/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js** `>= 20.x`
 - **pnpm** `>= 9.x` (`corepack enable pnpm`)
 - **Docker & Docker Compose** (for local PostgreSQL)
 
 ### 1. Clone & Install Dependencies
+
 ```bash
 git clone https://github.com/ZenDevvv/tarn.git
 cd tarn
@@ -98,51 +107,59 @@ pnpm install
 ```
 
 ### 2. Configure Environment
+
 Copy the example environment file:
+
 ```bash
 cp .env.example .env
 ```
-*(Review `.env` to verify your database credentials and authentication secrets.)*
 
-### 3. Spin Up PostgreSQL & Run Migrations
+_(Review `.env` to verify your database credentials and authentication secrets.)_
+
+### 3. Spin Up PostgreSQL & Setup Database
+
 ```bash
-# Start PostgreSQL in Docker (port 5433)
-pnpm db:up
-
-# Run Prisma migrations
-pnpm db:migrate
-
-# (Optional) Seed the database with demo applications and companies
-pnpm db:seed
+# Automated setup (starts PostgreSQL, applies migrations, seeds sample data)
+pnpm db:setup
 ```
 
+_(Or manually step-by-step: `pnpm db:up` ➔ `pnpm db:migrate` ➔ `pnpm db:seed`)_
+
 ### 4. Start Development Servers
+
 Run the API and Web client in parallel:
+
 ```bash
 pnpm dev
 ```
+
+_(Automatically ensures PostgreSQL is running and latest migrations are applied before starting servers.)_
+
 - **Web App:** [http://localhost:5173](http://localhost:5173)
-- **API Server:** [http://localhost:3000](http://localhost:3000)
+- **API Server:** [http://localhost:4000](http://localhost:4000)
 - **Prisma Studio:** `pnpm db:studio` (opens database GUI on [http://localhost:5555](http://localhost:5555))
 
 ---
 
 ## 🛠️ Available Scripts
 
-| Command | Description |
-| :--- | :--- |
-| `pnpm dev` | Starts Docker DB and runs both Web and API concurrently |
-| `pnpm dev:web` | Starts the Vite frontend application only |
-| `pnpm dev:api` | Starts the Express backend application only |
-| `pnpm build` | Compiles all packages and applications |
-| `pnpm test` | Runs unit and integration test suites |
-| `pnpm lint` | Runs linter across all workspaces |
-| `pnpm format` | Formats all source files with Prettier |
-| `pnpm db:up` | Boots the PostgreSQL container via Docker Compose |
-| `pnpm db:down` | Shuts down the local PostgreSQL container |
-| `pnpm db:migrate` | Runs database migrations with Prisma |
-| `pnpm db:seed` | Populates database with sample mock data |
-| `pnpm db:studio` | Launches Prisma Studio GUI for database browsing |
+| Command                  | Description                                                                     |
+| :----------------------- | :------------------------------------------------------------------------------ |
+| `pnpm dev`               | Starts PostgreSQL container, checks migrations, and runs Web + API concurrently |
+| `pnpm dev:web`           | Starts the Vite frontend application only                                       |
+| `pnpm dev:api`           | Starts the Express backend application only                                     |
+| `pnpm db:setup`          | Starts Docker DB, applies Prisma migrations, and seeds test data                |
+| `pnpm db:up`             | Boots the PostgreSQL container via Docker Compose                               |
+| `pnpm db:down`           | Shuts down the local PostgreSQL container                                       |
+| `pnpm db:migrate`        | Runs interactive database migrations in development (`migrate dev`)             |
+| `pnpm db:migrate:deploy` | Applies pending migrations in non-interactive mode (`migrate deploy`)           |
+| `pnpm db:push`           | Pushes schema directly without recording migrations                             |
+| `pnpm db:seed`           | Populates database with sample mock data (`mika@example.com`)                   |
+| `pnpm db:studio`         | Launches Prisma Studio GUI for database browsing                                |
+| `pnpm build`             | Compiles all packages and applications                                          |
+| `pnpm test`              | Runs unit and integration test suites                                           |
+| `pnpm lint`              | Runs linter across all workspaces                                               |
+| `pnpm format`            | Formats all source files with Prettier                                          |
 
 ---
 
