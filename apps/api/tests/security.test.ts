@@ -3,6 +3,10 @@ import request from "supertest";
 import express from "express";
 import { rateLimit } from "express-rate-limit";
 import { app } from "../src/app";
+import {
+  getAuthLimiterConfig,
+  createAuthLimiter,
+} from "../src/middleware/rate-limit";
 
 describe("Cloud Security, Observability & Ingress Tests", () => {
   let adminCookie: string[];
@@ -193,6 +197,83 @@ describe("Cloud Security, Observability & Ingress Tests", () => {
       expect(res3.status).toBe(429);
       expect(res3.body.error.code).toBe("TOO_MANY_REQUESTS");
       expect(res3.headers["ratelimit"]).toContain("remaining=0");
+    });
+  });
+
+  describe("Authentication Rate Limiting by Environment & Endpoint Isolation", () => {
+    it("provides generous limits in development and strict limits in production", () => {
+      const devConfig = getAuthLimiterConfig("development");
+      expect(devConfig.limit).toBe(100);
+      expect(devConfig.windowMs).toBe(15 * 60 * 1000);
+
+      const prodConfig = getAuthLimiterConfig("production");
+      expect(prodConfig.limit).toBe(10);
+      expect(prodConfig.windowMs).toBe(15 * 60 * 1000);
+    });
+
+    it("production configuration: throttles after 10 requests on sensitive routes", async () => {
+      const prodApp = express();
+      const prodLimiter = createAuthLimiter({
+        limit: 10,
+        skip: () => false,
+      });
+
+      prodApp.post("/login", prodLimiter, (_req, res) => res.json({ ok: true }));
+
+      // First 10 attempts pass
+      for (let i = 0; i < 10; i++) {
+        const res = await request(prodApp).post("/login");
+        expect(res.status).toBe(200);
+      }
+
+      // 11th attempt is blocked with 429
+      const blockedRes = await request(prodApp).post("/login");
+      expect(blockedRes.status).toBe(429);
+      expect(blockedRes.body.error.code).toBe("TOO_MANY_REQUESTS");
+      expect(blockedRes.body.error.message).toContain("Too many authentication attempts");
+    });
+
+    it("development configuration: allows 15+ rapid requests without locking out", async () => {
+      const devApp = express();
+      const devLimiter = createAuthLimiter({
+        limit: 100,
+        skip: () => false,
+      });
+
+      devApp.post("/login", devLimiter, (_req, res) => res.json({ ok: true }));
+
+      // 15 attempts easily pass without lockout
+      for (let i = 0; i < 15; i++) {
+        const res = await request(devApp).post("/login");
+        expect(res.status).toBe(200);
+      }
+    });
+
+    it("endpoint isolation: GET /me is NEVER throttled even when POST /login is locked out", async () => {
+      const authApp = express();
+      const strictLimiter = createAuthLimiter({
+        limit: 2,
+        skip: () => false,
+      });
+
+      // Mirror the new auth.routes.ts structure
+      authApp.post("/login", strictLimiter, (_req, res) => res.json({ status: "login_ok" }));
+      authApp.get("/me", (_req, res) => res.json({ user: "active_applicant" }));
+
+      // Send 2 logins to exhaust quota
+      await request(authApp).post("/login");
+      await request(authApp).post("/login");
+
+      // 3rd login is blocked
+      const loginBlocked = await request(authApp).post("/login");
+      expect(loginBlocked.status).toBe(429);
+
+      // GET /me still responds 200 without being rate-limited
+      for (let i = 0; i < 5; i++) {
+        const meRes = await request(authApp).get("/me");
+        expect(meRes.status).toBe(200);
+        expect(meRes.body.user).toBe("active_applicant");
+      }
     });
   });
 });

@@ -8,7 +8,7 @@ import pinoHttp from "pino-http";
 import { prisma } from "@tracker/database";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
-import { apiLimiter, authLimiter } from "./middleware/rate-limit";
+import { apiLimiter } from "./middleware/rate-limit";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 
@@ -93,8 +93,7 @@ app.get("/api/v1/health/ready", async (_req, res) => {
   }
 });
 
-// Rate limiting for API and Auth
-app.use("/api/v1/auth", authLimiter);
+// Global API rate limiting
 app.use("/api/v1", apiLimiter);
 
 import { authRouter } from "./modules/auth/auth.routes";
