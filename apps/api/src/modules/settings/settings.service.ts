@@ -1,13 +1,16 @@
-import bcrypt from 'bcryptjs';
-import { prisma } from '@tracker/database';
+import bcrypt from "bcryptjs";
+import { prisma } from "@tracker/database";
 import {
   UserSettingsDTO,
   UpdateProfileInput,
   UpdatePreferencesInput,
   ChangePasswordInput,
   UserDataExportDTO,
-} from '@tracker/types';
-import { AuthenticationError, NotFoundError } from '../../middleware/error-handler';
+} from "@tracker/types";
+import {
+  AuthenticationError,
+  NotFoundError,
+} from "../../middleware/error-handler";
 
 export const settingsService = {
   async getSettings(userId: string): Promise<UserSettingsDTO> {
@@ -16,7 +19,7 @@ export const settingsService = {
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     const [
@@ -58,14 +61,16 @@ export const settingsService = {
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
+      isActive: user.isActive,
       headline: user.headline,
       location: user.location,
-      timezone: user.timezone || 'UTC',
+      timezone: user.timezone || "UTC",
       phone: user.phone,
       website: user.website,
       linkedinUrl: user.linkedinUrl,
       bio: user.bio,
-      defaultCurrency: user.defaultCurrency || 'PHP',
+      defaultCurrency: user.defaultCurrency || "PHP",
       defaultWorkSetup: user.defaultWorkSetup as any,
       defaultResumeId: user.defaultResumeId,
       defaultResumeName,
@@ -73,7 +78,7 @@ export const settingsService = {
       interviewReminders: user.interviewReminders,
       followUpAlerts: user.followUpAlerts,
       weeklyDigest: user.weeklyDigest,
-      themePreference: (user.themePreference as any) || 'system',
+      themePreference: (user.themePreference as any) || "system",
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       stats: {
@@ -87,13 +92,16 @@ export const settingsService = {
     };
   },
 
-  async updateProfile(userId: string, input: UpdateProfileInput): Promise<UserSettingsDTO> {
+  async updateProfile(
+    userId: string,
+    input: UpdateProfileInput,
+  ): Promise<UserSettingsDTO> {
     const existing = await prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!existing) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     await prisma.user.update({
@@ -105,7 +113,8 @@ export const settingsService = {
         timezone: input.timezone !== undefined ? input.timezone : undefined,
         phone: input.phone !== undefined ? input.phone : undefined,
         website: input.website !== undefined ? input.website : undefined,
-        linkedinUrl: input.linkedinUrl !== undefined ? input.linkedinUrl : undefined,
+        linkedinUrl:
+          input.linkedinUrl !== undefined ? input.linkedinUrl : undefined,
         bio: input.bio !== undefined ? input.bio : undefined,
       },
     });
@@ -113,44 +122,75 @@ export const settingsService = {
     return this.getSettings(userId);
   },
 
-  async updatePreferences(userId: string, input: UpdatePreferencesInput): Promise<UserSettingsDTO> {
+  async updatePreferences(
+    userId: string,
+    input: UpdatePreferencesInput,
+  ): Promise<UserSettingsDTO> {
     const existing = await prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!existing) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     await prisma.user.update({
       where: { id: userId },
       data: {
-        defaultCurrency: input.defaultCurrency !== undefined ? input.defaultCurrency : undefined,
-        defaultWorkSetup: input.defaultWorkSetup !== undefined ? (input.defaultWorkSetup as any) : undefined,
-        defaultResumeId: input.defaultResumeId !== undefined ? input.defaultResumeId : undefined,
-        emailNotifications: input.emailNotifications !== undefined ? input.emailNotifications : undefined,
-        interviewReminders: input.interviewReminders !== undefined ? input.interviewReminders : undefined,
-        followUpAlerts: input.followUpAlerts !== undefined ? input.followUpAlerts : undefined,
-        weeklyDigest: input.weeklyDigest !== undefined ? input.weeklyDigest : undefined,
-        themePreference: input.themePreference !== undefined ? input.themePreference : undefined,
+        defaultCurrency:
+          input.defaultCurrency !== undefined
+            ? input.defaultCurrency
+            : undefined,
+        defaultWorkSetup:
+          input.defaultWorkSetup !== undefined
+            ? (input.defaultWorkSetup as any)
+            : undefined,
+        defaultResumeId:
+          input.defaultResumeId !== undefined
+            ? input.defaultResumeId
+            : undefined,
+        emailNotifications:
+          input.emailNotifications !== undefined
+            ? input.emailNotifications
+            : undefined,
+        interviewReminders:
+          input.interviewReminders !== undefined
+            ? input.interviewReminders
+            : undefined,
+        followUpAlerts:
+          input.followUpAlerts !== undefined ? input.followUpAlerts : undefined,
+        weeklyDigest:
+          input.weeklyDigest !== undefined ? input.weeklyDigest : undefined,
+        themePreference:
+          input.themePreference !== undefined
+            ? input.themePreference
+            : undefined,
       },
     });
 
     return this.getSettings(userId);
   },
 
-  async changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
+  async changePassword(
+    userId: string,
+    input: ChangePasswordInput,
+  ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
-    const isMatch = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    const isMatch = await bcrypt.compare(
+      input.currentPassword,
+      user.passwordHash,
+    );
     if (!isMatch) {
-      throw new AuthenticationError('Current password does not match our records');
+      throw new AuthenticationError(
+        "Current password does not match our records",
+      );
     }
 
     const passwordHash = await bcrypt.hash(input.newPassword, 10);
@@ -181,36 +221,36 @@ export const settingsService = {
               },
             },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         },
         statuses: {
-          orderBy: { order: 'asc' },
+          orderBy: { order: "asc" },
         },
         companies: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         },
         contacts: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         },
         interviews: {
-          orderBy: { scheduledAt: 'desc' },
+          orderBy: { scheduledAt: "desc" },
         },
         followUps: {
-          orderBy: { dueAt: 'desc' },
+          orderBy: { dueAt: "desc" },
         },
         resumes: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         },
       },
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     return {
       exportDate: new Date().toISOString(),
-      version: '1.0.0',
+      version: "1.0.0",
       user: {
         id: user.id,
         email: user.email,

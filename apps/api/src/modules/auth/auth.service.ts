@@ -1,10 +1,14 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { prisma } from '@tracker/database';
-import { RegisterInput, LoginInput } from '@tracker/validation';
-import { env } from '../../config/env';
-import { AuthenticationError, ConflictError, NotFoundError } from '../../middleware/error-handler';
-import { statusService } from '../statuses/status.service';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { prisma } from "@tracker/database";
+import { RegisterInput, LoginInput } from "@tracker/validation";
+import { env } from "../../config/env";
+import {
+  AuthenticationError,
+  ConflictError,
+  NotFoundError,
+} from "../../middleware/error-handler";
+import { statusService } from "../statuses/status.service";
 
 export const authService = {
   async register(input: RegisterInput) {
@@ -13,7 +17,9 @@ export const authService = {
     });
 
     if (existing) {
-      throw new ConflictError('An account with this email address already exists');
+      throw new ConflictError(
+        "An account with this email address already exists",
+      );
     }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
@@ -22,12 +28,16 @@ export const authService = {
       data: {
         email: input.email,
         name: input.name,
+        role: "USER",
+        isActive: true,
         passwordHash,
       },
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
+        isActive: true,
         createdAt: true,
       },
     });
@@ -36,7 +46,7 @@ export const authService = {
     await statusService.seedDefaultStatuses(user.id);
 
     const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: "7d",
     });
 
     return { user, token };
@@ -48,17 +58,23 @@ export const authService = {
     });
 
     if (!user) {
-      throw new AuthenticationError('Invalid email or password');
+      throw new AuthenticationError("Invalid email or password");
     }
 
     const isMatch = await bcrypt.compare(input.password, user.passwordHash);
 
     if (!isMatch) {
-      throw new AuthenticationError('Invalid email or password');
+      throw new AuthenticationError("Invalid email or password");
+    }
+
+    if (!user.isActive) {
+      throw new AuthenticationError(
+        "Account has been suspended. Please contact system administrator.",
+      );
     }
 
     const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: "7d",
     });
 
     return {
@@ -66,6 +82,8 @@ export const authService = {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
+        isActive: user.isActive,
         createdAt: user.createdAt,
       },
       token,
@@ -79,12 +97,14 @@ export const authService = {
         id: true,
         email: true,
         name: true,
+        role: true,
+        isActive: true,
         createdAt: true,
       },
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     return user;

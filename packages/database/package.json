@@ -10,6 +10,7 @@
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",
+    "promote:admin": "tsx scripts/promote-admin.ts",
     "studio": "prisma studio"
   },
   "prisma": {

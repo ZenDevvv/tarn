@@ -21,7 +21,8 @@
     "db:migrate:deploy": "pnpm --filter @tracker/database prisma migrate deploy",
     "db:push": "pnpm --filter @tracker/database prisma db push",
     "db:seed": "pnpm --filter @tracker/database prisma db seed",
-    "db:studio": "pnpm --filter @tracker/database prisma studio"
+    "db:studio": "pnpm --filter @tracker/database prisma studio",
+    "admin:promote": "pnpm --filter @tracker/database run promote:admin"
   },
   "devDependencies": {
     "prettier": "^3.3.3",

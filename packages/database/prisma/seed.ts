@@ -1,5 +1,6 @@
 import {
   PrismaClient,
+  Role,
   CloseType,
   Priority,
   WorkSetup,
@@ -9,13 +10,13 @@ import {
   InterviewType,
   InterviewStatus,
   InterviewResult,
-} from '@prisma/client';
-import bcrypt from 'bcryptjs';
+} from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  console.log("🌱 Starting database seed...");
 
   // Clean existing records
   await prisma.contact.deleteMany();
@@ -29,34 +30,73 @@ async function main() {
   await prisma.user.deleteMany();
 
   // Create primary test user (matching Dashboard sample)
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const passwordHash = await bcrypt.hash("password123", 10);
   const user = await prisma.user.create({
     data: {
-      email: 'mika@example.com',
-      name: 'Mika Santos',
+      email: "mika@example.com",
+      name: "Mika Santos",
+      role: Role.USER,
+      isActive: true,
       passwordHash,
     },
   });
 
-  console.log(`👤 Created user: ${user.name} (${user.email})`);
+  console.log(`👤 Created user: ${user.name} (${user.email}) [${user.role}]`);
+
+  // Create dedicated administrator account
+  const adminUser = await prisma.user.create({
+    data: {
+      email: "admin@example.com",
+      name: "System Administrator",
+      role: Role.ADMIN,
+      isActive: true,
+      passwordHash,
+    },
+  });
+
+  console.log(
+    `🛡️ Created admin user: ${adminUser.name} (${adminUser.email}) [${adminUser.role}]`,
+  );
 
   // Date helpers
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    17,
+    0,
+    0,
+  );
   const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
   const twoDaysLater = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
   const fiveDaysLater = new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000);
 
   // Seed default application statuses for user
   const defaultStatuses = [
-    { name: 'Saved', order: 0, closeType: null, isDefault: true },
-    { name: 'Applied', order: 1, closeType: null, isDefault: false },
-    { name: 'Interviewing', order: 2, closeType: null, isDefault: false },
-    { name: 'Offer', order: 3, closeType: null, isDefault: false },
-    { name: 'Accepted', order: 4, closeType: null, isDefault: false },
-    { name: 'Rejected', order: null, closeType: CloseType.REJECTED, isDefault: true },
-    { name: 'Withdrawn', order: null, closeType: CloseType.WITHDRAWN, isDefault: true },
-    { name: 'No response', order: null, closeType: CloseType.NO_RESPONSE, isDefault: true },
+    { name: "Saved", order: 0, closeType: null, isDefault: true },
+    { name: "Applied", order: 1, closeType: null, isDefault: false },
+    { name: "Interviewing", order: 2, closeType: null, isDefault: false },
+    { name: "Offer", order: 3, closeType: null, isDefault: false },
+    { name: "Accepted", order: 4, closeType: null, isDefault: false },
+    {
+      name: "Rejected",
+      order: null,
+      closeType: CloseType.REJECTED,
+      isDefault: true,
+    },
+    {
+      name: "Withdrawn",
+      order: null,
+      closeType: CloseType.WITHDRAWN,
+      isDefault: true,
+    },
+    {
+      name: "No response",
+      order: null,
+      closeType: CloseType.NO_RESPONSE,
+      isDefault: true,
+    },
   ];
 
   const statusMap = new Map<string, any>();
@@ -71,99 +111,115 @@ async function main() {
       },
     });
     statusMap.set(s.name.toUpperCase(), createdStatus);
+
+    await prisma.applicationStatus.create({
+      data: {
+        userId: adminUser.id,
+        name: s.name,
+        order: s.order,
+        closeType: s.closeType,
+        isDefault: s.isDefault,
+      },
+    });
   }
 
   // Seed applications matching Dashboard sample
   const appData = [
     {
-      company: 'Halcyon Labs',
-      role: 'Frontend Developer',
-      statusKey: 'INTERVIEWING',
+      company: "Halcyon Labs",
+      role: "Frontend Developer",
+      statusKey: "INTERVIEWING",
       priority: Priority.HIGH,
-      source: 'LinkedIn',
-      sourceUrl: 'https://linkedin.com/jobs/view/12345',
+      source: "LinkedIn",
+      sourceUrl: "https://linkedin.com/jobs/view/12345",
       workSetup: WorkSetup.HYBRID,
       salaryMin: 50000,
       salaryMax: 70000,
       appliedAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
-      nextAction: 'Prepare for technical interview',
+      nextAction: "Prepare for technical interview",
       nextActionDueAt: today,
-      description: 'Senior Frontend Developer focused on React, TypeScript, and modern component architecture.',
+      description:
+        "Senior Frontend Developer focused on React, TypeScript, and modern component architecture.",
     },
     {
-      company: 'Northbeam',
-      role: 'React Engineer',
-      statusKey: 'INTERVIEWING',
+      company: "Northbeam",
+      role: "React Engineer",
+      statusKey: "INTERVIEWING",
       priority: Priority.MEDIUM,
-      source: 'JobStreet',
-      sourceUrl: 'https://jobstreet.com/jobs/view/23456',
+      source: "JobStreet",
+      sourceUrl: "https://jobstreet.com/jobs/view/23456",
       workSetup: WorkSetup.REMOTE,
       salaryMin: 70000,
       salaryMax: 90000,
       appliedAt: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000),
-      nextAction: 'Follow up with recruiter',
+      nextAction: "Follow up with recruiter",
       nextActionDueAt: today,
-      description: 'React Engineer developing marketing intelligence dashboards and data visualization.',
+      description:
+        "React Engineer developing marketing intelligence dashboards and data visualization.",
     },
     {
-      company: 'Kite & Compass',
-      role: 'Full Stack Developer',
-      statusKey: 'APPLIED',
+      company: "Kite & Compass",
+      role: "Full Stack Developer",
+      statusKey: "APPLIED",
       priority: Priority.MEDIUM,
-      source: 'OnlineJobsPH',
-      sourceUrl: 'https://onlinejobs.ph/job/34567',
+      source: "OnlineJobsPH",
+      sourceUrl: "https://onlinejobs.ph/job/34567",
       workSetup: WorkSetup.REMOTE,
       salaryMin: 80000,
       salaryMax: 100000,
       appliedAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-      nextAction: 'Send portfolio',
+      nextAction: "Send portfolio",
       nextActionDueAt: twoDaysAgo,
-      description: 'Full stack role building Node.js microservices and clean React user interfaces.',
+      description:
+        "Full stack role building Node.js microservices and clean React user interfaces.",
     },
     {
-      company: 'Pageturn',
-      role: 'Frontend Developer',
-      statusKey: 'APPLIED',
+      company: "Pageturn",
+      role: "Frontend Developer",
+      statusKey: "APPLIED",
       priority: Priority.LOW,
-      source: 'Indeed',
-      sourceUrl: 'https://indeed.com/viewjob?jk=45678',
+      source: "Indeed",
+      sourceUrl: "https://indeed.com/viewjob?jk=45678",
       workSetup: WorkSetup.HYBRID,
       salaryMin: 45000,
       salaryMax: 60000,
       appliedAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000),
-      nextAction: 'Check application status',
+      nextAction: "Check application status",
       nextActionDueAt: twoDaysLater,
-      description: 'Frontend engineer working with design systems and responsive web typography.',
+      description:
+        "Frontend engineer working with design systems and responsive web typography.",
     },
     {
-      company: 'Orbit Freight',
-      role: 'QA Engineer',
-      statusKey: 'REJECTED',
+      company: "Orbit Freight",
+      role: "QA Engineer",
+      statusKey: "REJECTED",
       priority: Priority.LOW,
-      source: 'JobStreet',
-      sourceUrl: 'https://jobstreet.com/jobs/view/56789',
+      source: "JobStreet",
+      sourceUrl: "https://jobstreet.com/jobs/view/56789",
       workSetup: WorkSetup.ONSITE,
       salaryMin: 35000,
       salaryMax: 45000,
       appliedAt: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000),
       nextAction: null,
       nextActionDueAt: null,
-      description: 'QA automation role for logistics tracking portal and warehouse management systems.',
+      description:
+        "QA automation role for logistics tracking portal and warehouse management systems.",
     },
     {
-      company: 'Lumen Health',
-      role: 'Full Stack Developer',
-      statusKey: 'OFFER',
+      company: "Lumen Health",
+      role: "Full Stack Developer",
+      statusKey: "OFFER",
       priority: Priority.HIGH,
-      source: 'Referral',
+      source: "Referral",
       sourceUrl: null,
       workSetup: WorkSetup.HYBRID,
       salaryMin: 90000,
       salaryMax: 110000,
       appliedAt: new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000),
-      nextAction: 'Review offer',
+      nextAction: "Review offer",
       nextActionDueAt: fiveDaysLater,
-      description: 'Full stack healthcare software with React, Node.js, and HIPAA-compliant data pipelines.',
+      description:
+        "Full stack healthcare software with React, Node.js, and HIPAA-compliant data pipelines.",
     },
   ];
 
@@ -176,7 +232,8 @@ async function main() {
       data: {
         userId: user.id,
         name: item.company,
-        location: item.workSetup === WorkSetup.REMOTE ? 'Remote' : 'Philippines',
+        location:
+          item.workSetup === WorkSetup.REMOTE ? "Remote" : "Philippines",
       },
     });
 
@@ -192,7 +249,7 @@ async function main() {
         employmentType: EmploymentType.FULL_TIME,
         salaryMin: item.salaryMin,
         salaryMax: item.salaryMax,
-        currency: 'PHP',
+        currency: "PHP",
       },
     });
 
@@ -217,19 +274,21 @@ async function main() {
       data: {
         applicationId: app.id,
         type: TimelineEventType.APPLICATION_CREATED,
-        title: 'Application submitted',
+        title: "Application submitted",
         description: `Applied via ${item.source}`,
         occurredAt: item.appliedAt,
       },
     });
 
-    if (item.statusKey !== 'APPLIED') {
+    if (item.statusKey !== "APPLIED") {
       await prisma.timelineEvent.create({
         data: {
           applicationId: app.id,
           type: TimelineEventType.STATUS_CHANGED,
           title: `Moved to ${statusObj.name.toLowerCase()}`,
-          occurredAt: new Date(item.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000),
+          occurredAt: new Date(
+            item.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000,
+          ),
         },
       });
     }
@@ -249,7 +308,7 @@ async function main() {
     }
 
     // Seed Interviews for active interview stages
-    if (item.company === 'Halcyon Labs') {
+    if (item.company === "Halcyon Labs") {
       const tomorrow1030 = new Date(today.getTime() + 24 * 60 * 60 * 1000);
       tomorrow1030.setHours(10, 30, 0, 0);
 
@@ -259,17 +318,18 @@ async function main() {
           applicationId: app.id,
           round: 2,
           type: InterviewType.TECHNICAL,
-          title: 'Technical Deep Dive',
+          title: "Technical Deep Dive",
           scheduledAt: tomorrow1030,
           durationMinutes: 60,
-          interviewerName: 'Dana Reyes',
-          interviewerRole: 'Engineering Lead',
-          meetingUrl: 'https://meet.google.com/abc-defg-hij',
-          location: 'Google Meet',
+          interviewerName: "Dana Reyes",
+          interviewerRole: "Engineering Lead",
+          meetingUrl: "https://meet.google.com/abc-defg-hij",
+          location: "Google Meet",
           status: InterviewStatus.SCHEDULED,
           result: InterviewResult.PENDING,
-          notes: 'Focus on TypeScript, React architecture, and performance.',
-          prepNotes: 'Review React 19 server components, concurrent rendering, and state management.',
+          notes: "Focus on TypeScript, React architecture, and performance.",
+          prepNotes:
+            "Review React 19 server components, concurrent rendering, and state management.",
         },
       });
 
@@ -277,13 +337,15 @@ async function main() {
         data: {
           applicationId: app.id,
           type: TimelineEventType.INTERVIEW_SCHEDULED,
-          title: 'Technical interview scheduled',
-          description: 'Scheduled with Dana Reyes for tomorrow at 10:30 AM',
+          title: "Technical interview scheduled",
+          description: "Scheduled with Dana Reyes for tomorrow at 10:30 AM",
           occurredAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
         },
       });
-    } else if (item.company === 'Northbeam') {
-      const inThreeDays1400 = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+    } else if (item.company === "Northbeam") {
+      const inThreeDays1400 = new Date(
+        today.getTime() + 3 * 24 * 60 * 60 * 1000,
+      );
       inThreeDays1400.setHours(14, 0, 0, 0);
 
       await prisma.interview.create({
@@ -292,17 +354,19 @@ async function main() {
           applicationId: app.id,
           round: 1,
           type: InterviewType.HR,
-          title: 'HR Cultural Fit',
+          title: "HR Cultural Fit",
           scheduledAt: inThreeDays1400,
           durationMinutes: 45,
-          interviewerName: 'Liam Gomez',
-          interviewerRole: 'Talent Partner',
-          meetingUrl: 'https://zoom.us/j/1234567890',
-          location: 'Zoom',
+          interviewerName: "Liam Gomez",
+          interviewerRole: "Talent Partner",
+          meetingUrl: "https://zoom.us/j/1234567890",
+          location: "Zoom",
           status: InterviewStatus.SCHEDULED,
           result: InterviewResult.PENDING,
-          notes: 'Discuss previous remote team experience and salary expectations.',
-          prepNotes: 'Prepare elevator pitch and questions about team workflow.',
+          notes:
+            "Discuss previous remote team experience and salary expectations.",
+          prepNotes:
+            "Prepare elevator pitch and questions about team workflow.",
         },
       });
 
@@ -310,8 +374,8 @@ async function main() {
         data: {
           applicationId: app.id,
           type: TimelineEventType.INTERVIEW_SCHEDULED,
-          title: 'HR interview scheduled',
-          description: 'Scheduled with Liam Gomez on Zoom',
+          title: "HR interview scheduled",
+          description: "Scheduled with Liam Gomez on Zoom",
           occurredAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
         },
       });
@@ -323,70 +387,74 @@ async function main() {
   // Seed 8 realistic contacts matching dashboard sample
   const contactsData = [
     {
-      name: 'Sarah Jenkins',
-      role: 'Lead Technical Recruiter',
-      email: 'sarah.j@northbeam.io',
-      phone: '+1 (415) 890-2311',
-      linkedinUrl: 'https://linkedin.com/in/sarahjenkins-recruiter',
-      companyName: 'Northbeam',
-      notes: 'Initial recruiter screen went great. Recommended reviewing React state machine architecture for next round.',
+      name: "Sarah Jenkins",
+      role: "Lead Technical Recruiter",
+      email: "sarah.j@northbeam.io",
+      phone: "+1 (415) 890-2311",
+      linkedinUrl: "https://linkedin.com/in/sarahjenkins-recruiter",
+      companyName: "Northbeam",
+      notes:
+        "Initial recruiter screen went great. Recommended reviewing React state machine architecture for next round.",
     },
     {
-      name: 'Marcus Chen',
-      role: 'Head of Engineering',
-      email: 'marcus.chen@halcyonlabs.com',
-      linkedinUrl: 'https://linkedin.com/in/marcus-chen-tech',
-      companyName: 'Halcyon Labs',
-      notes: 'Direct interviewer for system design and architecture deep-dive.',
+      name: "Marcus Chen",
+      role: "Head of Engineering",
+      email: "marcus.chen@halcyonlabs.com",
+      linkedinUrl: "https://linkedin.com/in/marcus-chen-tech",
+      companyName: "Halcyon Labs",
+      notes: "Direct interviewer for system design and architecture deep-dive.",
     },
     {
-      name: 'Elena Vance',
-      role: 'Senior Talent Partner',
-      email: 'elena.vance@lumenhealth.org',
-      phone: '+1 (650) 412-9980',
-      linkedinUrl: 'https://linkedin.com/in/elena-vance-talent',
-      companyName: 'Lumen Health',
-      notes: 'Provided official offer letter package and detailed benefits overview.',
+      name: "Elena Vance",
+      role: "Senior Talent Partner",
+      email: "elena.vance@lumenhealth.org",
+      phone: "+1 (650) 412-9980",
+      linkedinUrl: "https://linkedin.com/in/elena-vance-talent",
+      companyName: "Lumen Health",
+      notes:
+        "Provided official offer letter package and detailed benefits overview.",
     },
     {
-      name: 'Dave Miller',
-      role: 'Engineering Manager',
-      email: 'dave.m@kitecompass.co',
-      linkedinUrl: 'https://linkedin.com/in/dave-miller-eng',
-      companyName: 'Kite & Compass',
-      notes: 'Reviewed GitHub open source repositories and portfolio.',
+      name: "Dave Miller",
+      role: "Engineering Manager",
+      email: "dave.m@kitecompass.co",
+      linkedinUrl: "https://linkedin.com/in/dave-miller-eng",
+      companyName: "Kite & Compass",
+      notes: "Reviewed GitHub open source repositories and portfolio.",
     },
     {
-      name: 'Aria Takahashi',
-      role: 'Talent Acquisition Specialist',
-      email: 'aria.t@pageturn.io',
-      linkedinUrl: 'https://linkedin.com/in/aria-takahashi',
-      companyName: 'Pageturn',
-      notes: 'Recruiter coordinator for frontend engineering team.',
+      name: "Aria Takahashi",
+      role: "Talent Acquisition Specialist",
+      email: "aria.t@pageturn.io",
+      linkedinUrl: "https://linkedin.com/in/aria-takahashi",
+      companyName: "Pageturn",
+      notes: "Recruiter coordinator for frontend engineering team.",
     },
     {
-      name: 'Julian Reed',
-      role: 'Principal Tech Recruiter',
-      email: 'jreed@techflowsearch.com',
-      phone: '+1 (212) 555-8940',
-      linkedinUrl: 'https://linkedin.com/in/julian-reed-recruiter',
-      notes: 'Independent recruiter specializing in high-growth startups and remote roles.',
+      name: "Julian Reed",
+      role: "Principal Tech Recruiter",
+      email: "jreed@techflowsearch.com",
+      phone: "+1 (212) 555-8940",
+      linkedinUrl: "https://linkedin.com/in/julian-reed-recruiter",
+      notes:
+        "Independent recruiter specializing in high-growth startups and remote roles.",
     },
     {
-      name: 'Chloe Dupont',
-      role: 'VP of Product',
-      email: 'chloe.d@orbitfreight.com',
-      linkedinUrl: 'https://linkedin.com/in/chloe-dupont-product',
-      companyName: 'Orbit Freight',
-      notes: 'Hiring manager contact from warehouse logistics portal discussions.',
+      name: "Chloe Dupont",
+      role: "VP of Product",
+      email: "chloe.d@orbitfreight.com",
+      linkedinUrl: "https://linkedin.com/in/chloe-dupont-product",
+      companyName: "Orbit Freight",
+      notes:
+        "Hiring manager contact from warehouse logistics portal discussions.",
     },
     {
-      name: 'Samira Patel',
-      role: 'Staff Engineer',
-      email: 'samira.p@northbeam.io',
-      linkedinUrl: 'https://linkedin.com/in/samira-patel-dev',
-      companyName: 'Northbeam',
-      notes: 'Peer engineer on the core web analytics team.',
+      name: "Samira Patel",
+      role: "Staff Engineer",
+      email: "samira.p@northbeam.io",
+      linkedinUrl: "https://linkedin.com/in/samira-patel-dev",
+      companyName: "Northbeam",
+      notes: "Peer engineer on the core web analytics team.",
     },
   ];
 
@@ -411,12 +479,12 @@ async function main() {
 
   console.log(`✅ Seeded 8 contacts across companies and applications`);
 
-  console.log('🎉 Database seed completed successfully!');
+  console.log("🎉 Database seed completed successfully!");
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed error:', e);
+    console.error("❌ Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

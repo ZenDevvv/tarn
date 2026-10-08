@@ -1,39 +1,49 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
-import { settingsApi } from '../api/settings-api';
-import { SettingsNav, SettingsTab } from '../components/settings-nav';
-import { ProfileSection } from '../components/profile-section';
-import { PreferencesSection } from '../components/preferences-section';
-import { PipelineStagesSection } from '../components/pipeline-stages-section';
-import { SecuritySection } from '../components/security-section';
-import { DataSection } from '../components/data-section';
-import { useAuth } from '@/features/auth/context/auth-context';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { settingsApi } from "../api/settings-api";
+import { SettingsNav, SettingsTab } from "../components/settings-nav";
+import { ProfileSection } from "../components/profile-section";
+import { PreferencesSection } from "../components/preferences-section";
+import { PipelineStagesSection } from "../components/pipeline-stages-section";
+import { SecuritySection } from "../components/security-section";
+import { DataSection } from "../components/data-section";
+import { useAuth } from "@/features/auth/context/auth-context";
 import {
   UpdateProfileInput,
   UpdatePreferencesInput,
   ChangePasswordInput,
-} from '@tracker/types';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+} from "@tracker/types";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
-const VALID_TABS: readonly SettingsTab[] = ['profile', 'preferences', 'stages', 'security', 'data'];
+const VALID_TABS: readonly SettingsTab[] = [
+  "profile",
+  "preferences",
+  "stages",
+  "security",
+  "data",
+];
 
 export function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const rawTab = searchParams.get('tab');
-  const activeTab: SettingsTab = rawTab && (VALID_TABS as readonly string[]).includes(rawTab)
-    ? (rawTab as SettingsTab)
-    : 'profile';
+  const rawTab = searchParams.get("tab");
+  const activeTab: SettingsTab =
+    rawTab && (VALID_TABS as readonly string[]).includes(rawTab)
+      ? (rawTab as SettingsTab)
+      : "profile";
 
   const handleTabChange = (tab: SettingsTab) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('tab', tab);
-      return next;
-    }, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", tab);
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const queryClient = useQueryClient();
-  const { updateCurrentUser } = useAuth();
+  const { user, updateCurrentUser } = useAuth();
 
   const {
     data: settings,
@@ -41,20 +51,23 @@ export function SettingsPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['settings'],
+    queryKey: ["settings"],
     queryFn: () => settingsApi.getSettings(),
   });
 
   const profileMutation = useMutation({
     mutationFn: (data: UpdateProfileInput) => settingsApi.updateProfile(data),
     onSuccess: (updated) => {
-      queryClient.setQueryData(['settings'], updated);
-      updateCurrentUser({
-        id: updated.id,
-        email: updated.email,
-        name: updated.name,
-        createdAt: updated.createdAt,
-      });
+      queryClient.setQueryData(["settings"], updated);
+      if (user) {
+        updateCurrentUser({
+          ...user,
+          id: updated.id,
+          email: updated.email,
+          name: updated.name,
+          createdAt: updated.createdAt,
+        });
+      }
     },
   });
 
@@ -62,13 +75,12 @@ export function SettingsPage() {
     mutationFn: (data: UpdatePreferencesInput) =>
       settingsApi.updatePreferences(data),
     onSuccess: (updated) => {
-      queryClient.setQueryData(['settings'], updated);
+      queryClient.setQueryData(["settings"], updated);
     },
   });
 
   const passwordMutation = useMutation({
-    mutationFn: (data: ChangePasswordInput) =>
-      settingsApi.changePassword(data),
+    mutationFn: (data: ChangePasswordInput) => settingsApi.changePassword(data),
   });
 
   if (isLoading) {
@@ -116,7 +128,8 @@ export function SettingsPage() {
           Settings
         </h1>
         <p className="text-small text-muted-foreground mt-1">
-          Manage your account profile, application defaults, security, and personal data.
+          Manage your account profile, application defaults, security, and
+          personal data.
         </p>
       </div>
 
@@ -125,7 +138,7 @@ export function SettingsPage() {
 
       {/* Tab Panel */}
       <div className="p-6 md:p-8 rounded-xl border border-border bg-card">
-        {activeTab === 'profile' && (
+        {activeTab === "profile" && (
           <ProfileSection
             settings={settings}
             onSave={async (data) => {
@@ -135,7 +148,7 @@ export function SettingsPage() {
           />
         )}
 
-        {activeTab === 'preferences' && (
+        {activeTab === "preferences" && (
           <PreferencesSection
             settings={settings}
             onSave={async (data) => {
@@ -145,11 +158,9 @@ export function SettingsPage() {
           />
         )}
 
-        {activeTab === 'stages' && (
-          <PipelineStagesSection />
-        )}
+        {activeTab === "stages" && <PipelineStagesSection />}
 
-        {activeTab === 'security' && (
+        {activeTab === "security" && (
           <SecuritySection
             onSavePassword={async (data) => {
               await passwordMutation.mutateAsync(data);
@@ -158,7 +169,7 @@ export function SettingsPage() {
           />
         )}
 
-        {activeTab === 'data' && (
+        {activeTab === "data" && (
           <DataSection
             settings={settings}
             onExport={() => settingsApi.downloadExport()}

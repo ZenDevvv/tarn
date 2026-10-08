@@ -1,10 +1,17 @@
-import { useEffect } from 'react';
-import { Outlet, NavLink, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { StageRing } from '@/features/applications/components/application-status-badge';
-import { useAuth } from '@/features/auth/context/auth-context';
-import { useTheme } from '@/app/providers';
+import { useEffect } from "react";
+import {
+  Outlet,
+  NavLink,
+  Link,
+  useNavigate,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { StageRing } from "@/features/applications/components/application-status-badge";
+import { useAuth } from "@/features/auth/context/auth-context";
+import { useTheme } from "@/app/providers";
 import {
   Home,
   Briefcase,
@@ -20,8 +27,9 @@ import {
   Sun,
   LogOut,
   MoreHorizontal,
-} from 'lucide-react';
-import { cn } from '@/lib/cn';
+  ShieldAlert,
+} from "lucide-react";
+import { cn } from "@/lib/cn";
 
 interface NavItem {
   to: string;
@@ -38,43 +46,49 @@ export function AppLayout() {
   const [searchParams] = useSearchParams();
 
   const isKanban =
-    location.pathname === '/applications' && searchParams.get('view') === 'pipeline';
+    location.pathname === "/applications" &&
+    searchParams.get("view") === "pipeline";
 
   // Global '/' key focuses search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+      if (
+        e.key === "/" &&
+        !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)
+      ) {
         e.preventDefault();
-        const searchInput = document.getElementById('q') as HTMLInputElement | null;
+        const searchInput = document.getElementById(
+          "q",
+        ) as HTMLInputElement | null;
         if (searchInput) searchInput.focus();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const { data: analytics } = useQuery({
-    queryKey: ['dashboard-analytics'],
-    queryFn: () => apiClient.get<any>('/analytics/dashboard'),
+    queryKey: ["dashboard-analytics"],
+    queryFn: () => apiClient.get<any>("/analytics/dashboard"),
     staleTime: 30000,
   });
 
   const { data: companies } = useQuery({
-    queryKey: ['companies-count'],
-    queryFn: () => apiClient.get<any[]>('/companies'),
+    queryKey: ["companies-count"],
+    queryFn: () => apiClient.get<any[]>("/companies"),
     staleTime: 30000,
   });
 
   const { data: contacts } = useQuery({
-    queryKey: ['contacts-count'],
-    queryFn: () => apiClient.get<any[]>('/contacts'),
+    queryKey: ["contacts-count"],
+    queryFn: () => apiClient.get<any[]>("/contacts"),
     staleTime: 30000,
   });
 
   const { data: resumes } = useQuery({
-    queryKey: ['resumes-count'],
-    queryFn: () => apiClient.get<any[]>('/resumes'),
+    queryKey: ["resumes-count"],
+    queryFn: () => apiClient.get<any[]>("/resumes"),
     staleTime: 30000,
   });
 
@@ -86,23 +100,74 @@ export function AppLayout() {
   const resumesCount = resumes?.length ?? 0;
 
   const navItems: NavItem[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: <Home size={16} strokeWidth={1.5} /> },
-    { to: '/applications', label: 'Applications', icon: <Briefcase size={16} strokeWidth={1.5} />, count: activeCount > 0 ? activeCount : undefined },
-    { to: '/saved-jobs', label: 'Saved jobs', icon: <Bookmark size={16} strokeWidth={1.5} />, count: savedCount > 0 ? savedCount : undefined },
-    { to: '/companies', label: 'Companies', icon: <Building2 size={16} strokeWidth={1.5} />, count: companiesCount > 0 ? companiesCount : undefined },
-    { to: '/contacts', label: 'Contacts', icon: <Users size={16} strokeWidth={1.5} />, count: contactsCount > 0 ? contactsCount : undefined },
-    { to: '/interviews', label: 'Interviews', icon: <Calendar size={16} strokeWidth={1.5} />, count: interviewsCount > 0 ? interviewsCount : undefined },
-    { to: '/resumes', label: 'Resumes', icon: <FileText size={16} strokeWidth={1.5} />, count: resumesCount > 0 ? resumesCount : undefined },
-    { to: '/analytics', label: 'Analytics', icon: <BarChart2 size={16} strokeWidth={1.5} /> },
-    { to: '/settings', label: 'Settings', icon: <Settings size={16} strokeWidth={1.5} /> },
+    {
+      to: "/dashboard",
+      label: "Dashboard",
+      icon: <Home size={16} strokeWidth={1.5} />,
+    },
+    {
+      to: "/applications",
+      label: "Applications",
+      icon: <Briefcase size={16} strokeWidth={1.5} />,
+      count: activeCount > 0 ? activeCount : undefined,
+    },
+    {
+      to: "/saved-jobs",
+      label: "Saved jobs",
+      icon: <Bookmark size={16} strokeWidth={1.5} />,
+      count: savedCount > 0 ? savedCount : undefined,
+    },
+    {
+      to: "/companies",
+      label: "Companies",
+      icon: <Building2 size={16} strokeWidth={1.5} />,
+      count: companiesCount > 0 ? companiesCount : undefined,
+    },
+    {
+      to: "/contacts",
+      label: "Contacts",
+      icon: <Users size={16} strokeWidth={1.5} />,
+      count: contactsCount > 0 ? contactsCount : undefined,
+    },
+    {
+      to: "/interviews",
+      label: "Interviews",
+      icon: <Calendar size={16} strokeWidth={1.5} />,
+      count: interviewsCount > 0 ? interviewsCount : undefined,
+    },
+    {
+      to: "/resumes",
+      label: "Resumes",
+      icon: <FileText size={16} strokeWidth={1.5} />,
+      count: resumesCount > 0 ? resumesCount : undefined,
+    },
+    {
+      to: "/analytics",
+      label: "Analytics",
+      icon: <BarChart2 size={16} strokeWidth={1.5} />,
+    },
+    {
+      to: "/settings",
+      label: "Settings",
+      icon: <Settings size={16} strokeWidth={1.5} />,
+    },
+    ...(user?.role === "ADMIN"
+      ? [
+          {
+            to: "/admin",
+            label: "Admin Console",
+            icon: <ShieldAlert size={16} strokeWidth={1.5} />,
+          },
+        ]
+      : []),
   ];
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
-  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : "U";
 
   return (
     <div className="grid grid-cols-[232px_minmax(0,1fr)] max-[1023px]:grid-cols-[64px_minmax(0,1fr)] max-[719px]:grid-cols-1 min-h-[100dvh] bg-background text-foreground font-sans">
@@ -134,8 +199,9 @@ export function AppLayout() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-small font-medium text-muted-foreground hover:bg-secondary hover:text-foreground no-underline transition-colors max-[1023px]:justify-center max-[1023px]:p-2',
-                  isActive && 'bg-secondary text-foreground font-semibold [&_svg]:text-primary'
+                  "flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-small font-medium text-muted-foreground hover:bg-secondary hover:text-foreground no-underline transition-colors max-[1023px]:justify-center max-[1023px]:p-2",
+                  isActive &&
+                    "bg-secondary text-foreground font-semibold [&_svg]:text-primary",
                 )
               }
               title={item.label}
@@ -165,11 +231,18 @@ export function AppLayout() {
               {userInitial}
             </div>
             <div className="min-w-0 max-[1023px]:hidden">
-              <span className="block font-medium text-[13px] leading-[18px] text-foreground truncate group-hover:text-primary transition-colors">
-                {user?.name || 'Candidate'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="block font-medium text-[13px] leading-[18px] text-foreground truncate group-hover:text-primary transition-colors">
+                  {user?.name || "Candidate"}
+                </span>
+                {user?.role === "ADMIN" && (
+                  <span className="text-[10px] font-semibold text-primary px-1 py-0.2 rounded bg-primary/15 border border-primary/25 shrink-0">
+                    ADMIN
+                  </span>
+                )}
+              </div>
               <span className="block text-caption text-muted-foreground truncate">
-                {user?.email || ''}
+                {user?.email || ""}
               </span>
             </div>
           </Link>
@@ -179,9 +252,9 @@ export function AppLayout() {
               type="button"
               onClick={toggleTheme}
               className="w-8 h-8 rounded-md hover:bg-secondary grid place-items-center text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             <button
               type="button"
@@ -199,8 +272,8 @@ export function AppLayout() {
       <main className="w-full flex-1 min-w-0 p-8 max-[1023px]:px-6 max-[719px]:px-4 max-[719px]:pb-28">
         <div
           className={cn(
-            'w-full mx-auto flex flex-col gap-10 transition-[max-width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
-            isKanban ? 'max-w-full' : 'max-w-[1040px]'
+            "w-full mx-auto flex flex-col gap-10 transition-[max-width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            isKanban ? "max-w-full" : "max-w-[1040px]",
           )}
         >
           <Outlet />
@@ -210,13 +283,18 @@ export function AppLayout() {
       {/* Mobile Bottom Tab Bar */}
       <nav
         className="hidden max-[719px]:grid grid-cols-5 fixed left-0 right-0 bottom-0 z-30 bg-card border-t border-border py-2 px-1 text-center text-[11px] text-muted-foreground"
-        style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}
+        style={{
+          paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))",
+        }}
         aria-label="Mobile Navigation"
       >
         <NavLink
           to="/dashboard"
           className={({ isActive }) =>
-            cn('flex flex-col items-center gap-1 no-underline text-muted-foreground', isActive && 'text-foreground font-semibold [&_svg]:text-primary')
+            cn(
+              "flex flex-col items-center gap-1 no-underline text-muted-foreground",
+              isActive && "text-foreground font-semibold [&_svg]:text-primary",
+            )
           }
         >
           <Home size={20} strokeWidth={1.5} />
@@ -226,7 +304,10 @@ export function AppLayout() {
         <NavLink
           to="/applications"
           className={({ isActive }) =>
-            cn('flex flex-col items-center gap-1 no-underline text-muted-foreground', isActive && 'text-foreground font-semibold [&_svg]:text-primary')
+            cn(
+              "flex flex-col items-center gap-1 no-underline text-muted-foreground",
+              isActive && "text-foreground font-semibold [&_svg]:text-primary",
+            )
           }
         >
           <Briefcase size={20} strokeWidth={1.5} />
@@ -246,7 +327,10 @@ export function AppLayout() {
         <NavLink
           to="/interviews"
           className={({ isActive }) =>
-            cn('flex flex-col items-center gap-1 no-underline text-muted-foreground', isActive && 'text-foreground font-semibold [&_svg]:text-primary')
+            cn(
+              "flex flex-col items-center gap-1 no-underline text-muted-foreground",
+              isActive && "text-foreground font-semibold [&_svg]:text-primary",
+            )
           }
         >
           <Calendar size={20} strokeWidth={1.5} />
@@ -256,7 +340,10 @@ export function AppLayout() {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            cn('flex flex-col items-center gap-1 no-underline text-muted-foreground', isActive && 'text-foreground font-semibold [&_svg]:text-primary')
+            cn(
+              "flex flex-col items-center gap-1 no-underline text-muted-foreground",
+              isActive && "text-foreground font-semibold [&_svg]:text-primary",
+            )
           }
         >
           <MoreHorizontal size={20} strokeWidth={1.5} />

@@ -52,11 +52,18 @@ enum TimelineEventType {
   CUSTOM_EVENT
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id                 String        @id @default(cuid())
   email              String        @unique
   passwordHash       String
   name               String
+  role               Role          @default(USER)
+  isActive           Boolean       @default(true)
   headline           String?
   location           String?
   timezone           String?       @default("UTC")
@@ -84,6 +91,7 @@ model User {
   resumes      Resume[]
   statuses     ApplicationStatus[]
 
+  @@index([role])
   @@map("users")
 }
 

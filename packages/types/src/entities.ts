@@ -1,4 +1,5 @@
-export type CloseType = 'REJECTED' | 'WITHDRAWN' | 'NO_RESPONSE' | 'CANCELLED' | 'OTHER';
+export type CloseType =
+  "REJECTED" | "WITHDRAWN" | "NO_RESPONSE" | "CANCELLED" | "OTHER";
 
 export interface ApplicationStatusDTO {
   id: string;
@@ -35,103 +36,102 @@ export interface ReorderStatusesInput {
   statusIds: string[];
 }
 
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type Priority = "LOW" | "MEDIUM" | "HIGH";
 
-export type WorkSetup = 'REMOTE' | 'HYBRID' | 'ONSITE';
+export type WorkSetup = "REMOTE" | "HYBRID" | "ONSITE";
 
 export const WORK_SETUP_LABELS: Record<WorkSetup, string> = {
-  REMOTE: 'Remote',
-  HYBRID: 'Hybrid',
-  ONSITE: 'Onsite',
+  REMOTE: "Remote",
+  HYBRID: "Hybrid",
+  ONSITE: "Onsite",
 };
 
-export const WORK_SETUP_OPTIONS: Array<{ value: WorkSetup | ''; label: string }> = [
-  { value: '', label: 'Not specified' },
-  { value: 'REMOTE', label: 'Remote' },
-  { value: 'HYBRID', label: 'Hybrid' },
-  { value: 'ONSITE', label: 'Onsite' },
+export const WORK_SETUP_OPTIONS: Array<{
+  value: WorkSetup | "";
+  label: string;
+}> = [
+  { value: "", label: "Not specified" },
+  { value: "REMOTE", label: "Remote" },
+  { value: "HYBRID", label: "Hybrid" },
+  { value: "ONSITE", label: "Onsite" },
 ];
 
 export function formatWorkSetup(
   setup?: WorkSetup | string | null,
-  fallback = 'Not specified'
+  fallback = "Not specified",
 ): string {
   if (!setup) return fallback;
   return WORK_SETUP_LABELS[setup as WorkSetup] || setup;
 }
 
 export type EmploymentType =
-  | 'FULL_TIME'
-  | 'PART_TIME'
-  | 'CONTRACT'
-  | 'INTERNSHIP'
-  | 'FREELANCE';
+  "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "FREELANCE";
 
 export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
-  FULL_TIME: 'Full-time',
-  PART_TIME: 'Part-time',
-  CONTRACT: 'Contract',
-  FREELANCE: 'Freelance',
-  INTERNSHIP: 'Internship',
+  FULL_TIME: "Full-time",
+  PART_TIME: "Part-time",
+  CONTRACT: "Contract",
+  FREELANCE: "Freelance",
+  INTERNSHIP: "Internship",
 };
 
-export const EMPLOYMENT_TYPE_OPTIONS: Array<{ value: EmploymentType | ''; label: string }> = [
-  { value: '', label: 'Not specified' },
-  { value: 'FULL_TIME', label: 'Full-time' },
-  { value: 'PART_TIME', label: 'Part-time' },
-  { value: 'CONTRACT', label: 'Contract' },
-  { value: 'FREELANCE', label: 'Freelance' },
-  { value: 'INTERNSHIP', label: 'Internship' },
+export const EMPLOYMENT_TYPE_OPTIONS: Array<{
+  value: EmploymentType | "";
+  label: string;
+}> = [
+  { value: "", label: "Not specified" },
+  { value: "FULL_TIME", label: "Full-time" },
+  { value: "PART_TIME", label: "Part-time" },
+  { value: "CONTRACT", label: "Contract" },
+  { value: "FREELANCE", label: "Freelance" },
+  { value: "INTERNSHIP", label: "Internship" },
 ];
 
 export function formatEmploymentType(
   type?: EmploymentType | string | null,
-  fallback = 'Not specified'
+  fallback = "Not specified",
 ): string {
   if (!type) return fallback;
   return EMPLOYMENT_TYPE_LABELS[type as EmploymentType] || type;
 }
 
-export type FollowUpStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
+export type FollowUpStatus = "PENDING" | "COMPLETED" | "CANCELLED";
 
 export type TimelineEventType =
-  | 'APPLICATION_CREATED'
-  | 'STATUS_CHANGED'
-  | 'FOLLOW_UP_CREATED'
-  | 'FOLLOW_UP_COMPLETED'
-  | 'NOTE_ADDED'
-  | 'INTERVIEW_SCHEDULED'
-  | 'INTERVIEW_COMPLETED'
-  | 'CUSTOM_EVENT';
+  | "APPLICATION_CREATED"
+  | "STATUS_CHANGED"
+  | "FOLLOW_UP_CREATED"
+  | "FOLLOW_UP_COMPLETED"
+  | "NOTE_ADDED"
+  | "INTERVIEW_SCHEDULED"
+  | "INTERVIEW_COMPLETED"
+  | "CUSTOM_EVENT";
 
 export type InterviewType =
-  | 'HR'
-  | 'RECRUITER'
-  | 'TECHNICAL'
-  | 'CODING_ASSESSMENT'
-  | 'SYSTEM_DESIGN'
-  | 'HIRING_MANAGER'
-  | 'FINAL'
-  | 'CLIENT'
-  | 'OTHER';
+  | "HR"
+  | "RECRUITER"
+  | "TECHNICAL"
+  | "CODING_ASSESSMENT"
+  | "SYSTEM_DESIGN"
+  | "HIRING_MANAGER"
+  | "FINAL"
+  | "CLIENT"
+  | "OTHER";
 
 export type InterviewStatus =
-  | 'SCHEDULED'
-  | 'COMPLETED'
-  | 'RESCHEDULED'
-  | 'CANCELLED'
-  | 'NO_SHOW';
+  "SCHEDULED" | "COMPLETED" | "RESCHEDULED" | "CANCELLED" | "NO_SHOW";
 
 export type InterviewResult =
-  | 'PENDING'
-  | 'PASSED'
-  | 'FAILED'
-  | 'DID_NOT_HEAR_BACK';
+  "PENDING" | "PASSED" | "FAILED" | "DID_NOT_HEAR_BACK";
+
+export type Role = "USER" | "ADMIN";
 
 export interface UserDTO {
   id: string;
   email: string;
   name: string;
+  role: Role;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -330,7 +330,13 @@ export interface ParsedJobMetadataDTO {
   salaryMax?: number;
   currency?: string;
   description?: string;
-  extractedVia?: 'json-ld' | 'opengraph' | 'heuristic' | 'url' | 'text_snippet' | 'bot_protected';
+  extractedVia?:
+    | "json-ld"
+    | "opengraph"
+    | "heuristic"
+    | "url"
+    | "text_snippet"
+    | "bot_protected";
   isBotProtected?: boolean;
   botPlatform?: string;
   message?: string;
@@ -440,7 +446,7 @@ export interface PlatformMetricDTO {
 }
 
 export interface WorkSetupMetricDTO {
-  setup: WorkSetup | 'UNSPECIFIED';
+  setup: WorkSetup | "UNSPECIFIED";
   label: string;
   count: number;
   percentage: number;
@@ -476,7 +482,7 @@ export interface StatusDistributionDTO {
 }
 
 export interface AnalyticsOverviewDTO {
-  range: 'all' | '30d' | '90d' | 'ytd';
+  range: "all" | "30d" | "90d" | "ytd";
   rangeLabel: string;
   kpis: AnalyticsKpiDTO;
   funnel: FunnelStageDTO[];
@@ -493,6 +499,8 @@ export interface UserSettingsDTO {
   id: string;
   email: string;
   name: string;
+  role?: Role;
+  isActive?: boolean;
   headline: string | null;
   location: string | null;
   timezone: string;
@@ -508,7 +516,7 @@ export interface UserSettingsDTO {
   interviewReminders: boolean;
   followUpAlerts: boolean;
   weeklyDigest: boolean;
-  themePreference: 'light' | 'dark' | 'system';
+  themePreference: "light" | "dark" | "system";
   createdAt: string;
   updatedAt: string;
   stats: {
@@ -540,7 +548,7 @@ export interface UpdatePreferencesInput {
   interviewReminders?: boolean;
   followUpAlerts?: boolean;
   weeklyDigest?: boolean;
-  themePreference?: 'light' | 'dark' | 'system';
+  themePreference?: "light" | "dark" | "system";
 }
 
 export interface ChangePasswordInput {
@@ -572,3 +580,56 @@ export interface UserDataExportDTO {
   resumes: any[];
 }
 
+export interface SystemMemoryInfo {
+  rssMb: number;
+  heapTotalMb: number;
+  heapUsedMb: number;
+  externalMb: number;
+}
+
+export interface SystemStatusDTO {
+  status: "healthy" | "degraded";
+  uptimeSeconds: number;
+  timestamp: string;
+  environment: string;
+  nodeVersion: string;
+  platform: string;
+  memory: SystemMemoryInfo;
+  database: {
+    status: "connected" | "disconnected";
+    latencyMs: number;
+    counts: {
+      users: number;
+      activeUsers: number;
+      applications: number;
+      companies: number;
+      jobs: number;
+      interviews: number;
+      resumes: number;
+      contacts: number;
+    };
+  };
+}
+
+export interface AdminUserListItemDTO {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  isActive: boolean;
+  headline?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  counts: {
+    applications: number;
+    companies: number;
+    interviews: number;
+    resumes: number;
+  };
+}
+
+export interface AdminUserDetailDTO extends AdminUserListItemDTO {
+  timezone?: string | null;
+  location?: string | null;
+  defaultCurrency?: string | null;
+}
