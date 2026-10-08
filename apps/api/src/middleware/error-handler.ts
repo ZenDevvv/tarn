@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { logger } from '../lib/logger';
 
 export class AppError extends Error {
   statusCode: number;
@@ -89,12 +90,38 @@ export function errorHandler(
     });
   }
 
-  console.error('Unhandled server error:', err);
+  // Handle body-parser / express payload size limit
+  if (
+    ('status' in err && (err as any).status === 413) ||
+    ('statusCode' in err && (err as any).statusCode === 413) ||
+    ('type' in err && (err as any).type === 'entity.too.large')
+  ) {
+    return res.status(413).json({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'Request payload exceeds maximum allowed size',
+      },
+    });
+  }
+
+  const reqId = res.getHeader('x-request-id') || (_req.headers['x-request-id'] as string);
+
+  logger.error(
+    {
+      err,
+      requestId: reqId,
+      path: _req.path,
+      method: _req.method,
+      ip: _req.ip,
+    },
+    'Unhandled server error'
+  );
 
   return res.status(500).json({
     error: {
       code: 'INTERNAL_SERVER_ERROR',
       message: 'An unexpected internal server error occurred',
+      requestId: reqId || undefined,
     },
   });
 }

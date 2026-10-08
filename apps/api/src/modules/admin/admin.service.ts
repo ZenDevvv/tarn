@@ -3,6 +3,12 @@ import { BadRequestError, NotFoundError } from "../../middleware/error-handler";
 import { Role, SystemStatusDTO } from "@tracker/types";
 import { AdminUsersQueryInput } from "@tracker/validation";
 import { adminRepository } from "./admin.repository";
+import { auditService } from "./audit.service";
+
+interface AuditContext {
+  ipAddress?: string;
+  userAgent?: string;
+}
 
 export const adminService = {
   async getSystemStatus(): Promise<SystemStatusDTO> {
@@ -62,7 +68,12 @@ export const adminService = {
     return user;
   },
 
-  async updateUserRole(actorId: string, targetUserId: string, newRole: Role) {
+  async updateUserRole(
+    actorId: string,
+    targetUserId: string,
+    newRole: Role,
+    meta?: AuditContext,
+  ) {
     const targetUser = await adminRepository.findUserById(targetUserId);
     if (!targetUser) {
       throw new NotFoundError("User not found");
@@ -83,13 +94,29 @@ export const adminService = {
       }
     }
 
-    return adminRepository.updateUserRole(targetUserId, newRole);
+    const updatedUser = await adminRepository.updateUserRole(targetUserId, newRole);
+
+    await auditService.log({
+      actorId,
+      action: "USER_ROLE_UPDATED",
+      targetId: targetUserId,
+      ipAddress: meta?.ipAddress,
+      userAgent: meta?.userAgent,
+      details: {
+        previousRole: targetUser.role,
+        newRole,
+        targetUserEmail: targetUser.email,
+      },
+    });
+
+    return updatedUser;
   },
 
   async updateUserStatus(
     actorId: string,
     targetUserId: string,
     isActive: boolean,
+    meta?: AuditContext,
   ) {
     const targetUser = await adminRepository.findUserById(targetUserId);
     if (!targetUser) {
@@ -109,6 +136,21 @@ export const adminService = {
       }
     }
 
-    return adminRepository.updateUserStatus(targetUserId, isActive);
+    const updatedUser = await adminRepository.updateUserStatus(targetUserId, isActive);
+
+    await auditService.log({
+      actorId,
+      action: "USER_STATUS_UPDATED",
+      targetId: targetUserId,
+      ipAddress: meta?.ipAddress,
+      userAgent: meta?.userAgent,
+      details: {
+        previousStatus: targetUser.isActive,
+        newStatus: isActive,
+        targetUserEmail: targetUser.email,
+      },
+    });
+
+    return updatedUser;
   },
 };

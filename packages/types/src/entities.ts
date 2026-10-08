@@ -633,3 +633,17 @@ export interface AdminUserDetailDTO extends AdminUserListItemDTO {
   location?: string | null;
   defaultCurrency?: string | null;
 }
+
+export type AuditAction = "USER_ROLE_UPDATED" | "USER_STATUS_UPDATED";
+
+export interface AuditLogDTO {
+  id: string;
+  actorId: string;
+  actorEmail?: string;
+  action: AuditAction;
+  targetId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  details?: Record<string, any> | null;
+  createdAt: string;
+}

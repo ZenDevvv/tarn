@@ -1,20 +1,48 @@
 import express from "express";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import crypto from "crypto";
 import path from "path";
+import pinoHttp from "pino-http";
+import { prisma } from "@tracker/database";
 import { env } from "./config/env";
+import { logger } from "./lib/logger";
+import { apiLimiter, authLimiter } from "./middleware/rate-limit";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 
 export const app = express();
 
-// Request ID & security headers
+// Reverse proxy trust (for ALB, Cloudflare, Cloud Run, etc.)
+app.set("trust proxy", 1);
+
+// Standard HTTP security headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
+
+// Request ID propagation
 app.use((req, res, next) => {
   const reqId = (req.headers["x-request-id"] as string) || crypto.randomUUID();
+  req.headers["x-request-id"] = reqId;
   res.setHeader("x-request-id", reqId);
   next();
 });
+
+// Structured HTTP logging
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req) =>
+      (req.headers["x-request-id"] as string) || crypto.randomUUID(),
+    autoLogging: {
+      ignore: (req) => req.url?.startsWith("/api/v1/health") ?? false,
+    },
+  }),
+);
 
 // Middleware
 app.use(
@@ -23,14 +51,17 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: "15mb" }));
+
+// Payload size isolation: 15mb for resume uploads, 100kb for general API calls
+app.use("/api/v1/resumes/upload", express.json({ limit: "15mb" }));
+app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser(env.COOKIE_SECRET));
 
 // Static files for uploaded resumes and attachments
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
-// Health check endpoint
-app.get("/api/v1/health", (_req, res) => {
+// Cloud Health Probes (unthrottled)
+app.get(["/api/v1/health", "/api/v1/health/live"], (_req, res) => {
   res.status(200).json({
     data: {
       status: "ok",
@@ -39,6 +70,32 @@ app.get("/api/v1/health", (_req, res) => {
     },
   });
 });
+
+app.get("/api/v1/health/ready", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.status(200).json({
+      data: {
+        status: "ready",
+        database: "connected",
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error({ error }, "Database readiness check failed");
+    return res.status(503).json({
+      error: {
+        code: "SERVICE_UNAVAILABLE",
+        message: "Database connection failed",
+        status: "not_ready",
+      },
+    });
+  }
+});
+
+// Rate limiting for API and Auth
+app.use("/api/v1/auth", authLimiter);
+app.use("/api/v1", apiLimiter);
 
 import { authRouter } from "./modules/auth/auth.routes";
 import { applicationRouter } from "./modules/applications/application.routes";
@@ -52,7 +109,7 @@ import { settingsRouter } from "./modules/settings/settings.routes";
 import { statusRouter } from "./modules/statuses/status.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
 
-// Root routes placeholder
+// Root routes
 export const apiRouter = express.Router();
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/applications", applicationRouter);

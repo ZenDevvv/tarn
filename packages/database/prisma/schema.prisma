@@ -57,6 +57,11 @@ enum Role {
   ADMIN
 }
 
+enum AuditAction {
+  USER_ROLE_UPDATED
+  USER_STATUS_UPDATED
+}
+
 model User {
   id                 String        @id @default(cuid())
   email              String        @unique
@@ -90,6 +95,7 @@ model User {
   contacts     Contact[]
   resumes      Resume[]
   statuses     ApplicationStatus[]
+  auditLogs    AuditLog[]    @relation("UserAuditLogs")
 
   @@index([role])
   @@map("users")
@@ -335,4 +341,22 @@ model Resume {
   @@index([userId])
   @@index([userId, isDefault])
   @@map("resumes")
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  actorId   String
+  action    AuditAction
+  targetId  String?
+  ipAddress String?
+  userAgent String?
+  details   Json?
+  createdAt DateTime    @default(now())
+
+  actor User @relation("UserAuditLogs", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

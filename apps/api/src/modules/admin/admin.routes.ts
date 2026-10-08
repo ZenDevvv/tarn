@@ -31,3 +31,4 @@ adminRouter.patch(
   validateBody(updateUserStatusSchema),
   adminController.updateUserStatus,
 );
+adminRouter.get("/audit-logs", adminController.getAuditLogs);
