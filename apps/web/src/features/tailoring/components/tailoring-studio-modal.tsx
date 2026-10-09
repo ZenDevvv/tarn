@@ -13,7 +13,6 @@ import {
   FileText,
   Mail,
   Lock,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { JdAnalysisResultDTO, GenerationQuotaDTO } from '@tracker/types';
 import { tailoringApi, TailoredPackageResponse } from '../api/tailoring-api';
@@ -41,7 +40,6 @@ export function TailoringStudioModal({
   onGenerated,
 }: TailoringStudioModalProps) {
   const [targetArtifact, setTargetArtifact] = useState<'package' | 'resume' | 'cover_letter'>('package');
-  const [layoutPreset, setLayoutPreset] = useState<'experienced' | 'early_career'>('experienced');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blockingWarnings, setBlockingWarnings] = useState<string[]>([]);
@@ -76,11 +74,6 @@ export function TailoringStudioModal({
       const res = await tailoringApi.generatePackage(applicationId, {
         targetArtifact,
         overrideWarnings,
-        preset: layoutPreset,
-        sectionOrder:
-          layoutPreset === 'experienced'
-            ? ['experience', 'projects', 'skills', 'education', 'certifications']
-            : ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'],
       });
       setGenerationResult(res);
       if (res.quota) {
@@ -608,76 +601,6 @@ export function TailoringStudioModal({
                   </label>
                 </div>
               </div>
-
-              {/* Layout & Section Hierarchy Preset */}
-              {targetArtifact !== 'cover_letter' && (
-                <div className="space-y-3 pt-2 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-display font-semibold text-small text-foreground flex items-center gap-1.5">
-                      <SlidersHorizontal size={14} className="text-primary" />
-                      <span>Resume Section Hierarchy</span>
-                    </h4>
-                    <span className="text-micro text-muted-foreground">
-                      Seniority-adaptive ATS ordering
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label
-                      className={`flex flex-col p-3 rounded-xl border transition-all cursor-pointer ${
-                        layoutPreset === 'experienced'
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-border bg-secondary/20 hover:border-foreground/20'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="layout-preset"
-                        value="experienced"
-                        checked={layoutPreset === 'experienced'}
-                        onChange={() => setLayoutPreset('experienced')}
-                        className="sr-only"
-                      />
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-small text-foreground">
-                          Experienced (Experience First)
-                        </span>
-                        <span className="text-micro font-medium px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                          Recommended
-                        </span>
-                      </div>
-                      <p className="text-micro text-muted-foreground leading-relaxed">
-                        Experience &rarr; Projects &rarr; Skills &rarr; Education &rarr; Certifications. No summary fluff.
-                      </p>
-                    </label>
-
-                    <label
-                      className={`flex flex-col p-3 rounded-xl border transition-all cursor-pointer ${
-                        layoutPreset === 'early_career'
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-border bg-secondary/20 hover:border-foreground/20'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="layout-preset"
-                        value="early_career"
-                        checked={layoutPreset === 'early_career'}
-                        onChange={() => setLayoutPreset('early_career')}
-                        className="sr-only"
-                      />
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-small text-foreground">
-                          Early Career (Education First)
-                        </span>
-                      </div>
-                      <p className="text-micro text-muted-foreground leading-relaxed">
-                        Education &rarr; Skills &rarr; Projects &rarr; Experience. Includes targeted summary if profile is sparse.
-                      </p>
-                    </label>
-                  </div>
-                </div>
-              )}
 
               {/* Quota Limit Notice */}
               {quota && (!quota.isEntitled || quota.remainingToday <= 0) && (

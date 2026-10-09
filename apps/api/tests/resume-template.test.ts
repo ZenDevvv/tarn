@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildResumeHtml } from '../src/modules/tailoring/templates/resume-template';
+import { determineOptimalSectionOrder } from '../src/modules/tailoring/tailoring.service';
 
 describe('buildResumeHtml Dynamic Section Ordering & Certifications Tests', () => {
   const baseProfile = {
@@ -191,5 +192,82 @@ describe('buildResumeHtml Dynamic Section Ordering & Certifications Tests', () =
     expect(skillsIndex).toBeLessThan(projIndex);
     expect(projIndex).toBeLessThan(eduIndex);
     expect(eduIndex).toBeLessThan(expIndex);
+  });
+
+  it('renders Project Experience before Experience for portfolio/project-first profile (0 formal jobs, >=2 projects)', () => {
+    const payload = {
+      ...baseProfile,
+      experience: [],
+      projects: [
+        {
+          name: 'OpenCore Framework',
+          bullets: ['Distributed actor framework in Rust.'],
+        },
+        {
+          name: 'HyperDB',
+          bullets: ['Embedded key-value engine.'],
+        },
+      ],
+    };
+
+    const html = buildResumeHtml(payload);
+
+    const projIndex = html.indexOf('Project Experience');
+    const eduIndex = html.indexOf('Education');
+
+    expect(projIndex).toBeGreaterThan(-1);
+    expect(eduIndex).toBeGreaterThan(-1);
+    // Projects should precede Education and Experience
+    expect(projIndex).toBeLessThan(eduIndex);
+  });
+});
+
+describe('determineOptimalSectionOrder Profile Heuristic Tests', () => {
+  it('returns experience-first order for experienced candidates (>=2 roles)', () => {
+    const profile: any = {
+      workExperience: [
+        { company: 'A', role: 'Dev', bullets: ['Built APIs'] },
+        { company: 'B', role: 'Dev', bullets: ['Built UI'] },
+      ],
+      projectExperience: [],
+    };
+    const order = determineOptimalSectionOrder(profile);
+    expect(order).toEqual(['experience', 'projects', 'skills', 'education', 'certifications']);
+  });
+
+  it('returns experience-first order for candidate with 1 role but >=4 bullets', () => {
+    const profile: any = {
+      workExperience: [
+        { company: 'A', role: 'Dev', bullets: ['b1', 'b2', 'b3', 'b4'] },
+      ],
+      projectExperience: [],
+    };
+    const order = determineOptimalSectionOrder(profile);
+    expect(order).toEqual(['experience', 'projects', 'skills', 'education', 'certifications']);
+  });
+
+  it('returns portfolio/project-first order for candidates with 0 roles and >=2 projects', () => {
+    const profile: any = {
+      workExperience: [],
+      projectExperience: [
+        { name: 'Proj 1', bullets: ['b1'] },
+        { name: 'Proj 2', bullets: ['b2'] },
+      ],
+    };
+    const order = determineOptimalSectionOrder(profile);
+    expect(order).toEqual(['projects', 'skills', 'education', 'certifications', 'experience']);
+  });
+
+  it('returns early-career/student order with summary placeholder for sparse profiles', () => {
+    const profile: any = {
+      workExperience: [
+        { company: 'Intern Co', role: 'Intern', bullets: ['Assisted team'] },
+      ],
+      projectExperience: [
+        { name: 'School Project', bullets: ['Completed lab'] },
+      ],
+    };
+    const order = determineOptimalSectionOrder(profile);
+    expect(order).toEqual(['summary', 'education', 'skills', 'projects', 'experience', 'certifications']);
   });
 });
