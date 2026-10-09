@@ -120,7 +120,7 @@ export function CareerProfileSection() {
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[840px]">
+    <div className="flex flex-col gap-8 w-full">
       {/* Header & Quick Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
