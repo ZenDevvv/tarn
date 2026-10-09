@@ -254,6 +254,7 @@ Zen Andrei Obrero
     expect(res.body.data.resume).toBeDefined();
     expect(res.body.data.coverLetter).toBeDefined();
     expect(res.body.data.validation.isValid).toBe(true);
+    expect(typeof res.body.data.validation.coverageDelta).toBe('number');
     expect(res.body.data.resume.fileUrl).toContain('.pdf');
     expect(res.body.data.coverLetter.fileUrl).toContain('.pdf');
     expect(res.body.data.quota.usedToday).toBe(1);

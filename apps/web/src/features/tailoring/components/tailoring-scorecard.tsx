@@ -9,6 +9,7 @@ interface TailoringScorecardProps {
   onOpenStudio: () => void;
   hasJobDescription: boolean;
   isTailored?: boolean;
+  coverageDelta?: number;
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export function TailoringScorecard({
   onOpenStudio,
   hasJobDescription,
   isTailored,
+  coverageDelta,
   className,
 }: TailoringScorecardProps) {
   if (!hasJobDescription) {
@@ -77,8 +79,11 @@ export function TailoringScorecard({
                 Role Alignment
               </h3>
               {isTailored && (
-                <span className="px-2 py-0.2 rounded-full text-micro font-medium bg-primary/10 text-primary border border-primary/20">
-                  Tailored
+                <span className="px-2 py-0.5 rounded-full text-micro font-medium bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                  <span>Tailored</span>
+                  {typeof coverageDelta === 'number' && coverageDelta > 0 && (
+                    <span className="font-semibold text-primary">+{coverageDelta}%</span>
+                  )}
                 </span>
               )}
             </div>

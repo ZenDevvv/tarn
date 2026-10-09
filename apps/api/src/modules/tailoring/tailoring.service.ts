@@ -136,7 +136,8 @@ export const tailoringService = {
       analysis.highPriorityKeywords,
       analysis.exactPhrases,
       profile,
-      company
+      company,
+      analysis.matchScore
     );
 
     if (validation.blocking && !input.overrideWarnings) {
@@ -292,16 +293,29 @@ export const tailoringService = {
   ): Promise<{ resume: any; coverLetterMarkdown: string }> {
     const prompt = `
 You are an expert ATS resume and cover letter tailoring engine.
-Follow these non-negotiable rules:
-1. Stay 100% faithful to the candidate's Master Profile. NEVER invent employers, tools, dates, or metrics.
-2. Follow the candidate's positioning rules: ${JSON.stringify(profile.positioningRules)}.
-3. Do NOT include a Professional Summary section in the resume.
-4. Echo at least 3 exact phrases from the Job Description in the cover letter.
-5. High-priority keywords: ${JSON.stringify(analysis.highPriorityKeywords)}.
-6. Exact phrases to echo: ${JSON.stringify(analysis.exactPhrases)}.
 
-Target Role: ${role}
-Target Company: ${company}
+Your task is to adapt the candidate's Master Profile specifically for the target role: "${role}" at "${company}".
+
+NON-NEGOTIABLE FIDELITY RULES:
+1. Grounding: Stay 100% faithful to the candidate's Master Profile. NEVER invent employers, tools, projects, dates, or metrics.
+2. Verified Metrics: ONLY use metrics and quantities that exist in the candidate's profile (e.g. from factBank or experience bullets).
+3. Positioning: Follow the candidate's positioning rules: ${JSON.stringify(profile.positioningRules)}.
+4. No Summary: Do NOT include a Professional Summary section in the resume.
+5. Cover Letter Verbatim Echoes: Echo at least 3 exact phrases from the Job Description in the cover letter: ${JSON.stringify(analysis.exactPhrases)}.
+
+ADAPTATION & TAILORING DIRECTIVES:
+A. Resume Bullet Rewriting & Gap Closing:
+   - Target Identified Gaps: ${JSON.stringify(analysis.missingKeywords)}.
+   - High-Priority Skills: ${JSON.stringify(analysis.highPriorityKeywords)}.
+   - Where the candidate has relevant work or project experience, rewrite and reorder achievement bullets to highlight aspects relevant to "${role}" and bridge identified keyword gaps.
+   - If the candidate genuinely lacks a skill, do NOT invent it. Instead, emphasize adjacent verifiable competencies from their profile.
+   - Order bullets within each role and project by relevance to "${role}".
+
+B. Cover Letter Composition:
+   - Opening: Establish direct candidacy for "${role}" at "${company}" using the candidate's core positioning: ${JSON.stringify(profile.factBank?.core_positioning || [])}.
+   - Body Paragraphs: Showcase the candidate's quantified highlights: ${JSON.stringify(profile.factBank?.quantified_highlights || [])} and key achievements from their experience. Weave in the exact echo phrases naturally without buzzword stuffing.
+   - Previous Employers: ONLY mention past employers from the candidate's work history: ${JSON.stringify((profile.workExperience || []).map((w) => w.company))}.
+   - Closing: Reiterate enthusiasm for "${company}" and invite discussion.
 
 Candidate Master Profile:
 ${JSON.stringify({

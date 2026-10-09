@@ -325,4 +325,34 @@ In my work at Uzaro Solutions Technology Inc., I delivered reliable solutions.
     expect(report.blocking).toBe(false);
     expect(report.fidelityWarnings).toHaveLength(0);
   });
+
+  it('correctly calculates coverageBefore, coverageAfter, and coverageDelta', () => {
+    const resumePayload = {
+      experience: [
+        {
+          company: 'Uzaro Solutions Technology Inc.',
+          role: 'Technology Developer',
+          bullets: ['Worked with React and TypeScript.'],
+        },
+      ],
+      skills: {
+        Frontend: ['React', 'TypeScript', 'Node.js', 'Prisma'],
+      },
+    };
+
+    const initialCoverage = 50; // 50% before tailoring
+    const report = TailoringValidatorService.validate(
+      resumePayload,
+      '',
+      ['React', 'TypeScript', 'Node.js', 'Prisma'], // 4 keywords, all present in skills
+      [],
+      sampleProfile,
+      'Acme Software',
+      initialCoverage
+    );
+
+    expect(report.coverageBefore).toBe(50);
+    expect(report.coverageAfter).toBe(100);
+    expect(report.coverageDelta).toBe(50); // 100 - 50 = +50% lift
+  });
 });

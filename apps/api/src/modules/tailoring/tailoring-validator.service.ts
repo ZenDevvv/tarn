@@ -17,7 +17,8 @@ export class TailoringValidatorService {
     jdKeywords: string[],
     jdExactPhrases: string[],
     profile: MasterProfileDTO,
-    targetCompany?: string
+    targetCompany?: string,
+    coverageBefore?: number
   ): ValidationReport {
     // 1. Build profile text corpus for grounding checks
     const profileTextParts: string[] = [];
@@ -212,8 +213,16 @@ export class TailoringValidatorService {
       }
     }
 
+    const coverageAfter = keywordCoveragePercent;
+    const initialCoverage =
+      typeof coverageBefore === 'number' ? coverageBefore : keywordCoveragePercent;
+    const coverageDelta = coverageAfter - initialCoverage;
+
     return {
       keywordCoveragePercent,
+      coverageBefore: initialCoverage,
+      coverageAfter,
+      coverageDelta,
       matchedKeywords,
       missingKeywords,
       exactPhraseEchoes,

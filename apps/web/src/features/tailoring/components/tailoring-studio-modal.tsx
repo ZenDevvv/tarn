@@ -181,9 +181,16 @@ export function TailoringStudioModal({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-lg bg-background border border-border">
                     <p className="text-micro text-muted-foreground">Keyword Coverage</p>
-                    <p className="font-display font-bold text-subheading text-foreground mt-0.5">
-                      {generationResult.validation.keywordCoveragePercent}%
-                    </p>
+                    <div className="flex items-baseline gap-1.5 mt-0.5">
+                      <p className="font-display font-bold text-subheading text-foreground">
+                        {generationResult.validation.keywordCoveragePercent}%
+                      </p>
+                      {generationResult.validation.coverageDelta > 0 && (
+                        <span className="text-micro font-semibold text-primary">
+                          +{generationResult.validation.coverageDelta}% lift
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="p-3 rounded-lg bg-background border border-border">
                     <p className="text-micro text-muted-foreground">Matched Skills</p>
@@ -214,6 +221,27 @@ export function TailoringStudioModal({
                     </p>
                   </div>
                 </div>
+
+                {/* Honest Coverage Lift Explanation */}
+                {generationResult.validation.coverageDelta > 0 ? (
+                  <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20 text-micro text-foreground flex items-center gap-2">
+                    <Sparkles size={14} className="shrink-0 text-primary" />
+                    <span>
+                      Tailoring lifted keyword coverage by{' '}
+                      <strong className="text-primary">
+                        +{generationResult.validation.coverageDelta}%
+                      </strong>{' '}
+                      through truthful rephrasing of your profile experience.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-secondary/40 border border-border text-micro text-muted-foreground flex items-center gap-2">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>
+                      Coverage delta: ±0%. Tailoring surfaced all relevant profile material. To raise keyword coverage further, add missing skills to your Career Profile.
+                    </span>
+                  </div>
+                )}
 
                 <div className="text-micro text-muted-foreground flex items-center gap-1.5 pt-1">
                   <span>

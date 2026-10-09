@@ -514,6 +514,9 @@ export interface GenerationQuotaDTO {
 
 export interface ValidationReportDTO {
   keywordCoveragePercent: number;
+  coverageBefore: number;
+  coverageAfter: number;
+  coverageDelta: number;
   matchedKeywords: string[];
   missingKeywords: string[];
   exactPhraseEchoes: string[];
