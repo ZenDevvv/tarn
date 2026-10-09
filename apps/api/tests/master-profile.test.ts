@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'fs';
 import request from 'supertest';
 import { app } from '../src/app';
 
@@ -247,5 +248,61 @@ BS Computer Science | 2020
       .set('Cookie', userACookie);
     expect(updatedRes.body.data.basics.name).toBe('John Smith');
     expect(updatedRes.body.data.basics.email).toBe('john.smith@gmail.com');
+  });
+
+  // spec-resume-ingestion.md §2.1 — the field report: uploading this exact PDF
+  // returned 200 on upload-resume but 400 VALIDATION_ERROR on confirm-import,
+  // because the parser emitted workExperience[1].company === "". Fixtures can only
+  // approximate the layout `pdftotext -layout` produces; only the real file proves
+  // the round-trip. The payload below mirrors resume-upload-dropzone.tsx exactly.
+  describe('Zen Obrero RESUME.pdf round-trip', () => {
+    const ZEN_PDF_PATH = '/home/machenike/Projects/Resume-Builder/Zen Obrero RESUME.pdf';
+
+    it('uploads and confirms the real resume without a 400', async () => {
+      const fileData = readFileSync(ZEN_PDF_PATH).toString('base64');
+
+      const uploadRes = await request(app)
+        .post('/api/v1/master-profile/upload-resume')
+        .set('Cookie', userBCookie)
+        .send({ filename: 'Zen Obrero RESUME.pdf', mimeType: 'application/pdf', fileData });
+
+      expect(uploadRes.status).toBe(200);
+      const draft = uploadRes.body.data.profile;
+      expect(draft.workExperience.length).toBeGreaterThan(0);
+
+      // Exactly what resume-upload-dropzone.tsx sends on Confirm & Import.
+      const confirmRes = await request(app)
+        .post('/api/v1/master-profile/confirm-import')
+        .set('Cookie', userBCookie)
+        .send({
+          basics: draft.basics,
+          positioningRules: draft.positioningRules || [],
+          factBank: draft.factBank || {},
+          summaryCandidates: draft.summaryCandidates || [],
+          workExperience: (draft.workExperience || []).map((w: any) => ({ ...w, bullets: w.bullets || [] })),
+          projectExperience: (draft.projectExperience || []).map((p: any) => ({
+            ...p,
+            stack: p.stack || [],
+            bullets: p.bullets || [],
+          })),
+          skills: draft.skills || {},
+          education: (draft.education || []).map((e: any) => ({ ...e, bullets: e.bullets || [] })),
+        });
+
+      expect(
+        confirmRes.status,
+        `confirm-import rejected the real resume: ${JSON.stringify(confirmRes.body)}`
+      ).toBe(200);
+
+      const persisted = await request(app)
+        .get('/api/v1/master-profile')
+        .set('Cookie', userBCookie);
+      expect(persisted.body.data.basics.name).toBe('Zen Andrei Obrero');
+      expect(persisted.body.data.workExperience.length).toBe(draft.workExperience.length);
+      for (const job of persisted.body.data.workExperience) {
+        expect(job.company.trim()).not.toBe('');
+        expect(job.role.trim()).not.toBe('');
+      }
+    });
   });
 });

@@ -27,9 +27,17 @@ export const updateMasterProfileSchema = z.object({
   factBank: z.record(z.any()).default({}),
   summaryCandidates: z.array(z.any()).optional().default([]),
   workExperience: z.array(z.object({
-    company: z.string().trim().min(1),
+    // Defence-in-depth for parsed (not authored) profiles: a resume header can carry
+    // neither an employer nor a title signal, and min(1) here turned that one ambiguous
+    // segment into a 400 that discarded the entire profile. Parse-time coalescing in
+    // ProfileExtractorService.pushJob remains the primary fix; accepting "" here means a
+    // future regression degrades one editable field instead of the whole import, which the
+    // review-before-commit draft already surfaces. Type is still enforced — only emptiness
+    // is allowed. aiResumePayloadSchema deliberately keeps min(1): AI output must name a
+    // company, but a real resume is not obliged to.
+    company: z.string().trim(),
     location: z.string().trim().optional().nullable(),
-    role: z.string().trim().min(1),
+    role: z.string().trim(),
     date_range: z.string().trim().min(1),
     bullets: z.array(z.string().trim()).default([]),
   })).default([]),

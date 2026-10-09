@@ -482,4 +482,44 @@ Continuing Studies, 2019
       expect(profile.education[0].degree).toBe('Continuing Studies, 2019');
     });
   });
+
+  // Defence-in-depth behind the parse-time coalescing in pushJob. A parsed resume is
+  // not an authored one: a header can carry neither an employer nor a title signal, and
+  // min(1) on either field turns that single ambiguous segment into a 400 that
+  // discards the entire profile. The user corrects the field in the review UI; nobody
+  // should lose the whole import over one unreadable line.
+  describe('updateMasterProfileSchema accepts an ambiguous work segment', () => {
+    const profileWithEmptySignals = {
+      basics: { name: 'Jane Doe' },
+      workExperience: [
+        {
+          company: 'Acme Corp Ltd',
+          role: 'Software Engineer',
+          date_range: 'Jan 2020 - Present',
+          bullets: ['Built things that shipped.'],
+        },
+        {
+          company: '',
+          role: '',
+          date_range: 'Mar 2024 - May 2024',
+          bullets: ['Supported an internship team.'],
+        },
+      ],
+    };
+
+    it('accepts a work entry whose company and role are empty strings', () => {
+      const parsed = updateMasterProfileSchema.safeParse(profileWithEmptySignals);
+
+      expect(parsed.success, JSON.stringify(parsed.success ? [] : parsed.error.issues)).toBe(true);
+    });
+
+    it('still rejects a non-string company so junk cannot enter the store', () => {
+      const parsed = updateMasterProfileSchema.safeParse({
+        ...profileWithEmptySignals,
+        workExperience: [{ ...profileWithEmptySignals.workExperience[0], company: 42 }],
+      });
+
+      expect(parsed.success).toBe(false);
+    });
+  });
 });
