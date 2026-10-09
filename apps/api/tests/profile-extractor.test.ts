@@ -522,4 +522,95 @@ Continuing Studies, 2019
       expect(parsed.success).toBe(false);
     });
   });
+
+  describe('Phase 1 deterministic hardening', () => {
+    it('parses domain-specific section aliases (clinical, licenses, academic background)', () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Dr. Gregory House
+house@princetonplainsboro.org | 555-019-2834
+Remote
+
+CLINICAL EXPERIENCE
+Princeton Plainsboro Teaching Hospital | Head of Diagnostic Medicine
+Jul 2012 - Present
+- Diagnosed rare conditions in acute patients.
+
+LICENSES & CERTIFICATIONS
+- State Board of Medical Examiners License #12345
+- ACLS Certification
+
+ACADEMIC BACKGROUND
+Johns Hopkins University
+Doctor of Medicine (M.D.) | 2004
+      `.trim());
+
+      expect(profile.workExperience.length).toBe(1);
+      expect(profile.workExperience[0].company).toBe('Princeton Plainsboro Teaching Hospital');
+      expect(profile.workExperience[0].role).toBe('Head of Diagnostic Medicine');
+      expect(profile.factBank.certifications.length).toBe(2);
+      expect(profile.factBank.certifications[0]).toContain('State Board of Medical Examiners License');
+      expect(profile.education.length).toBe(1);
+      expect(profile.education[0].school).toBe('Johns Hopkins University');
+      expect(profile.education[0].degree).toContain('Doctor of Medicine');
+      expect(warnings).not.toContain('Experience not found');
+      expect(warnings).not.toContain('Education not found');
+    });
+
+    it('parses multi-degree education blocks into distinct education entries', () => {
+      const { profile } = ProfileExtractorService.parseResumeText(`
+Alice Smith
+alice@example.com
+
+EDUCATION
+Harvard Medical School
+Doctor of Medicine (M.D.) | 2018
+
+University of California, Berkeley
+B.S. in Molecular and Cell Biology | 2014
+      `.trim());
+
+      expect(profile.education.length).toBe(2);
+      expect(profile.education[0].school).toBe('Harvard Medical School');
+      expect(profile.education[0].degree).toContain('Doctor of Medicine');
+      expect(profile.education[0].graduation).toBe('2018');
+      expect(profile.education[1].school).toBe('University of California, Berkeley');
+      expect(profile.education[1].degree).toContain('B.S. in Molecular and Cell Biology');
+      expect(profile.education[1].graduation).toBe('2014');
+    });
+
+    it('parses international date markers and non-English month abbreviations', () => {
+      const { profile } = ProfileExtractorService.parseResumeText(`
+Carlos Santana
+carlos@musica.es
+Madrid, Spain
+
+EXPERIENCIA LABORAL
+Hospital La Paz | Senior Resident
+Ene 2021 – Presente
+- Coordinated emergency triage and surgery preparation.
+      `.trim());
+
+      expect(profile.workExperience.length).toBe(1);
+      expect(profile.workExperience[0].company).toBe('Hospital La Paz');
+      expect(profile.workExperience[0].role).toBe('Senior Resident');
+      expect(profile.workExperience[0].date_range).toContain('Presente');
+    });
+
+    it('parses global international regions without missing location warning', () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Priya Sharma
+priya@tech.in | +91 98765 43210
+Bangalore, India
+
+EXPERIENCE
+Infosys Technologies | Lead Analyst
+Jan 2020 - Present
+- Architected enterprise cloud infrastructure.
+      `.trim());
+
+      expect(profile.basics.location).toBe('Bangalore, India');
+      expect(warnings).not.toContain('Location not found — please verify');
+    });
+  });
 });
+

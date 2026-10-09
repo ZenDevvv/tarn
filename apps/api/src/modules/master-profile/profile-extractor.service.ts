@@ -7,7 +7,8 @@ import { consolidateBullets, isBulletLine } from '../tailoring/utils/bullet-util
 
 const ACRONYM_GUARD = /\b(IoT|LMS|AWS|API|SQL|CSS|PHP|HTML|HRIS|ERP|SaaS|LLM|AI|PMS)\b/i;
 
-const REGION_ALLOWLIST = /\b(PH|Philippines|US|USA|United States|UK|United Kingdom|CA|Canada|AU|Australia|SG|Singapore|JP|Japan|IN|India|DE|Germany|NL|Netherlands|IE|Ireland|AL|AK|AZ|AR|CO|CT|FL|GA|HI|ID|IL|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|AB|BC|MB|NB|NS|NT|NU|ON|PE|QC|SK|YT)\b/i;
+const REGION_ALLOWLIST =
+  /\b(PH|Philippines|US|USA|United States|UK|United Kingdom|CA|Canada|AU|Australia|SG|Singapore|JP|Japan|IN|India|DE|Germany|NL|Netherlands|IE|Ireland|FR|France|ES|Spain|IT|Italy|SE|Sweden|CH|Switzerland|BR|Brazil|MX|Mexico|CO|Colombia|AR|Argentina|CL|Chile|ZA|South Africa|AE|UAE|United Arab Emirates|NZ|New Zealand|NSW|VIC|QLD|WA|SA|TAS|MH|KA|DL|TN|TS|UP|WB|GJ|AL|AK|AZ|AR|CO|CT|FL|GA|HI|ID|IL|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|AB|BC|MB|NB|NS|NT|NU|ON|PE|QC|SK|YT)\b/i;
 
 export class ProfileExtractorService {
   /**
@@ -156,15 +157,35 @@ export class ProfileExtractorService {
     const sectionIndices: Array<{ name: string; lineIndex: number }> = [];
     lines.forEach((line, idx) => {
       const clean = line.trim().toUpperCase();
-      if (/^(WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|EMPLOYMENT HISTORY|EMPLOYMENT)\b/i.test(clean)) {
+      if (
+        /^(WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|EMPLOYMENT HISTORY|EMPLOYMENT|CLINICAL EXPERIENCE|CLINICAL ROTATIONS|TEACHING EXPERIENCE|RESEARCH EXPERIENCE|RESIDENCIES|FELLOWSHIPS|CLERKSHIPS|APPRENTICESHIPS|MILITARY SERVICE|MILITARY EXPERIENCE|VOLUNTEER EXPERIENCE|PROFESSIONAL PRACTICE|PRACTICUM|INTERNSHIPS|EXPERIENCIA LABORAL|EXPÉRIENCE PROFESSIONNELLE|BERUFSERFAHRUNG)\b/i.test(
+          clean
+        )
+      ) {
         sectionIndices.push({ name: 'EXPERIENCE', lineIndex: idx });
-      } else if (/^(PROJECT EXPERIENCE|PROJECTS|KEY PROJECTS|PERSONAL PROJECTS)\b/i.test(clean)) {
+      } else if (
+        /^(PROJECT EXPERIENCE|PROJECTS|KEY PROJECTS|PERSONAL PROJECTS|REPRESENTATIVE MATTERS|SELECTED CASES|PUBLICATIONS|RESEARCH)\b/i.test(
+          clean
+        )
+      ) {
         sectionIndices.push({ name: 'PROJECTS', lineIndex: idx });
-      } else if (/^(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|AREAS OF EXPERTISE|TECHNOLOGIES)\b/i.test(clean)) {
+      } else if (
+        /^(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|AREAS OF EXPERTISE|TECHNOLOGIES|COMPETENCIES|SKILLS & COMPETENCIES|SKILLS AND COMPETENCIES|COMPÉTENCES)\b/i.test(
+          clean
+        )
+      ) {
         sectionIndices.push({ name: 'SKILLS', lineIndex: idx });
-      } else if (/^(EDUCATION|ACADEMIC BACKGROUND|ACADEMIC HISTORY)\b/i.test(clean)) {
+      } else if (
+        /^(EDUCATION|ACADEMIC BACKGROUND|ACADEMIC HISTORY|ACADEMIC TRAINING|EDUCATION & TRAINING|EDUCATION AND TRAINING|DEGREES|HIGHER EDUCATION|FORMACIÓN ACADÉMICA|FORMATION|AUSBILDUNG)\b/i.test(
+          clean
+        )
+      ) {
         sectionIndices.push({ name: 'EDUCATION', lineIndex: idx });
-      } else if (/^(CERTIFICATIONS|CERTIFICATES|LICENSES|LICENSES & CERTIFICATIONS|CREDENTIALS)\b/i.test(clean)) {
+      } else if (
+        /^(CERTIFICATIONS|CERTIFICATES|LICENSES|LICENSES & CERTIFICATIONS|LICENSES AND CERTIFICATIONS|CREDENTIALS|BOARD CERTIFICATIONS|STATE LICENSES|LICENSURE|BAR ADMISSIONS|CREDENTIALS & LICENSES|ACCREDITATIONS|CERTIFICACIONES)\b/i.test(
+          clean
+        )
+      ) {
         sectionIndices.push({ name: 'CERTIFICATIONS', lineIndex: idx });
       }
     });
@@ -212,7 +233,7 @@ export class ProfileExtractorService {
     // Two-signal role/employer disambiguation (domain-agnostic).
     // A segment is a TITLE if it carries a profession suffix; an EMPLOYER if it carries an org suffix.
     const TITLE_SUFFIX_REGEX =
-      /\b(Nurse|Teacher|Professor|Instructor|Accountant|Controller|Comptroller|Auditor|Therapist|Technician|Technologist|Paramedic|Counselor|Attorney|Paralegal|Coordinator|Administrator|Director|Manager|Supervisor|Engineer|Developer|Architect|Designer|Specialist|Lead|Officer|Consultant|Analyst|Intern|Executive|President|Owner|Operator|Salesperson|Sales|Representative|Agent|Clerk|Practitioner|Resident|Dietitian|Electrician|Plumber|Welder|Mechanic|Machinist|Carpenter|Scientist|Researcher|Librarian|Social Worker|Case Manager|Program Manager|Product Manager)\b/i;
+      /\b(Nurse|Teacher|Professor|Instructor|Accountant|Controller|Comptroller|Auditor|Therapist|Technician|Technologist|Paramedic|Counselor|Attorney|Paralegal|Coordinator|Administrator|Director|Manager|Supervisor|Engineer|Developer|Architect|Designer|Specialist|Lead|Officer|Consultant|Analyst|Intern|Executive|President|Owner|Operator|Salesperson|Sales|Representative|Agent|Clerk|Practitioner|Resident|Dietitian|Electrician|Plumber|Welder|Mechanic|Machinist|Carpenter|Scientist|Researcher|Librarian|Social Worker|Case Manager|Program Manager|Product Manager|Head|Chief|Doctor|Physician|Surgeon|Fellow|Dean|Principal|Faculty|Counsel|Advocate|Partner)\b/i;
     const COMPANY_SIGNAL_REGEX =
       /\b(Inc|LLC|Ltd|Corp|Corporation|Company|Co|Hospital|University|College|School|Institute|Academy|Polytechnic|District|Bank|Group|Systems|Technologies|Labs|Center|Centre|Clinic|Department|Agency|Association|GmbH|Foundation|Partners|Industries)\b/i;
 
@@ -245,7 +266,9 @@ export class ProfileExtractorService {
       const trimmed = l.trim();
       if (!trimmed) continue;
 
-      const dateMatch = trimmed.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})\s*(\d{4})?\s*[-–—]\s*(Present|Current|\w+\s*\d{4}|\d{4})/i);
+      const dateMatch = trimmed.match(
+        /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Abr|Ago|Dic|Fév|Avr|Mai|Aoû|Okt|Dez|\d{4})\s*(\d{4})?\s*[-–—]\s*(Presente|Present|Current|Now|Ongoing|Actualidad|Présent|Heute|至今|\w+\s*\d{4}|\d{4})\b/i
+      );
       if (dateMatch) {
         if (curJob) {
           if (curJob.rawLines.length > 0) {
@@ -265,8 +288,14 @@ export class ProfileExtractorService {
         let company = '';
         let jobLocation = '';
 
-        if (headerWithoutDate.includes('|')) {
-          const parts = headerWithoutDate.split('|').map((p) => p.trim()).filter(Boolean);
+        const headerToSplit = headerWithoutDate.includes('|')
+          ? headerWithoutDate
+          : pendingTitle && pendingTitle.includes('|')
+          ? pendingTitle
+          : null;
+
+        if (headerToSplit) {
+          const parts = headerToSplit.split('|').map((p) => p.trim()).filter(Boolean);
           if (parts.length >= 2) {
             const titleIdx = parts.findIndex(looksLikeTitle);
             const employerIdx = parts.findIndex(looksLikeEmployer);
@@ -280,10 +309,13 @@ export class ProfileExtractorService {
               // Neither segment carries a title signal — keep legacy order but warn, never silently swap.
               company = parts[0];
               role = parts.slice(1).join(' | ');
-              warnings.push(`Verify role/employer split for "${headerWithoutDate}"`);
+              warnings.push(`Verify role/employer split for "${headerToSplit}"`);
             }
           } else if (parts.length === 1) {
             company = parts[0];
+          }
+          if (headerToSplit === pendingTitle) {
+            pendingTitle = '';
           }
         } else if (pendingTitle) {
           // Stacked header — the date sat on its own line, so `pendingTitle` holds the
@@ -401,56 +433,88 @@ export class ProfileExtractorService {
     const eduLines = getSectionText('EDUCATION');
     const education: Array<{ school: string; location?: string | null; degree?: string | null; honors?: string | null; graduation?: string | null; bullets?: string[] }> = [];
     if (eduLines.length > 0) {
-      // `pdftotext -layout` aligns columns with runs of spaces, so a two-column header
-      // arrives as "Institution<padding>City, Region". Split those runs apart so the
-      // padding never survives into school/degree.
-      const eduSegments = eduLines
-        .flatMap((l) => l.trim().split(/\s{6,}/))
-        .map((l) => l.trim())
-        .filter(Boolean);
-      // The degree is the segment naming a qualification, wherever it appears; the school
-      // is the institution segment. Anything left over (locations, honorifics) stays out
-      // of both and is picked up as bullets below.
       const isDegreeSegment = (s: string) =>
-        /\b(B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?|M\.?B\.?A\.?|Ph\.?D\.?|Bachelor|Master|Doctor|Diploma)\b/i.test(
+        /\b(B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?|M\.?B\.?A\.?|Ph\.?D\.?|M\.?D\.?|J\.?D\.?|Bachelor|Master|Doctor|Doctorate|Diploma|Associate|Certificate)\b/i.test(
           s
         );
-      // Only reach for the qualification heuristic once an institution is actually
-      // identified. Without that signal the layout is unresolvable, so positional order
-      // stands — "Apprenticeship Certificate" on line 1 stays the school.
-      const institutionIdx = eduSegments.findIndex((s) => looksLikeEmployer(s) && !isDegreeSegment(s));
-      const degreeIdx = institutionIdx >= 0 ? eduSegments.findIndex(isDegreeSegment) : -1;
-      const [firstEdu, secondEdu] = eduSegments;
-      let school = firstEdu?.trim() || '';
-      let degree = degreeIdx >= 0 ? eduSegments[degreeIdx] : secondEdu?.trim() || null;
-      if (institutionIdx >= 0) {
-        school = eduSegments[institutionIdx].replace(/[,|–—]?\s*\b(?:19|20)\d{2}\b\s*$/, '').trim();
+
+      // Split eduLines into candidate entry line groups.
+      // Groups are separated by empty lines OR by a new institution signal after an existing entry.
+      const eduBlocks: string[][] = [];
+      let currentBlock: string[] = [];
+      let hasInstitutionInBlock = false;
+      let hasDegreeInBlock = false;
+
+      for (const l of eduLines) {
+        const trimmed = l.trim();
+        if (!trimmed) {
+          if (currentBlock.length > 0) {
+            eduBlocks.push(currentBlock);
+            currentBlock = [];
+            hasInstitutionInBlock = false;
+            hasDegreeInBlock = false;
+          }
+          continue;
+        }
+
+        const looksInst = looksLikeEmployer(trimmed) && !isDegreeSegment(trimmed);
+        const looksDeg = isDegreeSegment(trimmed);
+
+        if ((hasInstitutionInBlock || hasDegreeInBlock) && (looksInst || (looksDeg && hasDegreeInBlock)) && currentBlock.length >= 2) {
+          eduBlocks.push(currentBlock);
+          currentBlock = [l];
+          hasInstitutionInBlock = looksInst;
+          hasDegreeInBlock = looksDeg;
+        } else {
+          currentBlock.push(l);
+          if (looksInst) hasInstitutionInBlock = true;
+          if (looksDeg) hasDegreeInBlock = true;
+        }
       }
-      if (looksLikeEmployer(school) && degree === school) {
-        degree = null;
+      if (currentBlock.length > 0) {
+        eduBlocks.push(currentBlock);
       }
-      const consumed = new Set([institutionIdx, degreeIdx].filter((i) => i >= 0));
-      const allEduText = eduSegments.join(' ');
-      const gradMatch = allEduText.match(/\b(19\d{2}|20\d{2})\b/);
-      const graduation = gradMatch ? gradMatch[0] : null;
-      // A leftover segment that is only a place (and optional "Graduated <year>" tail)
-      // is the campus location, not an achievement — carry it on the entry instead of
-      // letting it merge into the first bullet.
-      let eduLocation: string | null = null;
-      const leftovers = eduSegments.filter((_s, i) => !consumed.has(i));
-      const placeOnly = /^[A-Z][a-zA-Z.\- ]*,\s*[A-Z][a-zA-Z.\- ]+$/.test(leftovers[0] || '');
-      const rest = placeOnly ? leftovers.slice(1) : leftovers;
-      if (placeOnly) {
-        eduLocation = leftovers[0];
+
+      for (const block of eduBlocks) {
+        const eduSegments = block
+          .flatMap((l) => l.trim().split(/\s{6,}/))
+          .map((l) => l.trim())
+          .filter(Boolean);
+
+        if (eduSegments.length === 0) continue;
+
+        const institutionIdx = eduSegments.findIndex((s) => looksLikeEmployer(s) && !isDegreeSegment(s));
+        const degreeIdx = institutionIdx >= 0 ? eduSegments.findIndex(isDegreeSegment) : -1;
+        const [firstEdu, secondEdu] = eduSegments;
+        let school = firstEdu?.trim() || '';
+        let degree = degreeIdx >= 0 ? eduSegments[degreeIdx] : secondEdu?.trim() || null;
+        if (institutionIdx >= 0) {
+          school = eduSegments[institutionIdx].replace(/[,|–—]?\s*\b(?:19|20)\d{2}\b\s*$/, '').trim();
+        }
+        if (looksLikeEmployer(school) && degree === school) {
+          degree = null;
+        }
+        const consumed = new Set([institutionIdx, degreeIdx].filter((i) => i >= 0));
+        const allEduText = eduSegments.join(' ');
+        const gradMatch = allEduText.match(/\b(19\d{2}|20\d{2})\b/);
+        const graduation = gradMatch ? gradMatch[0] : null;
+
+        let eduLocation: string | null = null;
+        const leftovers = eduSegments.filter((_s, i) => !consumed.has(i));
+        const placeOnly = /^[A-Z][a-zA-Z.\- ]*,\s*[A-Z][a-zA-Z.\- ]+$/.test(leftovers[0] || '');
+        const rest = placeOnly ? leftovers.slice(1) : leftovers;
+        if (placeOnly) {
+          eduLocation = leftovers[0];
+        }
+        const bullets = consolidateBullets(rest);
+        education.push({
+          school,
+          location: eduLocation,
+          degree,
+          graduation,
+          bullets,
+        });
       }
-      const bullets = consolidateBullets(rest);
-      education.push({
-        school,
-        location: eduLocation,
-        degree,
-        graduation,
-        bullets,
-      });
     }
 
     if (education.length === 0) {
