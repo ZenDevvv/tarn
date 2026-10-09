@@ -58,9 +58,67 @@ describe('JobParserService', () => {
       const url = new URL('https://www.linkedin.com/jobs/view/123456789');
       expect(jobParserService.extractSourcePlatform(url)).toBe('LinkedIn');
     });
+
+    it('detects OnlineJobsPH platform', () => {
+      const url = new URL('https://www.onlinejobs.ph/jobseekers/job/senior-customer-operations-specialist-sap-order-management-wholesale-1746806');
+      expect(jobParserService.extractSourcePlatform(url)).toBe('OnlineJobsPH');
+    });
   });
 
   describe('HTML Metadata Extraction', () => {
+    it('extracts OnlineJobs.ph HTML posting with role, company, remote work setup, and weekly salary', () => {
+      const onlineJobsHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Senior Customer Operations Specialist – SAP Order Management (Wholesale) 1746806 - OnlineJobs.ph</title>
+        </head>
+        <body>
+          <h3 class="job__logo">
+            <img src="/logo.png" /> adminworks
+          </h3>
+          <h1 class="job__title" data-jobid="1746806">Senior Customer Operations Specialist – SAP Order Management (Wholesale)</h1>
+          <dl>
+            <dt>TYPE OF WORK</dt>
+            <dd><p class="fs-18">Full Time</p></dd>
+            <dt>WAGE / SALARY</dt>
+            <dd><p class="fs-18">$250/week</p></dd>
+            <dt>HOURS PER WEEK</dt>
+            <dd><p class="fs-18">40</p></dd>
+          </dl>
+          <div class="card-header">JOB OVERVIEW</div>
+          <p id="job-description" class="job-description" data-jobid="1746806">
+            Interviews are being held Mon 12 – Wed 14 Oct, so please apply by Sunday 11 Oct.<br />
+            Full-time | Remote (Philippines) | USD $250 per week<br />
+            A leading international apparel and headwear brand is hiring an experienced Customer Operations Specialist for its wholesale customer-service team.<br />
+            What you'll do<br />
+            - Enter, change and manage wholesale customer orders in SAP<br />
+          </p>
+          <div class="card-header">SKILL REQUIREMENT</div>
+          <div>Microsoft Excel Customer Service SAP ERP</div>
+          <div>ABOUT THE EMPLOYER</div>
+          <div>Business or Contact Name: Not Given</div>
+        </body>
+        </html>
+      `;
+
+      const parsed = jobParserService.extractMetadataFromHtml(
+        onlineJobsHtml,
+        new URL('https://www.onlinejobs.ph/jobseekers/job/senior-customer-operations-specialist-sap-order-management-wholesale-1746806')
+      );
+
+      expect(parsed.source).toBe('OnlineJobsPH');
+      expect(parsed.position).toBe('Senior Customer Operations Specialist – SAP Order Management (Wholesale)');
+      expect(parsed.companyName).toBe('adminworks');
+      expect(parsed.workSetup).toBe('REMOTE');
+      expect(parsed.employmentType).toBe('FULL_TIME');
+      expect(parsed.salaryMin).toBe(250);
+      expect(parsed.salaryMax).toBe(250);
+      expect(parsed.currency).toBe('USD');
+      expect(parsed.location).toBe('Remote (Philippines)');
+      expect(parsed.description).toContain('Interviews are being held Mon 12 – Wed 14 Oct');
+      expect(parsed.description).toContain("What you'll do");
+    });
     it('extracts high-fidelity Schema.org JobPosting JSON-LD', () => {
       const sampleHtml = `
         <!DOCTYPE html>
@@ -750,6 +808,120 @@ Post a job
       expect(result.description).not.toContain('Set alert for similar jobs');
       expect(result.description).not.toContain('More jobs');
       expect(result.description).not.toContain('Looking for talent');
+    });
+
+    it('parses full page copy-paste text dump from OnlineJobs.ph with USD weekly salary, company, and stripped footer', () => {
+      const onlineJobsDump = `
+ adminworks
+Senior Customer Operations Specialist – SAP Order Management (Wholesale)
+ Bookmark
+
+TYPE OF WORK
+Full Time
+
+
+WAGE / SALARY
+$250/week
+
+
+HOURS PER WEEK
+40
+
+
+DATE UPDATED
+Oct 9, 2026
+
+ JOB OVERVIEW
+Interviews are being held Mon 12 – Wed 14 Oct, so please apply by Sunday 11 Oct.
+
+Full-time | Remote (Philippines) | USD $250 per week | Mon–Fri 9:00am–5:00pm Australian Eastern Time (AET)
+
+Daytime hours in the Philippines: approx. 6:00am–2:00pm PHT during Australian daylight saving (Oct–Apr), 7:00am–3:00pm PHT otherwise. No night shift.
+
+A leading international apparel and headwear brand is hiring an experienced Customer Operations Specialist for its wholesale customer-service team.
+
+You'll own wholesale orders from receipt to delivery in SAP, keep customers informed, and work with sales, logistics, warehouse and finance so every order is accurate and on time. This is a senior role. We want someone who takes ownership, builds their own reports, and can guide or back up others in the team.
+
+What you'll do
+- Enter, change and manage wholesale customer orders in SAP, from order entry through delivery and invoicing
+- Process and monitor EDI orders, and fix failed or rejected transactions
+- Track open orders, deliveries, backorders and stock delays
+- Build and maintain open-order and delivery-status reports in Excel
+
+Must-haves
+- Fluent spoken and written English (non-negotiable)
+- 3+ years in order processing, customer operations or wholesale customer service
+- Hands-on SAP sales order processing: order entry and changes, deliveries, billing and invoicing.
+
+How to apply
+Answer every question below in your application. Applications that skip them will not be reviewed.
+1. Attach your updated CV.
+2. How many years have you used SAP to process sales orders, and when did you last use it?
+
+Fluent English is required
+
+ SKILL REQUIREMENT
+Microsoft Excel Customer Service SAP ERP
+ABOUT THE EMPLOYER
+Business or Contact Name: Not Given
+
+Member since: August 9, 2025
+
+Total Job Posts: 82
+`;
+
+      const result = jobParserService.parseJobText(
+        onlineJobsDump,
+        'https://www.onlinejobs.ph/jobseekers/job/senior-customer-operations-specialist-sap-order-management-wholesale-1746806'
+      );
+
+      expect(result.position).toBe('Senior Customer Operations Specialist – SAP Order Management (Wholesale)');
+      expect(result.companyName).toBe('adminworks');
+      expect(result.source).toBe('OnlineJobsPH');
+      expect(result.location).toBe('Remote (Philippines)');
+      expect(result.workSetup).toBe('REMOTE');
+      expect(result.employmentType).toBe('FULL_TIME');
+      expect(result.salaryMin).toBe(250);
+      expect(result.salaryMax).toBe(250);
+      expect(result.currency).toBe('USD');
+
+      // Description contains overview & responsibilities
+      expect(result.description).toBeDefined();
+      expect(result.description).toContain('JOB OVERVIEW');
+      expect(result.description).toContain('Interviews are being held Mon 12 – Wed 14 Oct');
+      expect(result.description).toContain("What you'll do");
+      expect(result.description).toContain('How to apply');
+
+      // Description must NOT contain OnlineJobs.ph footer blocks
+      expect(result.description).not.toContain('SKILL REQUIREMENT');
+      expect(result.description).not.toContain('ABOUT THE EMPLOYER');
+      expect(result.description).not.toContain('Business or Contact Name');
+      expect(result.description).not.toContain('Member since');
+      expect(result.description).not.toContain('Total Job Posts');
+    });
+
+    it('parses OnlineJobs.ph job overview-only snippet extracting full-time, remote setup, and USD wage', () => {
+      const overviewOnly = `
+Senior Customer Operations Specialist – SAP Order Management (Wholesale)
+Interviews are being held Mon 12 – Wed 14 Oct, so please apply by Sunday 11 Oct.
+
+Full-time | Remote (Philippines) | USD $250 per week | Mon–Fri 9:00am–5:00pm Australian Eastern Time (AET)
+
+A leading international apparel and headwear brand is hiring an experienced Customer Operations Specialist for its wholesale customer-service team.
+
+You'll own wholesale orders from receipt to delivery in SAP, keep customers informed, and work with sales, logistics, warehouse and finance.
+`;
+
+      const result = jobParserService.parseJobText(overviewOnly);
+
+      expect(result.position).toBe('Senior Customer Operations Specialist – SAP Order Management (Wholesale)');
+      expect(result.workSetup).toBe('REMOTE');
+      expect(result.employmentType).toBe('FULL_TIME');
+      expect(result.salaryMin).toBe(250);
+      expect(result.salaryMax).toBe(250);
+      expect(result.currency).toBe('USD');
+      expect(result.location).toBe('Remote (Philippines)');
+      expect(result.description).toContain('Interviews are being held Mon 12 – Wed 14 Oct');
     });
   });
 });

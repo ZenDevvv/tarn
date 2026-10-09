@@ -56,6 +56,7 @@ export class JobParserService {
    */
   public extractSourcePlatform(url: URL): string {
     const host = url.hostname.toLowerCase();
+    if (host.includes('onlinejobs.ph') || host.includes('onlinejobs')) return 'OnlineJobsPH';
     if (host.includes('jobstreet')) return 'Jobstreet';
     if (host.includes('greenhouse.io')) return 'Greenhouse';
     if (host.includes('lever.co')) return 'Lever';
@@ -257,7 +258,8 @@ export class JobParserService {
       }
     }
     if (source === 'Other') {
-      if (/jobstreet/i.test(trimmed)) source = 'Jobstreet';
+      if (/onlinejobs(?:\.ph)?/i.test(trimmed) || /TYPE OF WORK[\s\S]*?HOURS PER WEEK/i.test(trimmed)) source = 'OnlineJobsPH';
+      else if (/jobstreet/i.test(trimmed)) source = 'Jobstreet';
       else if (/linkedin/i.test(trimmed)) source = 'LinkedIn';
       else if (/indeed/i.test(trimmed)) source = 'Indeed';
       else if (/glassdoor/i.test(trimmed)) source = 'Glassdoor';
@@ -290,42 +292,12 @@ export class JobParserService {
       employmentType = 'INTERNSHIP';
     }
 
-    // 3. Salary extraction: handles PHP, ₱, $, USD, EUR, GBP, SGD, AUD, monthly and yearly
-    const salaryRegex =
-      /(?:(PHP|₱|\$|USD|EUR|€|£|GBP|SGD|S\$|AUD|A\$)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)\s*(?:-|to|–|—)\s*(?:(PHP|₱|\$|USD|EUR|€|£|GBP|SGD|S\$|AUD|A\$)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)(?:\s*(?:a|per|\/)\s*(month|mo|year|yr|annum))?/i;
-    const salaryMatch = trimmed.match(salaryRegex);
-
-    if (salaryMatch) {
-      const rawCurr = (salaryMatch[1] || salaryMatch[3] || '').toUpperCase();
-      if (rawCurr.includes('PHP') || rawCurr.includes('₱') || /PHP|₱/i.test(trimmed)) {
-        currency = 'PHP';
-      } else if (rawCurr.includes('EUR') || rawCurr.includes('€')) {
-        currency = 'EUR';
-      } else if (rawCurr.includes('GBP') || rawCurr.includes('£')) {
-        currency = 'GBP';
-      } else if (rawCurr.includes('SGD') || rawCurr.includes('S$')) {
-        currency = 'SGD';
-      } else if (rawCurr.includes('AUD') || rawCurr.includes('A$')) {
-        currency = 'AUD';
-      } else {
-        currency = 'USD';
-      }
-
-      const parseNum = (str: string): number => {
-        const cleaned = str.replace(/,/g, '').toLowerCase();
-        if (cleaned.endsWith('k')) return parseFloat(cleaned) * 1000;
-        return parseFloat(cleaned);
-      };
-
-      salaryMin = parseNum(salaryMatch[2]);
-      salaryMax = parseNum(salaryMatch[4]);
-    } else if (
-      source === 'Jobstreet' ||
-      source === 'Kalibrr' ||
-      source === 'Bossjob' ||
-      /Philippines|Makati|Taguig|Manila|Cebu|Pasig|BGC/i.test(trimmed)
-    ) {
-      currency = 'PHP';
+    // 3. Salary extraction: handles ranges, single amounts ($250/week, USD $250 per week), and currency
+    const sal = this.extractSalaryDetails(trimmed, source);
+    if (sal) {
+      if (sal.salaryMin !== undefined) salaryMin = sal.salaryMin;
+      if (sal.salaryMax !== undefined) salaryMax = sal.salaryMax;
+      if (sal.currency) currency = sal.currency;
     }
 
     // 4. Location detection & cleaning (PH & Global hubs)
@@ -408,7 +380,7 @@ export class JobParserService {
       if (/^skip to (?:main |search )?content/i.test(l)) return true;
       if (/^back to (?:open )?roles|back to jobs|view all (?:open )?positions/i.test(l)) return true;
       if (
-        /^(?:ph\.)?(?:jobstreet|indeed|linkedin|glassdoor|kalibrr|bossjob|foundit|monster|workable|smartrecruiters|greenhouse|lever|ashby)(?:\.com)?$/i.test(
+        /^(?:ph\.)?(?:onlinejobs(?:\.ph)?|onlinejobsph|jobstreet|indeed|linkedin|glassdoor|kalibrr|bossjob|foundit|monster|workable|smartrecruiters|greenhouse|lever|ashby)(?:\.com)?$/i.test(
           l
         )
       )
@@ -420,7 +392,7 @@ export class JobParserService {
       )
         return true;
       if (
-        /^(strong applicant|be an early applicant|high application volume|actively recruiting|urgently hiring|featured|promoted|promoted by hirer|responses managed off linkedin|easy apply|apply|apply now|apply for this job|apply on company website|submit application|save|save job|share|responsive employer|direct employer|hybrid|remote|onsite|on-site|contract|full[- ]time|part[- ]time)$/i.test(
+        /^(strong applicant|be an early applicant|high application volume|actively recruiting|urgently hiring|featured|promoted|promoted by hirer|responses managed off linkedin|easy apply|apply|apply now|apply for this job|apply on company website|submit application|save|save job|bookmark|share|responsive employer|direct employer|hybrid|remote|onsite|on-site|contract|full[- ]time|part[- ]time)$/i.test(
           l
         )
       )
@@ -444,6 +416,9 @@ export class JobParserService {
       if (/^\d+\s+skills?(?:\s+and\s+credentials)?\s+match/i.test(l)) return true;
       if (/^\+\d+\s+more$/i.test(l)) return true;
       if (/^•$/i.test(l)) return true;
+      if (/^(type of work|wage\s*\/\s*salary|hours per week|date updated|skill requirement|about the employer)$/i.test(l))
+        return true;
+      if (/^(member since:|total job posts:|business or contact name:)/i.test(l)) return true;
       return false;
     };
 
@@ -560,16 +535,25 @@ export class JobParserService {
     const cleanCandidates = lines.filter((l) => !isNoiseLine(l) && !l.toLowerCase().endsWith('logo'));
 
     if (!position) {
-      const roleMatch = cleanCandidates.find((l) => ROLE_KEYWORDS.test(l) && !isLocationLine(l));
+      const roleMatch = cleanCandidates.find(
+        (l) =>
+          ROLE_KEYWORDS.test(l) &&
+          !isLocationLine(l) &&
+          l.length < 90 &&
+          !/^(?:we are|you will|a leading|our client|looking for)\b/i.test(l)
+      );
       if (roleMatch) {
         position = roleMatch.replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
-      } else if (cleanCandidates.length > 0) {
+      } else if (cleanCandidates.length > 0 && cleanCandidates[0].length < 90) {
         position = cleanCandidates[0].replace(/\s*[-–—|•]\s*(?:Full[- ]Time|Part[- ]Time|Hybrid|Remote).*$/i, '').trim();
       }
     }
 
     if (!companyName) {
-      if (companyHint) {
+      const bizMatch = lines.join('\n').match(/Business or Contact Name:\s*([^\n]+)/i);
+      if (bizMatch && !/not given/i.test(bizMatch[1].trim()) && bizMatch[1].trim().length < 80) {
+        companyName = bizMatch[1].trim();
+      } else if (companyHint) {
         companyName = companyHint;
       } else if (logoCompanyHint) {
         companyName = logoCompanyHint;
@@ -612,7 +596,7 @@ export class JobParserService {
       /^(duties\s+(?:and|&)\s+responsibilities|responsibilities\s*(?:and|&)?\s*(?:duties)?|key\s+responsibilities|job\s+description|full\s+job\s+description|job\s+details|job\s+summary|job\s+overview|role\s+overview|about\s+the\s+role|about\s+the\s+job|about\s+the\s+position|about\s+the\s+opportunity|the\s+opportunity|the\s+role|what\s+you(?:'ll|\swill)\s+do|what\s+you(?:'ll|\swill)\s+be\s+doing|what\s+you(?:'ll|\swill)\s+work\s+on|what\s+we(?:'re|\sare)\s+looking\s+for|who\s+you\s+are|requirements|qualifications|position\s+overview|scope\s+of\s+work|role\s+description|your\s+impact|our\s+mission|overview\b|summary\b)/i;
 
     const DESCRIPTION_END_REGEX =
-      /^(employer\s+questions|your\s+application\s+will\s+include|report\s+this\s+job|report\s+this\s+advert|report\s+this\s+listing|report\s+job|be\s+careful|don['’]t\s+provide\s+your\s+bank|never\s+provide\s+your\s+bank|learn\s+how\s+to\s+protect\s+yourself|salary\s+teaser|what\s+can\s+i\s+earn\s+as|see\s+more\s+detailed\s+salary|job\s+seekers|explore\s+careers|explore\s+salaries|download\s+apps|register\s+for\s+free|post\s+a\s+job\s+ad|recruitment\s+software|similar\s+jobs|people\s+also\s+viewed|recommended\s+jobs|recommended\s+opportunities|related\s+jobs|terms\s+(?:and|&)\s+conditions|terms\s+of\s+service|copyright\s+©|all\s+rights\s+reserved|privacy\s+policy|hiring\s+lab|indeed\s+events|work\s+at\s+indeed|esg\s+at\s+indeed|©\s+\d+\s+indeed|about\s+the\s+company|sign\s+in\s+to\s+create\s+job\s+alert|explore\s+collaborative\s+articles|linkedin\s+corporation|submit\s+your\s+application|submit\s+application|resume\/cv|attach\s+resume|powered\s+by\s+(?:greenhouse|lever|ashby|workable|smartrecruiters)|set\s+alert\s+for\s+similar\s+jobs|job\s+search\s+faster\s+with\s+premium|access\s+company\s+insights|more\s+jobs\b|looking\s+for\s+talent\??|post\s+a\s+job\b|interested\s+in\s+working\s+with\s+us|commitments\b|career\s+growth\s+and\s+learning)/i;
+      /^(employer\s+questions|your\s+application\s+will\s+include|report\s+this\s+job|report\s+this\s+advert|report\s+this\s+listing|report\s+job|be\s+careful|don['’]t\s+provide\s+your\s+bank|never\s+provide\s+your\s+bank|learn\s+how\s+to\s+protect\s+yourself|salary\s+teaser|what\s+can\s+i\s+earn\s+as|see\s+more\s+detailed\s+salary|job\s+seekers|explore\s+careers|explore\s+salaries|download\s+apps|register\s+for\s+free|post\s+a\s+job\s+ad|recruitment\s+software|similar\s+jobs|people\s+also\s+viewed|recommended\s+jobs|recommended\s+opportunities|related\s+jobs|terms\s+(?:and|&)\s+conditions|terms\s+of\s+service|copyright\s+©|all\s+rights\s+reserved|privacy\s+policy|hiring\s+lab|indeed\s+events|work\s+at\s+indeed|esg\s+at\s+indeed|©\s+\d+\s+indeed|about\s+the\s+company|sign\s+in\s+to\s+create\s+job\s+alert|explore\s+collaborative\s+articles|linkedin\s+corporation|submit\s+your\s+application|submit\s+application|resume\/cv|attach\s+resume|powered\s+by\s+(?:greenhouse|lever|ashby|workable|smartrecruiters)|set\s+alert\s+for\s+similar\s+jobs|job\s+search\s+faster\s+with\s+premium|access\s+company\s+insights|more\s+jobs\b|looking\s+for\s+talent\??|post\s+a\s+job\b|interested\s+in\s+working\s+with\s+us|commitments\b|career\s+growth\s+and\s+learning|skill\s+requirement|about\s+the\s+employer|business\s+or\s+contact\s+name|member\s+since:|total\s+job\s+posts:|share\s+this\s+post|view\s+other\s+job\s+posts\s+from)/i;
 
     let startIndex = -1;
 
@@ -684,9 +668,198 @@ export class JobParserService {
 
 
   /**
+   * Universal salary extraction handling ranges, single amounts, and currency inference.
+   */
+  public extractSalaryDetails(
+    text: string,
+    source?: string
+  ): { salaryMin?: number; salaryMax?: number; currency: string } | null {
+    // 1. Range match: e.g. PHP 95,000 - PHP 140,000 or $2,000 - $3,000 / month or 80k - 100k
+    const salaryRangeRegex =
+      /(?:(PHP|₱|\$|USD|EUR|€|£|GBP|SGD|S\$|AUD|A\$|CAD)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)\s*(?:-|to|–|—)\s*(?:(PHP|₱|\$|USD|EUR|€|£|GBP|SGD|S\$|AUD|A\$|CAD)\s*)?([0-9]{1,3}(?:,[0-9]{3})*|\d+k)(?:\s*(?:a|per|\/)\s*(week|wk|month|mo|year|yr|annum|day|hr|hour))?/i;
+
+    const parseNum = (str: string): number => {
+      const cleaned = str.replace(/,/g, '').toLowerCase();
+      if (cleaned.endsWith('k')) return parseFloat(cleaned) * 1000;
+      return parseFloat(cleaned);
+    };
+
+    const getCurrency = (rawCurr: string, fullContext: string): string => {
+      const c = rawCurr.toUpperCase();
+      if (c.includes('PHP') || c.includes('₱')) return 'PHP';
+      if (c.includes('EUR') || c.includes('€')) return 'EUR';
+      if (c.includes('GBP') || c.includes('£')) return 'GBP';
+      if (c.includes('SGD') || c.includes('S$')) return 'SGD';
+      if (c.includes('AUD') || c.includes('A$')) return 'AUD';
+      if (c.includes('CAD')) return 'CAD';
+      if (c.includes('USD') || c.includes('$')) return 'USD';
+      if (/USD|\$/i.test(fullContext)) return 'USD';
+      if (/PHP|₱/i.test(fullContext)) return 'PHP';
+      return 'USD';
+    };
+
+    const rangeMatch = text.match(salaryRangeRegex);
+    if (rangeMatch && rangeMatch[2] && rangeMatch[4]) {
+      const rawCurr = rangeMatch[1] || rangeMatch[3] || '';
+      const currency = getCurrency(rawCurr, rangeMatch[0]);
+      return {
+        salaryMin: parseNum(rangeMatch[2]),
+        salaryMax: parseNum(rangeMatch[4]),
+        currency,
+      };
+    }
+
+    // 2. Single amount match: e.g. "$250/week", "USD $250 per week", "₱50,000 / month", "Wage / Salary: $250"
+    const singleSalaryRegex =
+      /(?:(?:(USD|PHP|AUD|SGD|GBP|EUR|CAD)\s*[\$₱€£]?|([\$₱€£])|(?:wage|salary|pay|compensation)[:\s]*)\s*)([0-9]{1,3}(?:,[0-9]{3})*|\d+k)(?:\s*(USD|PHP|AUD|SGD|GBP|EUR|CAD))?(?:\s*(?:a|per|\/)\s*(week|wk|month|mo|year|yr|annum|day|hr|hour))?/i;
+
+    const wageLabelMatch = text.match(/WAGE\s*\/\s*SALARY\s*\n+([^\n]+)/i);
+    const targetSingleText = wageLabelMatch ? wageLabelMatch[1] : text;
+    const singleMatch = targetSingleText.match(singleSalaryRegex);
+
+    if (singleMatch && singleMatch[3]) {
+      const rawCurr = singleMatch[1] || singleMatch[2] || singleMatch[4] || '';
+      const num = parseNum(singleMatch[3]);
+      if (num > 0) {
+        const currency = getCurrency(rawCurr, singleMatch[0]);
+        return {
+          salaryMin: num,
+          salaryMax: num,
+          currency,
+        };
+      }
+    }
+
+    // 3. Fallback currency when salary amount wasn't extracted
+    let fallbackCurrency = 'USD';
+    if (
+      source === 'Jobstreet' ||
+      source === 'Kalibrr' ||
+      source === 'Bossjob' ||
+      /Makati|Taguig|Manila|Cebu|Pasig|BGC/i.test(text)
+    ) {
+      fallbackCurrency = 'PHP';
+    } else if (source === 'OnlineJobsPH') {
+      fallbackCurrency = 'USD';
+    }
+
+    return {
+      currency: fallbackCurrency,
+    };
+  }
+
+  /**
+   * Dedicated HTML parser for OnlineJobs.ph postings
+   */
+  public parseOnlineJobsHtml(html: string): Partial<ParsedJobMetadataDTO> | null {
+    const result: Partial<ParsedJobMetadataDTO> = {
+      source: 'OnlineJobsPH',
+      extractedVia: 'heuristic',
+    };
+
+    // 1. Position Title: from <h1 class="... job__title"> or <title>
+    const titleMatch = html.match(/<h1[^>]*class=["'][^"']*job__title[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i);
+    if (titleMatch) {
+      result.position = this.cleanText(titleMatch[1].replace(/<[^>]+>/g, ''));
+    } else {
+      const titleTagMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (titleTagMatch) {
+        let t = this.cleanText(titleTagMatch[1]);
+        t = t.replace(/\s*[-–—|•]\s*OnlineJobs(?:\.ph)?.*$/i, '').trim();
+        t = t.replace(/\s+\d{5,}\s*$/, '').trim();
+        result.position = t;
+      }
+    }
+
+    // 2. Company Name: from <h3 class="... job__logo">
+    const logoMatch = html.match(/<h3[^>]*class=["'][^"']*job__logo[^"']*["'][^>]*>([\s\S]*?)<\/h3>/i);
+    if (logoMatch) {
+      const rawLogo = logoMatch[1].replace(/<img[^>]*>/gi, '').replace(/<[^>]+>/g, '');
+      const cleanLogo = this.cleanText(rawLogo);
+      if (cleanLogo && cleanLogo.length < 80 && !this.isJobBoardOrPlatform(cleanLogo)) {
+        result.companyName = cleanLogo;
+      }
+    }
+
+    // Fallback company from "ABOUT THE EMPLOYER" -> "Business or Contact Name: ..."
+    if (!result.companyName) {
+      const bizMatch = html.match(/Business or Contact Name:\s*(?:<\/strong>)?\s*([^<\n]+)/i);
+      if (bizMatch) {
+        const biz = this.cleanText(bizMatch[1]);
+        if (biz && !/not given/i.test(biz)) {
+          result.companyName = biz;
+        }
+      }
+    }
+
+    // 3. Description: from <p id="job-description"> or class="job-description"
+    const descMatch =
+      html.match(/<p[^>]*id=["']job-description["'][^>]*>([\s\S]*?)<\/p>/i) ||
+      html.match(/<(?:p|div)[^>]*class=["'][^"']*job-description[^"']*["'][^>]*>([\s\S]*?)<\/(?:p|div)>/i);
+    if (descMatch) {
+      result.description = this.cleanHtmlSnippet(descMatch[1]);
+    }
+
+    // 4. Employment Type: from "TYPE OF WORK"
+    const typeMatch = html.match(/TYPE OF WORK[\s\S]*?<p[^>]*class=["'][^"']*fs-18[^"']*["'][^>]*>([\s\S]*?)<\/p>/i);
+    const typeText = typeMatch ? this.cleanText(typeMatch[1]).toLowerCase() : (result.description || '').toLowerCase();
+    if (typeText.includes('full time') || typeText.includes('full-time')) {
+      result.employmentType = 'FULL_TIME';
+    } else if (typeText.includes('part time') || typeText.includes('part-time')) {
+      result.employmentType = 'PART_TIME';
+    } else if (typeText.includes('contract')) {
+      result.employmentType = 'CONTRACT';
+    } else if (typeText.includes('freelance')) {
+      result.employmentType = 'FREELANCE';
+    } else if (typeText.includes('internship')) {
+      result.employmentType = 'INTERNSHIP';
+    }
+
+    // 5. Salary: from "WAGE / SALARY" block or description
+    const wageMatch = html.match(/WAGE\s*\/\s*SALARY[\s\S]*?<p[^>]*class=["'][^"']*fs-18[^"']*["'][^>]*>([\s\S]*?)<\/p>/i);
+    const wageText = wageMatch ? this.cleanText(wageMatch[1]) : '';
+    const salarySource = wageText ? `${wageText}\n${result.description || ''}` : (result.description || '');
+    const sal = this.extractSalaryDetails(salarySource, 'OnlineJobsPH');
+    if (sal) {
+      result.salaryMin = sal.salaryMin;
+      result.salaryMax = sal.salaryMax;
+      result.currency = sal.currency;
+    } else {
+      result.currency = 'USD';
+    }
+
+    // 6. Work Setup & Location
+    const contextText = `${result.description || ''} ${html}`;
+    if (/\b(remote|work from home|wfh)\b/i.test(contextText)) {
+      result.workSetup = 'REMOTE';
+    } else if (/\bhybrid\b/i.test(contextText)) {
+      result.workSetup = 'HYBRID';
+    } else {
+      result.workSetup = 'REMOTE';
+    }
+
+    if (/\bremote\s*\(([^)]+)\)/i.test(result.description || '')) {
+      const locM = (result.description || '').match(/\bremote\s*\(([^)]+)\)/i);
+      result.location = `Remote (${locM![1].trim()})`;
+    } else if (/Philippines/i.test(contextText)) {
+      result.location = 'Philippines';
+    }
+
+    return result;
+  }
+
+  /**
    * Extract metadata from HTML content using JSON-LD, OpenGraph, and heuristic regex.
    */
   public extractMetadataFromHtml(html: string, url: URL): Partial<ParsedJobMetadataDTO> {
+    // 0. Dedicated OnlineJobs.ph HTML parser
+    if (url.hostname.toLowerCase().includes('onlinejobs') || /class=["'][^"']*card-jobseeker/i.test(html)) {
+      const ojResult = this.parseOnlineJobsHtml(html);
+      if (ojResult && (ojResult.position || ojResult.companyName || ojResult.description)) {
+        return ojResult;
+      }
+    }
+
     // 1. Try Schema.org JSON-LD first (highest fidelity)
     const jsonLdResult = this.parseJsonLd(html);
     if (jsonLdResult && (jsonLdResult.position || jsonLdResult.companyName)) {
@@ -848,7 +1021,7 @@ export class JobParserService {
    */
   public isJobBoardOrPlatform(name: string): boolean {
     const n = name.toLowerCase().replace(/^@/, '').trim();
-    return /^(?:ph\.)?(?:linkedin(?:\s+jobs)?|jobstreet|indeed(?:\.com)?|glassdoor|kalibrr|bossjob|foundit|monster|greenhouse|lever|ashby|workable|smartrecruiters|ziprecruiter|remotive|wellfound|angel|ycombinator)(?:\.com)?$/i.test(
+    return /^(?:ph\.)?(?:onlinejobs(?:\.ph)?|onlinejobsph|linkedin(?:\s+jobs)?|jobstreet|indeed(?:\.com)?|glassdoor|kalibrr|bossjob|foundit|monster|greenhouse|lever|ashby|workable|smartrecruiters|ziprecruiter|remotive|wellfound|angel|ycombinator)(?:\.com)?$/i.test(
       n
     );
   }
@@ -928,10 +1101,13 @@ export class JobParserService {
     // Strip trailing platform suffixes e.g. " | LinkedIn Jobs", " - Indeed.com", " | Glassdoor", etc.
     cleaned = cleaned
       .replace(
-        /\s*[-–—|•]\s*(?:LinkedIn(?:\s+Jobs)?|Indeed(?:\.com)?|Jobstreet|Glassdoor|ZipRecruiter|Greenhouse|Lever|Ashby|Workable).*$/i,
+        /\s*[-–—|•]\s*(?:OnlineJobs(?:\.ph)?|LinkedIn(?:\s+Jobs)?|Indeed(?:\.com)?|Jobstreet|Glassdoor|ZipRecruiter|Greenhouse|Lever|Ashby|Workable).*$/i,
         ''
       )
       .trim();
+
+    // Strip trailing job IDs if present (e.g. "Senior Specialist 1746806" -> "Senior Specialist")
+    cleaned = cleaned.replace(/\s+\d{5,}\s*$/, '').trim();
 
     const ROLE_KEYWORDS =
       /\b(engineer|developer|designer|architect|programmer|manager|lead|director|analyst|specialist|consultant|officer|administrator|coordinator|technician|associate|scientist|intern|executive|qa|tester|devops|sre|scrum master|product owner)\b/i;
@@ -1015,9 +1191,10 @@ export class JobParserService {
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
+      .replace(/\r\n/g, '\n')
       .replace(/\n{3,}/g, '\n\n')
       .trim()
-      .slice(0, 2000);
+      .slice(0, 15000);
   }
 }
 
