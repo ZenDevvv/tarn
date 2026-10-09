@@ -1,6 +1,11 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import request from 'supertest';
+import fs from 'fs';
+import path from 'path';
 import { app } from '../src/app';
+import { prisma } from '@tracker/database';
+import { PdfRendererService } from '../src/modules/tailoring/pdf-renderer.service';
+
 
 describe('Tailoring and Cover Letter API Integration Tests', () => {
   let userCookie: string[];
@@ -131,6 +136,61 @@ describe('Tailoring and Cover Letter API Integration Tests', () => {
       .get(`/api/v1/applications/${applicationId}`)
       .set('Cookie', userCookie);
     expect(checkApp.body.data.resumeId).toBe(generatedResumeId);
+  });
+
+  it('POST /api/v1/tailoring/applications/:id/generate fails loudly with 503 and rolls back DB writes when Chromium is missing', async () => {
+    // 1. Create a fresh application for this test
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({
+        companyName: 'Failing Chromium Corp',
+        position: 'Backend Developer',
+        status: 'APPLIED',
+        priority: 'MEDIUM',
+        description: 'Need a Node.js developer with TypeScript.',
+      });
+    const testAppId = appRes.body.data.id;
+
+    // Count rows before
+    const resumeCountBefore = await prisma.resume.count({
+      where: { notes: { contains: 'Failing Chromium Corp' } },
+    });
+    const clCountBefore = await prisma.coverLetter.count({
+      where: { company: 'Failing Chromium Corp' },
+    });
+
+    // 2. Hide Chromium
+    const spy = vi.spyOn(PdfRendererService, 'findChromiumBinary').mockReturnValue(null);
+
+    // 3. Attempt generation
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${testAppId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ mode: 'deterministic' });
+
+    spy.mockRestore();
+
+    // 4. Assert hard error 503
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(res.body.error.message).toContain('PDF generation is temporarily unavailable');
+
+    // 5. Assert DB rollback / zero rows created
+    const resumeCountAfter = await prisma.resume.count({
+      where: { notes: { contains: 'Failing Chromium Corp' } },
+    });
+    const clCountAfter = await prisma.coverLetter.count({
+      where: { company: 'Failing Chromium Corp' },
+    });
+    expect(resumeCountAfter).toBe(resumeCountBefore);
+    expect(clCountAfter).toBe(clCountBefore);
+
+    // 6. Assert application resumeId remains null
+    const checkApp = await request(app)
+      .get(`/api/v1/applications/${testAppId}`)
+      .set('Cookie', userCookie);
+    expect(checkApp.body.data.resumeId).toBeNull();
   });
 
   it('GET /api/v1/tailoring/resumes/:id/preview-html renders classic HTML layout', async () => {

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import fs from 'fs';
 import { prisma, TimelineEventType } from '@tracker/database';
 import { GenerateTailoringInput } from '@tracker/validation';
 import { MasterProfileDTO } from '@tracker/types';
@@ -84,86 +85,105 @@ export const tailoringService = {
 
     const uniqueId = `${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
 
-    // Render PDFs
-    const resumeRender = await PdfRendererService.generateResume(resumePayload, uniqueId);
-    const coverLetterRender = await PdfRendererService.generateCoverLetter(
-      coverLetterMd,
-      profile.basics,
-      role,
-      company,
-      uniqueId
-    );
+    let resumeRender: { html: string; pdfUrl: string; localPdfPath: string } | null = null;
+    let coverLetterRender: { html: string; pdfUrl: string; localPdfPath: string } | null = null;
 
-    // Save Resume to database
-    const resume = await prisma.resume.create({
-      data: {
-        userId,
-        name: `Resume - ${company} (${role})`,
-        targetRole: role,
-        fileUrl: resumeRender.pdfUrl,
-        filename: `resume_${role.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
-        mimeType: 'application/pdf',
-        isTailored: true,
-        matchScore: analysis.matchScore,
-        content: resumePayload,
-        skills: Object.values(resumePayload.skills || {}).flat() as string[],
-        notes: `Tailored for ${role} at ${company}. Match score: ${analysis.matchScore}%.`,
-      },
-    });
-
-    // Save Cover Letter to database
-    const coverLetter = await prisma.coverLetter.create({
-      data: {
-        userId,
-        applicationId: application.id,
-        name: `Cover Letter - ${company} (${role})`,
+    try {
+      // Render PDFs (throws ServiceUnavailableError if Chromium fails/missing)
+      resumeRender = await PdfRendererService.generateResume(resumePayload, uniqueId);
+      coverLetterRender = await PdfRendererService.generateCoverLetter(
+        coverLetterMd,
+        profile.basics,
         role,
         company,
-        content: coverLetterMd,
-        htmlContent: coverLetterRender.html,
-        fileUrl: coverLetterRender.pdfUrl,
-        matchScore: analysis.matchScore,
-        echoedPhrases: validation.exactPhraseEchoes,
-      },
-    });
+        uniqueId
+      );
 
-    // Link resume to application
-    await prisma.application.update({
-      where: { id: application.id },
-      data: {
-        resumeId: resume.id,
-      },
-    });
+      // Perform DB writes inside prisma transaction
+      const { resume, coverLetter } = await prisma.$transaction(async (tx) => {
+        const createdResume = await tx.resume.create({
+          data: {
+            userId,
+            name: `Resume - ${company} (${role})`,
+            targetRole: role,
+            fileUrl: resumeRender!.pdfUrl,
+            filename: `resume_${role.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
+            mimeType: 'application/pdf',
+            isTailored: true,
+            matchScore: analysis.matchScore,
+            content: resumePayload,
+            skills: Object.values(resumePayload.skills || {}).flat() as string[],
+            notes: `Tailored for ${role} at ${company}. Match score: ${analysis.matchScore}%.`,
+          },
+        });
 
-    // Log timeline event
-    await prisma.timelineEvent.create({
-      data: {
-        applicationId: application.id,
-        type: TimelineEventType.CUSTOM_EVENT,
-        title: 'Tailored application package generated',
-        description: `Generated tailored resume (${analysis.matchScore}% match) and cover letter with ${validation.exactPhraseEchoes.length} echoed phrases.`,
-        metadata: {
-          resumeId: resume.id,
-          coverLetterId: coverLetter.id,
-          matchScore: analysis.matchScore,
+        const createdCoverLetter = await tx.coverLetter.create({
+          data: {
+            userId,
+            applicationId: application.id,
+            name: `Cover Letter - ${company} (${role})`,
+            role,
+            company,
+            content: coverLetterMd,
+            htmlContent: coverLetterRender!.html,
+            fileUrl: coverLetterRender!.pdfUrl,
+            matchScore: analysis.matchScore,
+            echoedPhrases: validation.exactPhraseEchoes,
+          },
+        });
+
+        await tx.application.update({
+          where: { id: application.id },
+          data: {
+            resumeId: createdResume.id,
+          },
+        });
+
+        await tx.timelineEvent.create({
+          data: {
+            applicationId: application.id,
+            type: TimelineEventType.CUSTOM_EVENT,
+            title: 'Tailored application package generated',
+            description: `Generated tailored resume (${analysis.matchScore}% match) and cover letter with ${validation.exactPhraseEchoes.length} echoed phrases.`,
+            metadata: {
+              resumeId: createdResume.id,
+              coverLetterId: createdCoverLetter.id,
+              matchScore: analysis.matchScore,
+            },
+          },
+        });
+
+        return { resume: createdResume, coverLetter: createdCoverLetter };
+      });
+
+      return {
+        resume: {
+          ...resume,
+          createdAt: resume.createdAt.toISOString(),
+          updatedAt: resume.updatedAt.toISOString(),
         },
-      },
-    });
-
-    return {
-      resume: {
-        ...resume,
-        createdAt: resume.createdAt.toISOString(),
-        updatedAt: resume.updatedAt.toISOString(),
-      },
-      coverLetter: {
-        ...coverLetter,
-        createdAt: coverLetter.createdAt.toISOString(),
-        updatedAt: coverLetter.updatedAt.toISOString(),
-      },
-      analysis,
-      validation,
-    };
+        coverLetter: {
+          ...coverLetter,
+          createdAt: coverLetter.createdAt.toISOString(),
+          updatedAt: coverLetter.updatedAt.toISOString(),
+        },
+        analysis,
+        validation,
+      };
+    } catch (err) {
+      // Roll back / clean up any created PDF files on render or DB failure
+      if (resumeRender?.localPdfPath && fs.existsSync(resumeRender.localPdfPath)) {
+        try {
+          fs.unlinkSync(resumeRender.localPdfPath);
+        } catch {}
+      }
+      if (coverLetterRender?.localPdfPath && fs.existsSync(coverLetterRender.localPdfPath)) {
+        try {
+          fs.unlinkSync(coverLetterRender.localPdfPath);
+        } catch {}
+      }
+      throw err;
+    }
   },
 
   assembleDeterministic(profile: MasterProfileDTO, analysis: any, role: string, company: string) {

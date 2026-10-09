@@ -2,6 +2,7 @@ import { app } from './app';
 import { env } from './config/env';
 import { logger } from './lib/logger';
 import { prisma } from '@tracker/database';
+import { PdfRendererService } from './modules/tailoring/pdf-renderer.service';
 
 const server = app.listen(env.PORT, () => {
   logger.info(
@@ -12,6 +13,7 @@ const server = app.listen(env.PORT, () => {
     },
     `Tracker API server running on port ${env.PORT} (${env.NODE_ENV})`
   );
+  PdfRendererService.checkAvailability();
 });
 
 let isShuttingDown = false;
