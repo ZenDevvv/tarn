@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, CheckCircle, AlertCircle, AlertTriangle, Loader2, X, Check } from 'lucide-react';
 import { masterProfileApi } from '@/features/master-profile/api/master-profile-api';
+import { toErrorMessage } from '@/lib/api-client';
 import { MasterProfileDraftDTO } from '@tracker/types';
 
 interface ResumeUploadDropzoneProps {
@@ -38,7 +39,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
         } catch (err: any) {
           setFeedback({
             type: 'error',
-            message: err?.response?.data?.message || err.message || 'Failed to parse resume file.',
+            message: toErrorMessage(err, 'Failed to parse resume file.'),
           });
         } finally {
           setIsUploading(false);
@@ -87,7 +88,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
     } catch (err: any) {
       setFeedback({
         type: 'error',
-        message: err?.response?.data?.message || err.message || 'Failed to save imported profile.',
+        message: toErrorMessage(err, 'Failed to save imported profile.'),
       });
     } finally {
       setIsConfirming(false);
@@ -130,7 +131,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.txt,.json,.docx"
+            accept=".pdf,.txt,.json"
             className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
@@ -152,7 +153,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
               {isUploading ? 'Extracting & Parsing Sections...' : 'Drop your resume (PDF, TXT, or JSON) here'}
             </span>
             <p className="text-caption text-muted-foreground mt-0.5">
-              Review-before-commit: parse generates a preview draft without modifying your profile until confirmed.
+              PDF, TXT, or JSON. Word documents are not supported — export yours as PDF first.
             </p>
           </div>
 
