@@ -31,7 +31,7 @@ interface CachedDraft {
   savedAt: number;
 }
 
-type ModalStep = 'select' | 'loading' | 'review';
+type ModalStep = 'select' | 'loading' | 'review' | 'success';
 
 export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -227,22 +227,23 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
         // ignore
       }
       setCachedDraftInfo(null);
-      setDraft(null);
-      setSelectedFile(null);
-      setWarnings([]);
-      setModalStep(null);
-      setShowDiscardConfirm(false);
-      setFeedback({
-        type: 'success',
-        message: '✨ Career profile successfully updated from resume!',
-      });
-      onSuccess();
+      setModalStep('success');
+
+      // Subtle, brisk auto-close (1.2s)
+      setTimeout(() => {
+        setModalStep(null);
+        setDraft(null);
+        setSelectedFile(null);
+        setWarnings([]);
+        setShowDiscardConfirm(false);
+        setIsConfirming(false);
+        onSuccess();
+      }, 1200);
     } catch (err: any) {
       setFeedback({
         type: 'error',
         message: toErrorMessage(err, 'Failed to save imported profile.'),
       });
-    } finally {
       setIsConfirming(false);
     }
   };
@@ -350,21 +351,11 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
         </div>
       </div>
 
-      {/* Feedback Banner (outside modal) */}
-      {feedback && modalStep === null && (
-        <div
-          className={`p-3 rounded-lg text-small flex flex-col gap-2 border ${
-            feedback.type === 'success'
-              ? 'bg-primary/10 border-primary/20 text-foreground'
-              : 'bg-destructive/10 border-destructive/20 text-destructive'
-          }`}
-        >
+      {/* Feedback Banner (outside modal, errors only) */}
+      {feedback && feedback.type === 'error' && modalStep === null && (
+        <div className="p-3 rounded-lg text-small flex flex-col gap-2 border bg-destructive/10 border-destructive/20 text-destructive">
           <div className="flex items-start gap-2">
-            {feedback.type === 'success' ? (
-              <CheckCircle size={16} className="text-primary shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            )}
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{feedback.message}</span>
           </div>
         </div>
@@ -386,9 +377,11 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full bg-card border border-border rounded-xl shadow-2xl relative animate-in zoom-in-95 duration-150 ${
+            className={`w-full bg-card border border-border rounded-xl shadow-2xl relative transition-all duration-200 ease-out animate-in zoom-in-95 ${
               modalStep === 'review'
                 ? 'max-w-3xl max-h-[88vh] flex flex-col'
+                : modalStep === 'success'
+                ? 'max-w-sm p-6'
                 : 'max-w-lg p-6 space-y-5'
             }`}
             role="dialog"
@@ -739,6 +732,23 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
                   </button>
                 </div>
               </>
+            )}
+
+            {/* Step 4: Subtle In-Modal Success Feedback with Auto-Close */}
+            {modalStep === 'success' && (
+              <div className="py-5 px-3 flex flex-col items-center justify-center text-center space-y-3.5 animate-in fade-in duration-200">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center transition-transform duration-200 ease-out motion-safe:animate-in motion-safe:zoom-in-90">
+                  <Check size={28} className="stroke-[2.5]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-display font-semibold text-subheading text-foreground">
+                    Saved to Career Fact Bank
+                  </h3>
+                  <p className="text-caption text-muted-foreground">
+                    Profile successfully updated from resume.
+                  </p>
+                </div>
+              </div>
             )}
 
             {/* In-Modal Discard Confirmation Dialog */}
