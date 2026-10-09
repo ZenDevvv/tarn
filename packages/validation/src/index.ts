@@ -9,3 +9,4 @@ export * from "./analytics.schema";
 export * from "./settings.schema";
 export * from "./status.schema";
 export * from "./admin.schema";
+export * from "./tailoring.schema";

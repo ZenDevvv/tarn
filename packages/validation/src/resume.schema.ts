@@ -22,7 +22,7 @@ export const resumeFiltersSchema = z.object({
   search: z.string().optional(),
   targetRole: z.string().optional(),
   isDefault: z.enum(['true', 'false']).optional(),
-  sortBy: z.enum(['createdAt', 'updatedAt', 'name', 'version']).optional().default('createdAt'),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 

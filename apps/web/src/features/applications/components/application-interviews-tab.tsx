@@ -6,17 +6,20 @@ import { ScheduleInterviewModal } from '@/features/interviews/components/schedul
 import { InterviewDTO } from '@tracker/types';
 import { CreateInterviewInput, UpdateInterviewInput } from '@tracker/validation';
 import { Calendar, Plus, Video } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface ApplicationInterviewsTabProps {
   applicationId: string;
   companyName: string;
   jobTitle: string;
+  className?: string;
 }
 
 export function ApplicationInterviewsTab({
   applicationId,
   companyName,
   jobTitle,
+  className,
 }: ApplicationInterviewsTabProps) {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,8 +85,8 @@ export function ApplicationInterviewsTab({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-5">
-      <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+    <div className={cn('space-y-4', className)}>
+      <div className="flex items-center justify-between pb-2 border-b border-border/70">
         <div className="flex items-center gap-2">
           <Calendar size={18} className="text-primary" />
           <h3 className="font-display font-semibold text-subheading text-foreground">

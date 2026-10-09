@@ -9,12 +9,14 @@ import {
   Trash2,
   Plus,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  Edit3,
+  Save,
   FileText,
-  Download,
 } from 'lucide-react';
 import { applicationApi } from '../api/application-api';
-import { resumeApi } from '@/features/resumes/api/resume-api';
-import { ApplicationStatusBadge, StageRing, STATUS_CONFIG } from '../components/application-status-badge';
+import { StageRing, STATUS_CONFIG } from '../components/application-status-badge';
 import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { PriorityGlyph } from '../components/priority-glyph';
 import { Select } from '@/components/ui/select';
@@ -22,7 +24,16 @@ import { ApplicationTimeline } from '../components/application-timeline';
 import { ApplicationInterviewsTab } from '../components/application-interviews-tab';
 import { FollowUpItem } from '@/features/follow-ups/components/follow-up-item';
 import { apiClient } from '@/lib/api-client';
-import { ApplicationStatus, formatEmploymentType, formatWorkSetup } from '@tracker/types';
+import { ApplicationStatus, formatEmploymentType, formatWorkSetup, CoverLetterDTO } from '@tracker/types';
+
+import {
+  tailoringApi,
+  TailoringScorecard,
+  ApplicationDeliverables,
+  TailoringStudioModal,
+  DocumentPreviewModal,
+} from '@/features/tailoring';
+import { coverLetterApi } from '@/features/cover-letters/api/cover-letter-api';
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +41,20 @@ export function ApplicationDetailPage() {
   const queryClient = useQueryClient();
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
+  // Job Description Expand/Edit State
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editDescriptionText, setEditDescriptionText] = useState('');
+
+  // Tailoring Studio & Preview Modals State
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewModalTitle, setPreviewModalTitle] = useState('');
+  const [previewHtmlUrl, setPreviewHtmlUrl] = useState<string | null>(null);
+  const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
+  const [previewCoverLetter, setPreviewCoverLetter] = useState<CoverLetterDTO | null>(null);
+
+  // Follow-up task state
   const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
   const [followUpAction, setFollowUpAction] = useState('');
   const [followUpDueAt, setFollowUpDueAt] = useState(() => {
@@ -44,22 +69,23 @@ export function ApplicationDetailPage() {
     enabled: Boolean(id),
   });
 
-  const { data: userResumes = [] } = useQuery({
-    queryKey: ['resumes-list-all'],
-    queryFn: () => resumeApi.getResumes({}),
-  });
-
   const { data: userStatuses } = useApplicationStatuses();
 
-  const resumeMutation = useMutation({
-    mutationFn: (resumeId: string | null) =>
-      applicationApi.updateApplication(id!, { resumeId } as any),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['application', id] });
-      queryClient.invalidateQueries({ queryKey: ['resumes'] });
-      queryClient.invalidateQueries({ queryKey: ['resumes-count'] });
-    },
+  // Fetch Tailoring Analysis
+  const { data: analysis, isLoading: isAnalysisLoading } = useQuery({
+    queryKey: ['tailoring-analysis', id],
+    queryFn: () => tailoringApi.getAnalysis(id!),
+    enabled: Boolean(id && application?.job?.description),
   });
+
+  // Fetch Cover Letters for this Application
+  const { data: coverLetters = [] } = useQuery({
+    queryKey: ['cover-letters', id],
+    queryFn: () => coverLetterApi.getForApplication(id!),
+    enabled: Boolean(id),
+  });
+
+  const currentCoverLetter = coverLetters[0] || null;
 
   const statusMutation = useMutation({
     mutationFn: (newStatus: ApplicationStatus) => {
@@ -72,6 +98,16 @@ export function ApplicationDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['application', id] });
       queryClient.invalidateQueries({ queryKey: ['applications'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+
+  const updateDescriptionMutation = useMutation({
+    mutationFn: (newDescription: string) =>
+      applicationApi.updateApplication(id!, { description: newDescription }),
+    onSuccess: () => {
+      setIsEditingDescription(false);
+      queryClient.invalidateQueries({ queryKey: ['application', id] });
+      queryClient.invalidateQueries({ queryKey: ['tailoring-analysis', id] });
     },
   });
 
@@ -105,9 +141,34 @@ export function ApplicationDetailPage() {
     queryClient.invalidateQueries({ queryKey: ['follow-ups'] });
   };
 
+  const handleOpenResumePreview = () => {
+    if (!application?.resume) return;
+    setPreviewModalTitle(`Resume Preview: ${application.resume.name}`);
+    setPreviewHtmlUrl(application.resume.isTailored ? tailoringApi.getResumeHtmlUrl(application.resume.id) : null);
+    setPreviewFileUrl(application.resume.fileUrl ?? null);
+    setPreviewCoverLetter(null);
+    setPreviewModalOpen(true);
+  };
+
+  const handleOpenCoverLetterPreview = () => {
+    if (!currentCoverLetter) return;
+    setPreviewModalTitle(`Cover Letter: ${currentCoverLetter.name}`);
+    setPreviewHtmlUrl(tailoringApi.getCoverLetterHtmlUrl(currentCoverLetter.id));
+    setPreviewFileUrl(currentCoverLetter.fileUrl ?? null);
+    setPreviewCoverLetter(currentCoverLetter);
+    setPreviewModalOpen(true);
+  };
+
+  const handleStudioGenerated = () => {
+    queryClient.invalidateQueries({ queryKey: ['application', id] });
+    queryClient.invalidateQueries({ queryKey: ['tailoring-analysis', id] });
+    queryClient.invalidateQueries({ queryKey: ['cover-letters', id] });
+    queryClient.invalidateQueries({ queryKey: ['resumes-list-all'] });
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="animate-spin text-primary" size={28} />
       </div>
     );
@@ -115,7 +176,7 @@ export function ApplicationDetailPage() {
 
   if (isError || !application) {
     return (
-      <div className="p-8 border border-destructive/20 bg-destructive/5 rounded-lg text-center">
+      <div className="p-8 border border-destructive/20 bg-destructive/5 rounded-lg text-center max-w-xl mx-auto my-12">
         <p className="text-body font-medium text-destructive">Application not found</p>
         <p className="text-small text-muted-foreground mt-1">
           {error instanceof Error ? error.message : 'This application may have been archived.'}
@@ -134,36 +195,46 @@ export function ApplicationDetailPage() {
   const job = application.job;
   const timelineEvents = (application as any).timelineEvents || [];
   const followUps = (application as any).followUps || [];
+  const jobDesc = job?.description || '';
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[960px] mx-auto">
-      {/* Top Bar */}
+    <div className="w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-8">
+      {/* Top Header */}
       <div>
         <Link
           to="/applications"
-          className="inline-flex items-center gap-1.5 text-small text-muted-foreground hover:text-foreground no-underline transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 text-small text-muted-foreground hover:text-foreground no-underline transition-colors mb-3"
         >
           <ArrowLeft size={16} strokeWidth={1.5} />
           <span>Back to applications</span>
         </Link>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-caption uppercase tracking-wider text-muted-foreground font-medium">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/80">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap text-caption text-muted-foreground">
+              <span className="uppercase tracking-wider font-semibold text-foreground">
                 {company?.name}
               </span>
               <span className="text-border">•</span>
               <PriorityGlyph priority={application.priority} />
+              {application.appliedAt && (
+                <>
+                  <span className="text-border">•</span>
+                  <span>
+                    Applied {new Date(application.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </>
+              )}
             </div>
-            <h1 className="font-display font-semibold text-display text-foreground tracking-tight">
+
+            <h1 className="font-display font-bold text-3xl sm:text-4xl text-foreground tracking-tight">
               {job?.title}
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Stage Selector Dropdown */}
-            <div className="w-[200px]">
+            <div className="w-[190px]">
               <Select<ApplicationStatus>
                 value={application.status}
                 onChange={(val) => statusMutation.mutate(val)}
@@ -196,7 +267,7 @@ export function ApplicationDetailPage() {
               type="button"
               onClick={() => setIsArchiveModalOpen(true)}
               disabled={archiveMutation.isPending}
-              className="p-2 rounded-md border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
+              className="p-2 rounded-lg border border-border bg-background hover:bg-secondary text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
               title="Archive application"
             >
               <Trash2 size={16} strokeWidth={1.5} />
@@ -205,31 +276,39 @@ export function ApplicationDetailPage() {
         </div>
       </div>
 
-      {/* Main Grid: Details + Timeline */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column: Facts, Notes & Follow-ups */}
-        <div className="md:col-span-7 flex flex-col gap-6">
-          {/* Details Card */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <h3 className="font-display font-semibold text-subheading text-foreground mb-3 pb-2 border-b border-border">
+      {/* Main Grid: Left Column (Content) + Right Column (Scorecard & Timeline) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+        {/* Left Column: Details, Job Description, Deliverables, Interviews, Tasks, Notes */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-10">
+          {/* Opportunity Details (Spec Matrix) */}
+          <div className="space-y-4 pb-8 border-b border-border/70">
+            <h3 className="font-display font-semibold text-subheading text-foreground">
               Opportunity Details
             </h3>
 
-            <div className="grid grid-cols-2 gap-4 text-small">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 text-small">
               <div>
-                <span className="block text-caption text-muted-foreground">Work Setup</span>
+                <span className="block text-micro font-mono uppercase tracking-wider text-muted-foreground mb-1">
+                  Work Setup
+                </span>
                 <span className="font-medium text-foreground">{formatWorkSetup(job?.workSetup)}</span>
               </div>
               <div>
-                <span className="block text-caption text-muted-foreground">Employment Type</span>
+                <span className="block text-micro font-mono uppercase tracking-wider text-muted-foreground mb-1">
+                  Employment Type
+                </span>
                 <span className="font-medium text-foreground">{formatEmploymentType(job?.employmentType)}</span>
               </div>
               <div>
-                <span className="block text-caption text-muted-foreground">Location</span>
+                <span className="block text-micro font-mono uppercase tracking-wider text-muted-foreground mb-1">
+                  Location
+                </span>
                 <span className="font-medium text-foreground">{job?.location || 'Not specified'}</span>
               </div>
               <div>
-                <span className="block text-caption text-muted-foreground">Salary / Compensation</span>
+                <span className="block text-micro font-mono uppercase tracking-wider text-muted-foreground mb-1">
+                  Salary / Compensation
+                </span>
                 <span className="font-medium text-foreground">
                   {job?.salaryMin || job?.salaryMax
                     ? `${job.currency || '$'}${job?.salaryMin?.toLocaleString() || 0} - ${job?.salaryMax?.toLocaleString() || 'N/A'}`
@@ -237,7 +316,9 @@ export function ApplicationDetailPage() {
                 </span>
               </div>
               <div>
-                <span className="block text-caption text-muted-foreground">Applied Date</span>
+                <span className="block text-micro font-mono uppercase tracking-wider text-muted-foreground mb-1">
+                  Applied Date
+                </span>
                 <span className="font-medium text-foreground">
                   {application.appliedAt
                     ? new Date(application.appliedAt).toLocaleDateString('en-US', {
@@ -249,14 +330,16 @@ export function ApplicationDetailPage() {
                 </span>
               </div>
               <div>
-                <span className="block text-caption text-muted-foreground">Platform / Source</span>
+                <span className="block text-micro font-mono uppercase tracking-wider text-muted-foreground mb-1">
+                  Platform / Source
+                </span>
                 <span className="font-medium text-foreground">{job?.source || 'Direct'}</span>
               </div>
             </div>
 
             {job?.sourceUrl && (
-              <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                <span className="text-caption text-muted-foreground">Original Posting</span>
+              <div className="pt-2 flex items-center justify-between text-caption text-muted-foreground">
+                <span>Original Posting</span>
                 <a
                   href={job.sourceUrl}
                   target="_blank"
@@ -268,71 +351,139 @@ export function ApplicationDetailPage() {
                 </a>
               </div>
             )}
+          </div>
 
-            {/* Resume Section */}
-            <div className="mt-4 pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="block text-caption text-muted-foreground">Submitted Resume</span>
-                {application.resume ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <FileText size={15} className="text-primary shrink-0" />
-                    <span className="font-semibold text-small text-foreground">{application.resume.name}</span>
-                    {application.resume.version && (
-                      <span className="px-1.5 py-0.2 rounded font-mono text-micro font-medium bg-secondary text-secondary-foreground border border-border">
-                        {application.resume.version}
-                      </span>
-                    )}
-                    {application.resume.fileUrl && (
-                      <a
-                        href={application.resume.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-micro text-primary hover:underline font-medium ml-1"
-                        title="Download or preview submitted resume"
-                      >
-                        <Download size={12} />
-                        <span>Download</span>
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-small text-muted-foreground italic mt-0.5 block">No resume attached</span>
+          {/* Job Description (Editorial block with inline expand & editor) */}
+          <div className="space-y-3 pb-8 border-b border-border/70">
+            <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-primary" />
+                <h3 className="font-display font-semibold text-subheading text-foreground">
+                  Job Description
+                </h3>
+                {jobDesc && (
+                  <span className="text-micro font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded border border-border">
+                    {jobDesc.split(/\s+/).filter(Boolean).length} words
+                  </span>
                 )}
               </div>
 
-              {/* Quick Resume Selector */}
-              {userResumes.length > 0 && (
-                <div className="w-full sm:w-[220px]">
-                  <Select
-                    value={application.resumeId || ''}
-                    onChange={(val) => resumeMutation.mutate(val || null)}
-                    placeholder="Attach resume..."
-                    options={[
-                      { value: '', label: 'None (detach resume)' },
-                      ...userResumes.map((r) => ({
-                        value: r.id,
-                        label: `${r.name}${r.version ? ` (${r.version})` : ''}`,
-                      })),
-                    ]}
-                  />
-                </div>
+              {jobDesc && !isEditingDescription && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditDescriptionText(jobDesc);
+                    setIsEditingDescription(true);
+                  }}
+                  className="inline-flex items-center gap-1 text-caption font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <Edit3 size={13} />
+                  <span>Edit</span>
+                </button>
               )}
             </div>
+
+            {isEditingDescription ? (
+              <div className="space-y-3 pt-1">
+                <textarea
+                  rows={9}
+                  value={editDescriptionText}
+                  onChange={(e) => setEditDescriptionText(e.target.value)}
+                  placeholder="Paste or edit the full job description here..."
+                  className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-foreground text-small focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-relaxed"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDescription(false)}
+                    className="px-3 py-1.5 text-small text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updateDescriptionMutation.isPending}
+                    onClick={() => updateDescriptionMutation.mutate(editDescriptionText)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-small font-medium transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {updateDescriptionMutation.isPending ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Save size={13} />
+                    )}
+                    <span>Save Description</span>
+                  </button>
+                </div>
+              </div>
+            ) : jobDesc ? (
+              <div>
+                <div
+                  className={`text-small text-foreground/90 leading-relaxed whitespace-pre-wrap transition-all overflow-hidden ${
+                    isDescriptionExpanded ? 'max-h-none' : 'max-h-36 mask-linear-fade'
+                  }`}
+                >
+                  {jobDesc}
+                </div>
+                {jobDesc.length > 250 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    className="mt-2.5 inline-flex items-center gap-1 text-caption text-primary hover:underline font-medium cursor-pointer"
+                  >
+                    <span>{isDescriptionExpanded ? 'Show less' : 'Read full description'}</span>
+                    {isDescriptionExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="py-6 text-center border border-dashed border-border/80 rounded-lg space-y-2 bg-secondary/10">
+                <p className="text-small text-muted-foreground">
+                  No job description added yet. Adding the job description unlocks automated keyword matching and bullet tailoring.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditDescriptionText('');
+                    setIsEditingDescription(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-foreground text-small font-medium transition-colors cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Paste Job Description</span>
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Application Deliverables */}
+          <ApplicationDeliverables
+            resume={application.resume}
+            coverLetter={currentCoverLetter}
+            onPreviewResume={handleOpenResumePreview}
+            onPreviewCoverLetter={handleOpenCoverLetterPreview}
+            onOpenStudio={() => setIsStudioOpen(true)}
+            className="pb-8 border-b border-border/70"
+          />
 
           {/* Interview Rounds Tracker */}
           <ApplicationInterviewsTab
             applicationId={application.id}
             companyName={company?.name || ''}
             jobTitle={job?.title || ''}
+            className="pb-8 border-b border-border/70"
           />
 
           {/* Follow-up Tasks */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
-              <h3 className="font-display font-semibold text-subheading text-foreground">
-                Action Items & Follow-ups
-              </h3>
+          <div className="space-y-4 pb-8 border-b border-border/70">
+            <div className="flex items-center justify-between pb-2 border-b border-border/70">
+              <div>
+                <h3 className="font-display font-semibold text-subheading text-foreground">
+                  Action Items & Follow-ups
+                </h3>
+                <p className="text-caption text-muted-foreground mt-0.5">
+                  Pending tasks and recruiter follow-ups for this application.
+                </p>
+              </div>
               {!isAddingFollowUp && (
                 <button
                   type="button"
@@ -355,7 +506,7 @@ export function ApplicationDetailPage() {
                     dueAt: followUpDueAt,
                   });
                 }}
-                className="flex flex-col gap-2.5 p-3 mb-3 bg-secondary/50 rounded-lg border border-border"
+                className="flex flex-col gap-2.5 p-3.5 bg-secondary/40 rounded-lg border border-border"
               >
                 <input
                   type="text"
@@ -380,7 +531,7 @@ export function ApplicationDetailPage() {
                     <button
                       type="button"
                       onClick={() => setIsAddingFollowUp(false)}
-                      className="px-2 py-1 text-small text-muted-foreground hover:text-foreground cursor-pointer"
+                      className="px-2.5 py-1 text-small text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -398,7 +549,7 @@ export function ApplicationDetailPage() {
 
             <div className="space-y-2">
               {followUps.length === 0 ? (
-                <p className="text-small text-muted-foreground py-2">
+                <p className="text-small text-muted-foreground py-2 italic">
                   No pending follow-ups. Keep momentum going by scheduling one!
                 </p>
               ) : (
@@ -414,29 +565,63 @@ export function ApplicationDetailPage() {
             </div>
           </div>
 
-          {/* Notes Card */}
+          {/* Notes */}
           {application.notes && (
-            <div className="bg-card border border-border rounded-lg p-5">
-              <h3 className="font-display font-semibold text-subheading text-foreground mb-2 pb-2 border-b border-border">
+            <div className="space-y-2 pb-8">
+              <h3 className="font-display font-semibold text-subheading text-foreground">
                 Notes
               </h3>
-              <p className="text-small text-foreground whitespace-pre-wrap leading-relaxed">
+              <p className="text-small text-foreground/90 whitespace-pre-wrap leading-relaxed">
                 {application.notes}
               </p>
             </div>
           )}
         </div>
 
-        {/* Right Column: Activity Timeline */}
-        <div className="md:col-span-5">
-          <div className="bg-card border border-border rounded-lg p-5">
-            <ApplicationTimeline
-              applicationId={application.id}
-              events={timelineEvents}
-            />
-          </div>
+        {/* Right Column: Role Alignment Scorecard (Top) + Activity Timeline (Below) */}
+        <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6 self-start space-y-8">
+          {/* Role Alignment Scorecard */}
+          <TailoringScorecard
+            analysis={analysis}
+            isLoading={isAnalysisLoading}
+            hasJobDescription={Boolean(jobDesc.trim())}
+            isTailored={Boolean(application.resume?.isTailored || currentCoverLetter)}
+            onOpenStudio={() => setIsStudioOpen(true)}
+          />
+
+          {/* Activity Timeline */}
+          <ApplicationTimeline
+            applicationId={application.id}
+            events={timelineEvents}
+          />
         </div>
       </div>
+
+      {/* Tailoring Studio Modal */}
+      <TailoringStudioModal
+        isOpen={isStudioOpen}
+        onClose={() => setIsStudioOpen(false)}
+        applicationId={application.id}
+        analysis={analysis}
+        jobDescription={jobDesc}
+        roleTitle={job?.title}
+        companyName={company?.name}
+        onGenerated={handleStudioGenerated}
+      />
+
+      {/* Document Preview & Edit Modal */}
+      <DocumentPreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        title={previewModalTitle}
+        previewHtmlUrl={previewHtmlUrl}
+        fileUrl={previewFileUrl}
+        coverLetter={previewCoverLetter}
+        onCoverLetterUpdated={(updated) => {
+          setPreviewCoverLetter(updated);
+          queryClient.invalidateQueries({ queryKey: ['cover-letters', id] });
+        }}
+      />
 
       {/* Archive / Delete Confirmation Modal */}
       <ConfirmDeleteModal

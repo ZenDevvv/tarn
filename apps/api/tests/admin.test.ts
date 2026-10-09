@@ -84,7 +84,7 @@ describe("Admin API Integration Tests", () => {
   describe("User Management", () => {
     it("GET /api/v1/admin/users returns paginated user list for ADMIN", async () => {
       const res = await request(app)
-        .get("/api/v1/admin/users")
+        .get("/api/v1/admin/users?limit=100")
         .set("Cookie", adminCookie);
 
       expect(res.status).toBe(200);

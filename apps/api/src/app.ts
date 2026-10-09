@@ -54,11 +54,20 @@ app.use(
 
 // Payload size isolation: 15mb for resume uploads, 100kb for general API calls
 app.use("/api/v1/resumes/upload", express.json({ limit: "15mb" }));
+app.use("/api/v1/master-profile/upload-resume", express.json({ limit: "15mb" }));
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser(env.COOKIE_SECRET));
 
-// Static files for uploaded resumes and attachments
-app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+// Static files for uploaded resumes and attachments with framing allowed for in-app preview
+app.use(
+  "/uploads",
+  (_req, res, next) => {
+    res.removeHeader("X-Frame-Options");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' *");
+    next();
+  },
+  express.static(path.resolve(process.cwd(), "uploads"))
+);
 
 // Cloud Health Probes (unthrottled)
 app.get(["/api/v1/health", "/api/v1/health/live"], (_req, res) => {
@@ -107,6 +116,9 @@ import { resumeRouter } from "./modules/resumes/resume.routes";
 import { settingsRouter } from "./modules/settings/settings.routes";
 import { statusRouter } from "./modules/statuses/status.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
+import { masterProfileRouter } from "./modules/master-profile/master-profile.routes";
+import { tailoringRouter } from "./modules/tailoring/tailoring.routes";
+import { coverLetterRouter } from "./modules/cover-letters/cover-letter.routes";
 
 // Root routes
 export const apiRouter = express.Router();
@@ -121,6 +133,9 @@ apiRouter.use("/follow-ups", followUpRouter);
 apiRouter.use("/analytics", analyticsRouter);
 apiRouter.use("/interviews", interviewRouter);
 apiRouter.use("/admin", adminRouter);
+apiRouter.use("/master-profile", masterProfileRouter);
+apiRouter.use("/tailoring", tailoringRouter);
+apiRouter.use("/cover-letters", coverLetterRouter);
 app.use("/api/v1", apiRouter);
 
 // Error & fallback handling

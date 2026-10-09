@@ -92,12 +92,18 @@ export function AppLayout() {
     staleTime: 30000,
   });
 
+  const { data: coverLetters } = useQuery({
+    queryKey: ["cover-letters-count"],
+    queryFn: () => apiClient.get<any[]>("/cover-letters"),
+    staleTime: 30000,
+  });
+
   const savedCount = analytics?.pipeline?.SAVED ?? 0;
   const activeCount = analytics?.summary?.activeApplications ?? 0;
   const interviewsCount = analytics?.summary?.interviewCount ?? 0;
   const companiesCount = companies?.length ?? 0;
   const contactsCount = contacts?.length ?? 0;
-  const resumesCount = resumes?.length ?? 0;
+  const docsCount = (resumes?.length ?? 0) + (coverLetters?.length ?? 0);
 
   const navItems: NavItem[] = [
     {
@@ -136,10 +142,10 @@ export function AppLayout() {
       count: interviewsCount > 0 ? interviewsCount : undefined,
     },
     {
-      to: "/resumes",
-      label: "Resumes",
+      to: "/documents",
+      label: "Documents",
       icon: <FileText size={16} strokeWidth={1.5} />,
-      count: resumesCount > 0 ? resumesCount : undefined,
+      count: docsCount > 0 ? docsCount : undefined,
     },
     {
       to: "/analytics",

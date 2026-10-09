@@ -11,6 +11,7 @@ import {
   Briefcase,
   Eye,
   FileCode,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -117,11 +118,14 @@ export function ResumeCard({
 
         {/* Floating Top Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
-          {resume.version && (
-            <span className="px-2 py-0.5 rounded text-micro font-mono font-medium bg-background/90 text-foreground border border-border/80 shadow-xs backdrop-blur-xs">
-              {resume.version}
+          <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold bg-background/90 text-foreground border border-border/80 shadow-xs backdrop-blur-xs">
+            RESUME
+          </span>
+          {resume.isTailored && resume.matchScore ? (
+            <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-primary/15 text-primary border border-primary/20 backdrop-blur-xs">
+              {resume.matchScore}% MATCH
             </span>
-          )}
+          ) : null}
           {isPdf ? (
             <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/20 backdrop-blur-xs">
               PDF
@@ -181,6 +185,22 @@ export function ResumeCard({
                 +{resume.skills.length - 4}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Linked Application Pill */}
+        {resume.applications && resume.applications.length > 0 ? (
+          <div className="flex items-center gap-1.5 text-micro font-medium text-foreground bg-secondary/60 border border-border/60 rounded-md px-2 py-1 max-w-full">
+            <Building2 size={12} className="text-primary shrink-0" />
+            <span className="truncate">
+              {resume.applications[0].company?.name || 'Linked Opportunity'}
+              {resume.applications[0].job?.title ? ` • ${resume.applications[0].job.title}` : ''}
+              {resume.applications.length > 1 ? ` (+${resume.applications.length - 1} more)` : ''}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-micro text-muted-foreground bg-muted/40 border border-border/40 rounded-md px-2 py-1">
+            <span className="truncate">General Document (Unlinked)</span>
           </div>
         )}
 

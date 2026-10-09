@@ -95,6 +95,8 @@ model User {
   contacts     Contact[]
   resumes      Resume[]
   statuses     ApplicationStatus[]
+  masterProfile MasterProfile?
+  coverLetters CoverLetter[]
   auditLogs    AuditLog[]    @relation("UserAuditLogs")
 
   @@index([role])
@@ -174,6 +176,7 @@ model Application {
   followUps      FollowUp[]
   interviews     Interview[]
   contacts       Contact[]
+  coverLetters   CoverLetter[]
 
   @@index([userId])
   @@index([userId, statusId])
@@ -323,7 +326,7 @@ model Resume {
   id         String   @id @default(cuid())
   userId     String
   name       String
-  version    String?
+  version    String?  /// @deprecated Versioning is deprecated and no longer used in UI
   targetRole String?
   fileUrl    String?
   filename   String?
@@ -332,6 +335,9 @@ model Resume {
   isDefault  Boolean  @default(false)
   skills     String[] @default([])
   notes      String?  @db.Text
+  content    Json?
+  isTailored Boolean  @default(false)
+  matchScore Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -341,6 +347,48 @@ model Resume {
   @@index([userId])
   @@index([userId, isDefault])
   @@map("resumes")
+}
+
+model MasterProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  basics            Json
+  positioningRules  String[] @default([])
+  factBank          Json
+  summaryCandidates Json?    @default("[]")
+  workExperience    Json
+  projectExperience Json
+  technicalSkills   Json
+  education         Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("master_profiles")
+}
+
+model CoverLetter {
+  id            String   @id @default(cuid())
+  userId        String
+  applicationId String?
+  name          String
+  role          String?
+  company       String?
+  content       String   @db.Text
+  htmlContent   String?  @db.Text
+  fileUrl       String?
+  matchScore    Int?
+  echoedPhrases String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([applicationId])
+  @@map("cover_letters")
 }
 
 model AuditLog {
@@ -360,3 +408,4 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+

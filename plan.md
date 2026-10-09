@@ -1,45 +1,65 @@
-# Implementation Plan: Dynamic Application Statuses & Workflow Pipeline (`statuses`)
+# Implementation Plan: Application Tailoring, Scoring & Multi-User Career Profile (`tailoring`)
 
-> **Objective:** Shift application status management from a rigid, hardcoded enum to a dynamic, user-configurable database model (`ApplicationStatus`), enabling users to add, rename, and reorder stages in Settings while preserving deterministic StageRing visuals, Kanban column layouts, and analytics funnels.
-> **Detailed Task Plan:** [tasks/plan-statuses.md](file:///c:/Users/Zen/Desktop/MY%20PROJECTS/test/test-project2/tasks/plan-statuses.md)
-> **Specification:** [spec-statuses.md](file:///c:/Users/Zen/Desktop/MY%20PROJECTS/test/test-project2/spec-statuses.md)
+> **Objective:** Integrate the Resume-Builder tailoring engine into Tarn with full multi-user support, elevating the Application Detail view into an active application studio with real-time JD match scoring, high-priority keyword & gap analysis, user-configurable Master Profile settings (with resume PDF upload/auto-parsing, JSON import/export, and visual fact banking), dual deliverable cards (Tailored Resume & Targeted Cover Letter), in-app preview, and 1-click PDF generation matching `Zen Obrero RESUME.backup.pdf`.
+> **Detailed Task Plan:** [tasks/plan-tailoring.md](file:///home/machenike/Projects/tarn/tasks/plan-tailoring.md)
+> **Specification:** [spec-tailoring.md](file:///home/machenike/Projects/tarn/spec-tailoring.md)
 
 ---
 
 ## Phased Execution Overview
 
-- [x] **Task 1: Documentation & Capability Mapping (DEFINE)**
-  - Author `spec-statuses.md`
-  - Update `CAPABILITY_MAP.md`
-- [x] **Task 2: Database Schema & Seed Script (`packages/database`)**
-  - Add `CloseType` enum and `ApplicationStatus` model to `schema.prisma`
-  - Update `Application.statusId` foreign key relation
+- [x] **Task 1: Database Schema & Seed Data (`packages/database`)**
+  - Add `MasterProfile` and `CoverLetter` models to `schema.prisma`
+  - Enhance `Resume` model with `content Json?`, `isTailored`, `matchScore`
+  - Link `coverLetters` relation on `Application`
   - Apply Prisma push and re-generate client
-  - Update seed script in `seed.ts`
-- [x] **Task 3: Shared Contracts & Validation (`packages/types`, `packages/validation`)**
-  - Export `CloseType`, `ApplicationStatusDTO`, updated `ApplicationDTO`
-  - Create `status.schema.ts` and update `application.schema.ts`
-- [x] **Task 4: Backend Statuses Module & Integration Tests (TDD) (`apps/api`)**
-  - Write Supertest test suite `apps/api/tests/statuses.test.ts`
-  - Implement repository, service, controller, and routes at `/api/v1/statuses`
-- [x] **Task 5: Auth & Applications Integration (`apps/api`)**
-  - Seed default statuses on user registration in `auth.service.ts`
-  - Include status relation and default fallback in `application.repository.ts`
-  - Update user data export in `settings.service.ts`
-- [x] **Task 6: Dynamic Analytics Engine Refactor (`apps/api`)**
-  - Calculate active vs closed applications and order-driven funnel in `analytics.service.ts`
-  - Update analytics test suite
-- [x] **Task 7: Frontend Status API, Hook & Dynamic StageRing (`apps/web`)**
-  - Implement `status-api.ts` and `useApplicationStatuses()` hook
-  - Refactor `StageRing` & `ApplicationStatusBadge` for dynamic order fractions and closeType icons
-  - Update status badge tests
-- [x] **Task 8: Dynamic Kanban & Dashboard Pipeline (`apps/web`)**
-  - Render dynamic Kanban columns in `application-kanban.tsx`
-  - Render dynamic active grid and closed outcomes in `pipeline-strip.tsx`
-  - Update form and modal select dropdowns
-- [x] **Task 9: Settings "Pipeline & Stages" Management UI (`apps/web`)**
-  - Add "Stages" tab to `settings-nav.tsx` and `settings-page.tsx`
-  - Implement `PipelineStagesSection` with live previews, reordering, and deletion safety guards
-- [x] **Task 10: Multi-Module Verification & Knowledge Graph Maintenance (SHIP)**
-  - Run full test suite across monorepo (`pnpm test` - 135/135 tests passing)
-  - Run build verification (`pnpm build` - all packages & apps cleanly built)
+  - Pre-seed default user's `MasterProfile` in `seed.ts` with Zen Andrei Obrero's data from `Resume-Builder/data/master_resume.json`
+
+- [x] **Task 2: Shared Domain Contracts & Validation (`packages/types`, `packages/validation`)**
+  - Export `MasterProfileDTO`, `CoverLetterDTO`, `JdAnalysisResultDTO`, `TailoredResumePayload`
+  - Implement `tailoring.schema.ts` with Zod validation for generation, resume upload, master profile, and cover letters
+
+- [x] **Task 3: Profile Extraction & Resume Parsing Service (`apps/api`)**
+  - Implement `ProfileExtractorService` to parse uploaded resume PDFs/DOCX and JSON into structured `MasterProfile` sections
+  - Add routes: `GET /api/v1/master-profile`, `PUT /api/v1/master-profile`, `POST /api/v1/master-profile/upload-resume`, `POST /api/v1/master-profile/import-json`, `GET /api/v1/master-profile/export-json`
+  - Author integration tests in `tests/master-profile.test.ts`
+
+- [x] **Task 4: Deterministic NLP Analyzer & Validation Services (`apps/api`)**
+  - Port `analyze_job_description.py` into TypeScript `JdAnalyzerService` (n-grams, stop-words, tech patterns, action verbs, match score against user's specific profile)
+  - Port `validate_tailoring.py` into TypeScript `TailoringValidatorService` (keyword coverage %, echo counts, zero-warning fidelity checks)
+  - Author test suite in `tests/tailoring-analysis.test.ts`
+
+- [x] **Task 5: Document Template Engine & Headless PDF Renderer (`apps/api`)**
+  - Port classic layout HTML templates and CSS from `Resume-Builder` (dynamic user details, education first, work experience, project experience, technical skills, black text, classic blue links, no summary section)
+  - Implement headless Chromium PDF generation via native `/usr/bin/chromium --headless=new --print-to-pdf`
+
+- [x] **Task 6: Tailoring Coordinator & API Endpoints (`apps/api`)**
+  - Implement `TailoringService` with user-scoped dynamic tailoring (Deterministic ranking vs Gemini Flash AI synthesis respecting user's custom positioning rules)
+  - Expose `GET /api/v1/applications/:id/tailoring/analysis`
+  - Expose `POST /api/v1/applications/:id/tailoring/generate`
+  - Expose preview HTML and PDF streaming endpoints
+  - Implement Cover Letter CRUD routes
+
+- [x] **Task 7: Frontend API Clients & TanStack Query Hooks (`apps/web`)**
+  - Implement `master-profile-api.ts`, `tailoring-api.ts`, and `cover-letter-api.ts`
+
+- [x] **Task 8: Settings "Career Profile & Fact Bank" Management UI (`apps/web`)**
+  - Add **"Career Profile"** tab to Settings (`/settings`)
+  - Build `ResumeUploadDropzone` for 1-click resume PDF auto-extraction
+  - Build visual form editor for Contact Basics, Experience bullets, Projects, Skills, Education, and custom Positioning Rules
+  - Add JSON import / export buttons for instant backup
+
+- [x] **Task 9: Marker UI Tailoring Components (`apps/web`)**
+  - Implement `TailoringScorecard` (radial match ring %, matched lime pills, gap pills, echo phrases)
+  - Implement `ApplicationDeliverables` (dual elevated cards for Tailored Resume & Cover Letter with preview/download actions)
+  - Implement `TailoringStudioModal` (keyword inspection, engine mode selector, live generation, validation report)
+  - Implement `DocumentPreviewModal` (sandboxed iframe preview for classic documents)
+
+- [x] **Task 10: Application Detail Page Redesign (`apps/web`)**
+  - Integrate `TailoringScorecard` and `ApplicationDeliverables` into `application-detail-page.tsx`
+  - Add collapsible/expandable Job Description card with in-place editing
+  - Wire modals for live generation, editing, and previewing
+
+- [x] **Task 11: Multi-Module Verification & Testing (SHIP)**
+  - Run full test suite across monorepo (`pnpm test`)
+  - Run build verification (`pnpm build`)

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ResumeWithDetailsDTO } from '@tracker/types';
 import { StageRing, getStatusConfig } from '@/features/applications/components/application-status-badge';
 import { resolveDocumentUrl } from '../api/resume-api';
+import { tailoringApi } from '@/features/tailoring/api/tailoring-api';
 import {
   X,
   FileText,
@@ -16,6 +17,8 @@ import {
   Sparkles,
   Building2,
   ChevronRight,
+  Eye,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -26,6 +29,7 @@ export interface ResumeDetailModalProps {
   onEdit: (resume: ResumeWithDetailsDTO) => void;
   onDelete: (resume: ResumeWithDetailsDTO) => void;
   onSetDefault: (resume: ResumeWithDetailsDTO) => void;
+  onPreviewFullscreen?: (resume: ResumeWithDetailsDTO) => void;
 }
 
 function formatBytes(bytes?: number | null): string {
@@ -43,11 +47,46 @@ export function ResumeDetailModal({
   onEdit,
   onDelete,
   onSetDefault,
+  onPreviewFullscreen,
 }: ResumeDetailModalProps) {
   if (!isOpen || !resume) return null;
 
   const isPdf = resume.mimeType?.includes('pdf') || resume.filename?.toLowerCase().endsWith('.pdf');
   const resolvedUrl = resolveDocumentUrl(resume.fileUrl);
+
+  const previewHtmlUrl =
+    resume.isTailored || resume.content
+      ? tailoringApi.getResumeHtmlUrl(resume.id)
+      : null;
+
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [isLoadingHtml, setIsLoadingHtml] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !previewHtmlUrl) {
+      setHtmlContent(null);
+      setIsLoadingHtml(false);
+      return;
+    }
+
+    setIsLoadingHtml(true);
+    setIframeError(false);
+    fetch(previewHtmlUrl, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then((html) => {
+        setHtmlContent(html);
+        setIsLoadingHtml(false);
+      })
+      .catch((err) => {
+        console.warn('Could not fetch resume HTML preview:', err);
+        setHtmlContent(null);
+        setIsLoadingHtml(false);
+      });
+  }, [isOpen, previewHtmlUrl]);
 
   return (
     <div
@@ -72,11 +111,6 @@ export function ResumeDetailModal({
                 <h2 id="resume-detail-title" className="font-display font-bold text-heading text-foreground tracking-tight">
                   {resume.name}
                 </h2>
-                {resume.version && (
-                  <span className="px-2 py-0.5 rounded text-micro font-mono font-medium bg-secondary text-secondary-foreground border border-border">
-                    {resume.version}
-                  </span>
-                )}
                 {resume.isDefault && (
                   <span
                     className="inline-flex items-center justify-center text-amber-500 shrink-0"
@@ -159,12 +193,23 @@ export function ResumeDetailModal({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {onPreviewFullscreen && (
+                    <button
+                      type="button"
+                      onClick={() => onPreviewFullscreen(resume)}
+                      className="px-3 py-1.5 text-small font-semibold bg-secondary hover:bg-secondary/80 text-foreground rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer border border-border"
+                      title="Inspect full screen"
+                    >
+                      <Eye size={14} className="text-primary" />
+                      <span>Fullscreen</span>
+                    </button>
+                  )}
                   <a
                     href={resolvedUrl}
                     download={resume.filename || true}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 text-small font-semibold bg-primary text-primary-foreground rounded-lg hover:opacity-95 transition-opacity inline-flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-small font-semibold bg-primary text-primary-foreground rounded-lg hover:opacity-95 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     <Download size={14} />
                     <span>Download</span>
@@ -172,20 +217,53 @@ export function ResumeDetailModal({
                 </div>
               </div>
 
-              {/* Embedded Document Viewer if PDF */}
-              {isPdf && (
-                <div className="w-full h-80 rounded-xl overflow-hidden border border-border bg-muted/20">
-                  <iframe
-                    src={`${resolvedUrl}#toolbar=0&navpanes=0&view=FitH`}
-                    title={resume.name}
-                    className="w-full h-full border-0 bg-white dark:bg-zinc-900"
-                  />
+              {/* Embedded Document Viewer */}
+              {(previewHtmlUrl || isPdf) && (
+                <div className="w-full h-80 rounded-xl overflow-hidden border border-border bg-muted/20 relative">
+                  {isLoadingHtml && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/80 backdrop-blur-xs">
+                      <Loader2 size={24} className="animate-spin text-primary" />
+                      <span className="text-micro text-muted-foreground font-mono">Loading preview...</span>
+                    </div>
+                  )}
+                  {htmlContent ? (
+                    <iframe
+                      srcDoc={htmlContent}
+                      title={resume.name}
+                      className="w-full h-full border-0 bg-white"
+                    />
+                  ) : resolvedUrl && isPdf && !iframeError ? (
+                    <iframe
+                      src={`${resolvedUrl}#toolbar=0&navpanes=0&view=FitH`}
+                      title={resume.name}
+                      onError={() => setIframeError(true)}
+                      className="w-full h-full border-0 bg-white dark:bg-zinc-900"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
+                      <FileText size={32} className="opacity-40" />
+                      <p className="text-small font-medium text-foreground">
+                        {iframeError ? 'Embedded preview unavailable' : 'Preview not available for this format'}
+                      </p>
+                      {resolvedUrl && (
+                        <a
+                          href={resolvedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 text-micro text-primary hover:underline font-medium inline-flex items-center gap-1"
+                        >
+                          <ExternalLink size={12} />
+                          <span>Open document in new tab</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-secondary/30 border border-dashed border-border text-center text-small text-muted-foreground">
-              No file attachment or document URL linked to this resume version.
+              No file attachment or document URL linked to this document.
             </div>
           )}
 

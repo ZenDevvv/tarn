@@ -50,6 +50,10 @@ export function resolveDocumentUrl(fileUrl?: string | null): string {
   if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
     return fileUrl;
   }
+  // In browser, keep relative /uploads paths to leverage local reverse proxy and same-origin framing
+  if (typeof window !== 'undefined' && fileUrl.startsWith('/uploads')) {
+    return fileUrl;
+  }
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
   const origin = apiBase.replace(/\/api\/v1\/?$/, '');
   return `${origin}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;

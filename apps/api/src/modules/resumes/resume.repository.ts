@@ -33,8 +33,6 @@ export const resumeRepository = {
 
     if (filters.sortBy === 'name') {
       orderBy = { name: sortOrder };
-    } else if (filters.sortBy === 'version') {
-      orderBy = { version: sortOrder };
     } else if (filters.sortBy === 'updatedAt') {
       orderBy = { updatedAt: sortOrder };
     } else {
@@ -79,6 +77,8 @@ export const resumeRepository = {
       fileSize: r.fileSize,
       mimeType: r.mimeType,
       isDefault: r.isDefault,
+      isTailored: (r as any).isTailored ?? false,
+      matchScore: (r as any).matchScore ?? null,
       skills: r.skills,
       notes: r.notes,
       createdAt: r.createdAt.toISOString(),
@@ -138,6 +138,8 @@ export const resumeRepository = {
       fileSize: r.fileSize,
       mimeType: r.mimeType,
       isDefault: r.isDefault,
+      isTailored: (r as any).isTailored ?? false,
+      matchScore: (r as any).matchScore ?? null,
       skills: r.skills,
       notes: r.notes,
       createdAt: r.createdAt.toISOString(),
@@ -193,6 +195,8 @@ export const resumeRepository = {
         fileSize: r.fileSize,
         mimeType: r.mimeType,
         isDefault: r.isDefault,
+        isTailored: (r as any).isTailored ?? false,
+        matchScore: (r as any).matchScore ?? null,
         skills: r.skills,
         notes: r.notes,
         createdAt: r.createdAt.toISOString(),
@@ -257,6 +261,8 @@ export const resumeRepository = {
         fileSize: r.fileSize,
         mimeType: r.mimeType,
         isDefault: r.isDefault,
+        isTailored: (r as any).isTailored ?? false,
+        matchScore: (r as any).matchScore ?? null,
         skills: r.skills,
         notes: r.notes,
         createdAt: r.createdAt.toISOString(),
@@ -315,6 +321,8 @@ export const resumeRepository = {
         fileSize: r.fileSize,
         mimeType: r.mimeType,
         isDefault: r.isDefault,
+        isTailored: (r as any).isTailored ?? false,
+        matchScore: (r as any).matchScore ?? null,
         skills: r.skills,
         notes: r.notes,
         createdAt: r.createdAt.toISOString(),

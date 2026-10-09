@@ -79,8 +79,12 @@ const router = createBrowserRouter([
             element: <SavedJobsPage />,
           },
           {
-            path: "/resumes",
+            path: "/documents",
             element: <ResumesPage />,
+          },
+          {
+            path: "/resumes",
+            element: <Navigate to="/documents" replace />,
           },
           {
             path: "/analytics",

@@ -29,7 +29,6 @@ export function ResumeFormModal({
 }: ResumeFormModalProps) {
   const [sourceType, setSourceType] = useState<'upload' | 'link'>('upload');
   const [name, setName] = useState('');
-  const [version, setVersion] = useState('');
   const [targetRole, setTargetRole] = useState('');
   const [fileUrl, setFileUrl] = useState('');
   const [filename, setFilename] = useState('');
@@ -52,7 +51,6 @@ export function ResumeFormModal({
     if (isOpen) {
       if (resume) {
         setName(resume.name || '');
-        setVersion(resume.version || '');
         setTargetRole(resume.targetRole || '');
         setFileUrl(resume.fileUrl || '');
         setFilename(resume.filename || '');
@@ -64,7 +62,6 @@ export function ResumeFormModal({
         setSourceType(resume.fileUrl?.startsWith('http') && !resume.fileUrl.includes('/uploads/') ? 'link' : 'upload');
       } else {
         setName('');
-        setVersion('v1.0');
         setTargetRole('');
         setFileUrl('');
         setFilename('');
@@ -167,7 +164,6 @@ export function ResumeFormModal({
 
       const payload: CreateResumeInput = {
         name: name.trim(),
-        version: version.trim() || null,
         targetRole: targetRole.trim() || null,
         fileUrl: finalFileUrl || null,
         filename: finalFilename || null,
@@ -207,10 +203,10 @@ export function ResumeFormModal({
             </div>
             <div>
               <h2 id="resume-modal-title" className="font-display font-semibold text-subheading text-foreground">
-                {isEdit ? 'Edit Resume Version' : 'Add Tailored Resume'}
+                {isEdit ? 'Edit Resume' : 'Add Resume Document'}
               </h2>
               <p className="text-micro text-muted-foreground mt-0.5">
-                {isEdit ? 'Update resume details, target role, or document link' : 'Upload or link a tailored resume for specific job archetypes'}
+                {isEdit ? 'Update resume details, target role, or document link' : 'Upload or link a resume document for your applications'}
               </p>
             </div>
           </div>
@@ -329,37 +325,21 @@ export function ResumeFormModal({
             )}
           </div>
 
-          {/* Name & Version */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label htmlFor="resume-name" className="text-small font-semibold text-foreground">
-                Resume Name <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="resume-name"
-                ref={initialFocusRef}
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Senior Frontend Specialist"
-                required
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-small text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="resume-version" className="text-small font-semibold text-foreground">
-                Version Tag
-              </label>
-              <input
-                id="resume-version"
-                type="text"
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                placeholder="v3.0"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-small text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring font-mono"
-              />
-            </div>
+          {/* Document Name */}
+          <div className="space-y-1.5">
+            <label htmlFor="resume-name" className="text-small font-semibold text-foreground">
+              Document / Resume Name <span className="text-destructive">*</span>
+            </label>
+            <input
+              id="resume-name"
+              ref={initialFocusRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Senior Frontend Specialist or Resume - Linear"
+              required
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-small text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+            />
           </div>
 
           {/* Target Role */}

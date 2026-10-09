@@ -35,8 +35,7 @@ export function ResumeFilters({
   const sortOptions = [
     { value: 'recent_desc', label: 'Recently Created' },
     { value: 'updated_desc', label: 'Recently Updated' },
-    { value: 'name_asc', label: 'Resume Name (A–Z)' },
-    { value: 'version_desc', label: 'Version (Newest)' },
+    { value: 'name_asc', label: 'Document Name (A–Z)' },
   ];
 
   return (

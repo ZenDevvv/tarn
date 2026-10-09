@@ -13,6 +13,8 @@ describe('Resumes Feature - Unit Tests', () => {
     fileSize: 1048576,
     mimeType: 'application/pdf',
     isDefault: true,
+    isTailored: false,
+    matchScore: null,
     skills: ['React', 'TypeScript', 'Tailwind', 'Performance'],
     notes: 'Tailored with focus on design systems and web performance.',
     createdAt: new Date().toISOString(),
@@ -40,7 +42,6 @@ describe('Resumes Feature - Unit Tests', () => {
 
   it('validates resume entity fields and relationships', () => {
     expect(mockResume.name).toBe('Frontend Specialist 2026');
-    expect(mockResume.version).toBe('v3.0');
     expect(mockResume.targetRole).toBe('Senior Frontend Engineer');
     expect(mockResume.isDefault).toBe(true);
     expect(mockResume.skills).toContain('React');

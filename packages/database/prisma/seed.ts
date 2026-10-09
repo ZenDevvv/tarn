@@ -12,6 +12,8 @@ import {
   InterviewResult,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import fs from "fs";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -19,6 +21,9 @@ async function main() {
   console.log("🌱 Starting database seed...");
 
   // Clean existing records
+  await prisma.coverLetter.deleteMany();
+  await prisma.resume.deleteMany();
+  await prisma.masterProfile.deleteMany();
   await prisma.contact.deleteMany();
   await prisma.interview.deleteMany();
   await prisma.followUp.deleteMany();
@@ -42,6 +47,57 @@ async function main() {
   });
 
   console.log(`👤 Created user: ${user.name} (${user.email}) [${user.role}]`);
+
+  // Seed user's MasterProfile from Resume-Builder or default ground truth
+  const resumeBuilderPath = path.resolve(
+    process.cwd(),
+    "../Resume-Builder/data/master_resume.json"
+  );
+  let masterData: any;
+  if (fs.existsSync(resumeBuilderPath)) {
+    try {
+      masterData = JSON.parse(fs.readFileSync(resumeBuilderPath, "utf-8"));
+    } catch {
+      masterData = null;
+    }
+  }
+
+  const fallbackBasics = {
+    name: "Zen Andrei Obrero",
+    location: "Dasmarinas, Cavite",
+    phone: "09068575015",
+    email: "zenandreiobrero777@gmail.com",
+    links: [
+      { label: "Portfolio", url: "https://zendev-portfolio.netlify.app/" },
+      { label: "GitHub", url: "https://github.com/ZenDevvv" },
+    ],
+  };
+
+  await prisma.masterProfile.create({
+    data: {
+      userId: user.id,
+      basics: masterData?.basics || fallbackBasics,
+      positioningRules: masterData?.meta?.positioning_rules || [
+        "Never frame the candidate as a 'fresh graduate' or 'recent graduate'.",
+        "Lead with professional full-stack experience shipping production enterprise systems.",
+        "Education is a credential (BS CS, With Honors), not the primary narrative.",
+        "Primary product highlight is Bandai Namco HRIS (admin, HR, employee surfaces; 6,000+ employee records).",
+        "Put HRIS first in experience bullets and project sections when tailoring.",
+      ],
+      factBank: masterData?.fact_bank || {
+        core_positioning: ["Professional fullstack developer specializing in React and TypeScript"],
+        priority_themes: ["Bandai Namco HRIS", "Enterprise applications", "Frontend engineering"],
+        quantified_highlights: ["6,000+ employee records handled in Bandai Namco HRIS"],
+      },
+      summaryCandidates: masterData?.summary_candidates || [],
+      workExperience: masterData?.work_experience || [],
+      projectExperience: masterData?.project_experience || [],
+      technicalSkills: masterData?.technical_skills || {},
+      education: masterData?.education || [],
+    },
+  });
+
+  console.log(`📜 Seeded MasterProfile for user ${user.name}`);
 
   // Create dedicated administrator account
   const adminUser = await prisma.user.create({

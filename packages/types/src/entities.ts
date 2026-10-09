@@ -205,6 +205,7 @@ export interface ApplicationDTO {
   job?: JobDTO;
   interviews?: InterviewDTO[];
   resume?: ResumeDTO | null;
+  coverLetters?: CoverLetterDTO[];
 }
 
 export interface TimelineEventDTO {
@@ -382,6 +383,7 @@ export interface ResumeDTO {
   id: string;
   userId: string;
   name: string;
+  /** @deprecated Versioning is deprecated and removed from UI */
   version?: string | null;
   targetRole?: string | null;
   fileUrl?: string | null;
@@ -391,8 +393,110 @@ export interface ResumeDTO {
   isDefault: boolean;
   skills: string[];
   notes?: string | null;
+  content?: any | null;
+  isTailored: boolean;
+  matchScore?: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MasterProfileBasics {
+  name: string;
+  location?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  links: Array<{ label: string; url: string }>;
+}
+
+export interface MasterProfileWorkExperienceItem {
+  company: string;
+  location?: string | null;
+  role: string;
+  date_range: string;
+  bullets: string[];
+}
+
+export interface MasterProfileProjectItem {
+  name: string;
+  subtitle?: string | null;
+  stack?: string[];
+  bullets: string[];
+}
+
+export interface MasterProfileEducationItem {
+  school: string;
+  location?: string | null;
+  degree?: string | null;
+  honors?: string | null;
+  graduation?: string | null;
+  details?: string | null;
+  bullets?: string[];
+}
+
+export interface MasterProfileDTO {
+  id: string;
+  userId: string;
+  basics: MasterProfileBasics;
+  positioningRules: string[];
+  factBank: {
+    core_positioning?: string[];
+    priority_themes?: string[];
+    quantified_highlights?: string[];
+    highlight_project?: any;
+    [key: string]: any;
+  };
+  summaryCandidates?: any[];
+  workExperience: MasterProfileWorkExperienceItem[];
+  projectExperience: MasterProfileProjectItem[];
+  technicalSkills: Record<string, string[]>;
+  education: MasterProfileEducationItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoverLetterDTO {
+  id: string;
+  userId: string;
+  applicationId?: string | null;
+  name: string;
+  role?: string | null;
+  company?: string | null;
+  content: string; // Markdown
+  htmlContent?: string | null;
+  fileUrl?: string | null;
+  matchScore?: number | null;
+  echoedPhrases: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoverLetterWithDetailsDTO extends CoverLetterDTO {
+  application?: {
+    id: string;
+    status: ApplicationStatus;
+    priority: Priority;
+    appliedAt?: string | null;
+    company?: {
+      id: string;
+      name: string;
+    } | null;
+    job?: {
+      id: string;
+      title: string;
+    } | null;
+  } | null;
+}
+
+export interface JdAnalysisResultDTO {
+  matchScore: number;
+  highPriorityKeywords: string[];
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  keyVerbs: string[];
+  exactPhrases: string[];
+  role?: string;
+  company?: string;
+  fidelityWarnings?: string[];
 }
 
 export interface ResumeWithDetailsDTO extends ResumeDTO {

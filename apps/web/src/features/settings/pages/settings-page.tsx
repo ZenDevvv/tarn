@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { settingsApi } from "../api/settings-api";
 import { SettingsNav, SettingsTab } from "../components/settings-nav";
 import { ProfileSection } from "../components/profile-section";
+import { CareerProfileSection } from "../components/career-profile-section";
 import { PreferencesSection } from "../components/preferences-section";
 import { PipelineStagesSection } from "../components/pipeline-stages-section";
 import { SecuritySection } from "../components/security-section";
@@ -17,6 +18,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 
 const VALID_TABS: readonly SettingsTab[] = [
   "profile",
+  "career",
   "preferences",
   "stages",
   "security",
@@ -147,6 +149,8 @@ export function SettingsPage() {
             isSaving={profileMutation.isPending}
           />
         )}
+
+        {activeTab === "career" && <CareerProfileSection />}
 
         {activeTab === "preferences" && (
           <PreferencesSection
