@@ -36,6 +36,19 @@ export class TailoringValidatorService {
     (profile.education || []).forEach((ed) => {
       profileTextParts.push(ed.school || '', ed.degree || '', ed.honors || '', ed.graduation || '');
     });
+    (profile.customSections || []).forEach((sec: any) => {
+      profileTextParts.push(sec.title || '');
+      (sec.items || []).forEach((item: any) => {
+        if (typeof item === 'string') {
+          profileTextParts.push(item);
+        } else if (item && typeof item === 'object') {
+          Object.values(item).forEach((v) => {
+            if (Array.isArray(v)) profileTextParts.push(...v.map(String));
+            else if (v) profileTextParts.push(String(v));
+          });
+        }
+      });
+    });
     if (profile.factBank) {
       Object.values(profile.factBank).forEach((val) => {
         if (Array.isArray(val)) {
@@ -115,14 +128,26 @@ export class TailoringValidatorService {
     });
 
     // 5b. Employers Grounding (Resume Experience)
-    const masterCompanies = new Set(
-      (profile.workExperience || []).flatMap((w) => {
+    const customSectionEmployers: string[] = [];
+    (profile.customSections || []).forEach((sec: any) => {
+      if (sec.type === 'timeline') {
+        (sec.items || []).forEach((item: any) => {
+          if (item?.organization) customSectionEmployers.push(item.organization.toLowerCase().trim());
+          if (item?.company) customSectionEmployers.push(item.company.toLowerCase().trim());
+          if (item?.role) customSectionEmployers.push(item.role.toLowerCase().trim());
+        });
+      }
+    });
+
+    const masterCompanies = new Set([
+      ...(profile.workExperience || []).flatMap((w) => {
         const items: string[] = [];
         if (w.company) items.push(w.company.toLowerCase().trim());
         if (w.role) items.push(w.role.toLowerCase().trim());
         return items;
-      })
-    );
+      }),
+      ...customSectionEmployers,
+    ]);
     (resumePayload.experience || []).forEach((e) => {
       const cLower = e.company.toLowerCase().trim();
       const isKnown =
@@ -147,9 +172,20 @@ export class TailoringValidatorService {
     });
 
     // 5c2. Certifications Grounding
-    const masterCerts = new Set(
-      collectVerifiedCerts(profile).map((c) => c.toLowerCase().trim())
-    );
+    const customSectionCerts: string[] = [];
+    (profile.customSections || []).forEach((sec: any) => {
+      if (sec.type === 'credentials') {
+        (sec.items || []).forEach((item: any) => {
+          const name = typeof item === 'string' ? item : item?.name || '';
+          if (name) customSectionCerts.push(name.toLowerCase().trim());
+        });
+      }
+    });
+
+    const masterCerts = new Set([
+      ...collectVerifiedCerts(profile).map((c) => c.toLowerCase().trim()),
+      ...customSectionCerts,
+    ]);
 
     (resumePayload.certifications || []).forEach((cert: any) => {
       const cName = (typeof cert === 'string' ? cert : cert.name || '').toLowerCase().trim();

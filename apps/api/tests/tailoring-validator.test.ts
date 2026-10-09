@@ -514,4 +514,62 @@ In my work at Uzaro Solutions Technology Inc., I delivered reliable solutions.
     expect(report.matchedKeywords).toContain('acuity');
     expect(report.keywordCoveragePercent).toBe(100);
   });
+
+  it('grounds employers and certifications defined in polymorphic customSections', () => {
+    const profileWithPolymorphicSections: MasterProfileDTO = {
+      ...sampleProfile,
+      customSections: [
+        {
+          id: 'clinical_rotations',
+          title: 'Clinical Rotations',
+          type: 'timeline',
+          items: [
+            {
+              role: 'Pediatric Resident',
+              organization: 'St. Jude Childrens Research Hospital',
+              date_range: '2021 - 2022',
+              bullets: ['Managed pediatric oncology patient protocols.'],
+            },
+          ],
+        },
+        {
+          id: 'state_bar',
+          title: 'Bar Admissions',
+          type: 'credentials',
+          items: [
+            {
+              name: 'State Bar of New York',
+              issuer: 'New York Appellate Division',
+              date: '2020',
+            },
+          ],
+        },
+      ],
+    };
+
+    const tailoredPayload = {
+      experience: [
+        {
+          company: 'St. Jude Childrens Research Hospital',
+          role: 'Pediatric Resident',
+          date_range: '2021 - 2022',
+          bullets: ['Managed pediatric oncology patient protocols.'],
+        },
+      ],
+      certifications: ['State Bar of New York'],
+    };
+
+    const report = TailoringValidatorService.validate(
+      tailoredPayload,
+      '',
+      ['pediatric'],
+      [],
+      profileWithPolymorphicSections
+    );
+
+    // Organization and Certification from customSections must be recognized as grounded
+    expect(report.fidelityWarnings.filter((w) => w.includes('St. Jude'))).toHaveLength(0);
+    expect(report.fidelityWarnings.filter((w) => w.includes('State Bar of New York'))).toHaveLength(0);
+    expect(report.isValid).toBe(true);
+  });
 });

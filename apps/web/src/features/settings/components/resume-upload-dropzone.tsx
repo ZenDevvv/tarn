@@ -77,6 +77,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
           ...e,
           bullets: e.bullets || [],
         })),
+        customSections: draft.customSections || [],
       });
       setFeedback({
         type: 'success',

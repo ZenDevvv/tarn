@@ -12,6 +12,61 @@ export const generateTailoringSchema = z.object({
 });
 
 
+export const sectionTypeSchema = z.enum([
+  'timeline',
+  'credentials',
+  'publications',
+  'skills_matrix',
+  'freeform',
+]);
+
+export const timelineItemSchema = z.object({
+  id: z.string().optional(),
+  role: z.string().trim().min(1),
+  organization: z.string().trim().min(1),
+  location: z.string().trim().optional().nullable(),
+  date_range: z.string().trim().optional().nullable(),
+  bullets: z.array(z.string().trim()).default([]),
+  attributes: z.record(z.string()).optional(),
+});
+
+export const credentialItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1),
+  issuer: z.string().trim().optional().nullable(),
+  licenseNumber: z.string().trim().optional().nullable(),
+  jurisdiction: z.string().trim().optional().nullable(),
+  date: z.string().trim().optional().nullable(),
+  expirationDate: z.string().trim().optional().nullable(),
+  status: z.string().trim().optional().nullable(),
+});
+
+export const publicationItemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().trim().min(1),
+  authors: z.array(z.string().trim()).optional().default([]),
+  venue: z.string().trim().optional().nullable(),
+  date: z.string().trim().optional().nullable(),
+  doiOrUrl: z.string().trim().optional().nullable(),
+});
+
+export const skillGroupItemSchema = z.object({
+  category: z.string().trim().min(1),
+  skills: z.array(z.string().trim()).default([]),
+});
+
+export const freeformItemSchema = z.object({
+  heading: z.string().trim().optional().nullable(),
+  content: z.string().trim().min(1),
+});
+
+export const polymorphicSectionSchema = z.object({
+  id: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+  type: sectionTypeSchema,
+  items: z.array(z.any()).default([]),
+});
+
 export const updateMasterProfileSchema = z.object({
   basics: z.object({
     name: z.string().trim().min(1, 'Name is required'),
@@ -57,6 +112,7 @@ export const updateMasterProfileSchema = z.object({
     details: z.string().trim().optional().nullable(),
     bullets: z.array(z.string().trim()).optional().default([]),
   })).default([]),
+  customSections: z.array(polymorphicSectionSchema).optional(),
 });
 
 export const uploadProfileResumeSchema = z.object({
@@ -119,6 +175,7 @@ export const aiResumePayloadSchema = z.object({
   skills: z.record(z.array(z.string().trim())).default({}),
   summary: z.string().trim().optional().nullable(),
   certifications: z.array(z.any()).optional().default([]),
+  customSections: z.array(polymorphicSectionSchema).optional(),
   sectionOrder: z.array(z.string()).optional(),
 });
 

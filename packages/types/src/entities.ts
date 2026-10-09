@@ -433,6 +433,60 @@ export interface MasterProfileEducationItem {
   bullets?: string[];
 }
 
+export type SectionType =
+  | 'timeline'
+  | 'credentials'
+  | 'publications'
+  | 'skills_matrix'
+  | 'freeform';
+
+export interface TimelineItem {
+  id?: string;
+  role: string;
+  organization: string;
+  location?: string | null;
+  date_range?: string | null;
+  bullets: string[];
+  attributes?: Record<string, string>;
+}
+
+export interface CredentialItem {
+  id?: string;
+  name: string;
+  issuer?: string | null;
+  licenseNumber?: string | null;
+  jurisdiction?: string | null;
+  date?: string | null;
+  expirationDate?: string | null;
+  status?: string | null;
+}
+
+export interface PublicationItem {
+  id?: string;
+  title: string;
+  authors?: string[];
+  venue?: string | null;
+  date?: string | null;
+  doiOrUrl?: string | null;
+}
+
+export interface SkillGroupItem {
+  category: string;
+  skills: string[];
+}
+
+export interface FreeformItem {
+  heading?: string | null;
+  content: string;
+}
+
+export interface PolymorphicSection {
+  id: string;
+  title: string;
+  type: SectionType;
+  items: Array<TimelineItem | CredentialItem | PublicationItem | SkillGroupItem | FreeformItem | any>;
+}
+
 export interface MasterProfileDTO {
   id: string;
   userId: string;
@@ -450,6 +504,7 @@ export interface MasterProfileDTO {
   projectExperience: MasterProfileProjectItem[];
   skills: Record<string, string[]>;
   education: MasterProfileEducationItem[];
+  customSections?: PolymorphicSection[];
   createdAt: string;
   updatedAt: string;
 }

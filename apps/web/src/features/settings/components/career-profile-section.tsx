@@ -115,6 +115,7 @@ export function CareerProfileSection() {
         ...e,
         bullets: e.bullets || [],
       })),
+      customSections: formData.customSections || [],
     });
   };
 

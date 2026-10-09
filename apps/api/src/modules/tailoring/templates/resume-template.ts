@@ -383,6 +383,109 @@ export function buildResumeHtml(payload: any): string {
     </section>`
     : '';
 
+  // 7. Custom / Polymorphic Sections
+  const customSections = Array.isArray(payload.customSections) ? payload.customSections : [];
+  const customSectionsHtmlMap: Record<string, string> = {};
+
+  customSections.forEach((sec: any) => {
+    if (!sec || !sec.title) return;
+    const secId = (sec.id || sec.title).toLowerCase().trim();
+    const items = Array.isArray(sec.items) ? sec.items : [];
+    let itemsHtml = '';
+
+    if (sec.type === 'timeline') {
+      itemsHtml = items
+        .map((item: any) => {
+          const bullets = consolidateBullets(item.bullets || [])
+            .map((b: string) => `<li>${escapeHtml(b)}</li>`)
+            .join('');
+          return `
+            <article class="entry">
+              <div class="entry-header">
+                <div class="entry-title">${escapeHtml(item.organization || item.company || '')}</div>
+                <div class="entry-date">${escapeHtml(item.location || '')}</div>
+              </div>
+              <div class="entry-meta-row">
+                <div class="entry-subtitle">${escapeHtml(item.role || item.title || '')}</div>
+                <div class="entry-date">${escapeHtml(item.date_range || item.date || '')}</div>
+              </div>
+              ${bullets ? `<ul class="entry-list">${bullets}</ul>` : ''}
+            </article>
+          `;
+        })
+        .join('');
+    } else if (sec.type === 'credentials') {
+      itemsHtml = items
+        .map((cert: any) => {
+          const name = typeof cert === 'string' ? cert : cert.name || '';
+          const issuer = typeof cert === 'object' ? cert.issuer : undefined;
+          const date = typeof cert === 'object' ? cert.date : undefined;
+          return `
+            <div class="cert-row">
+              <div>
+                <span class="cert-label">${escapeHtml(name)}</span>
+                ${issuer ? `<span class="cert-issuer">— ${escapeHtml(issuer)}</span>` : ''}
+              </div>
+              ${date ? `<div class="cert-date">${escapeHtml(date)}</div>` : ''}
+            </div>
+          `;
+        })
+        .join('');
+    } else if (sec.type === 'publications') {
+      itemsHtml = items
+        .map((pub: any) => {
+          const authors = Array.isArray(pub.authors) ? pub.authors.join(', ') : pub.authors || '';
+          const metaLine = [authors, pub.venue, pub.date].filter(Boolean).join(' | ');
+          return `
+            <article class="entry">
+              <div class="entry-title">${escapeHtml(pub.title || '')}</div>
+              ${metaLine ? `<div class="entry-subtitle">${escapeHtml(metaLine)}</div>` : ''}
+            </article>
+          `;
+        })
+        .join('');
+    } else if (sec.type === 'skills_matrix') {
+      const rows = items
+        .map((grp: any) => {
+          const skillsStr = Array.isArray(grp.skills) ? grp.skills.join(', ') : String(grp.skills || '');
+          return `
+            <div class="skill-row">
+              <span class="skill-label">${escapeHtml(grp.category || 'Skills')}:</span><span class="skill-value">${escapeHtml(skillsStr)}</span>
+            </div>
+          `;
+        })
+        .join('');
+      itemsHtml = `<div class="skills-grid">${rows}</div>`;
+    } else {
+      itemsHtml = items
+        .map((item: any) => {
+          if (typeof item === 'string') {
+            return `<p class="summary-text">${escapeHtml(item)}</p>`;
+          }
+          return `
+            <article class="entry">
+              ${item.heading ? `<div class="entry-title">${escapeHtml(item.heading)}</div>` : ''}
+              <div class="summary-text">${escapeHtml(item.content || '')}</div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    if (itemsHtml) {
+      const sectionHtml = `
+        <section class="section">
+          <div class="section-kicker">${escapeHtml(sec.title)}</div>
+          <div class="section-body">
+            ${itemsHtml}
+          </div>
+        </section>
+      `;
+      customSectionsHtmlMap[secId] = sectionHtml;
+      customSectionsHtmlMap[sec.title.toLowerCase().trim()] = sectionHtml;
+    }
+  });
+
   // Section mapping
   const sectionMap: Record<string, string> = {
     summary: summarySectionHtml,
@@ -391,6 +494,7 @@ export function buildResumeHtml(payload: any): string {
     skills: skillsSectionHtml,
     education: educationSectionHtml,
     certifications: certificationsSectionHtml,
+    ...customSectionsHtmlMap,
   };
 
   // Determine section ordering
@@ -415,10 +519,39 @@ export function buildResumeHtml(payload: any): string {
     activeOrder = ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
   }
 
-  const renderedSectionsHtml = activeOrder
-    .map((secKey) => sectionMap[secKey.toLowerCase().trim()] || '')
-    .filter(Boolean)
-    .join('\n');
+  const renderedKeys = new Set<string>();
+  const renderedSections: string[] = [];
+
+  for (const secKey of activeOrder) {
+    const keyLower = secKey.toLowerCase().trim();
+    if (sectionMap[keyLower] && !renderedKeys.has(keyLower)) {
+      renderedSections.push(sectionMap[keyLower]);
+      renderedKeys.add(keyLower);
+      const matchedCustom = customSections.find(
+        (s: any) => (s.id || '').toLowerCase() === keyLower || (s.title || '').toLowerCase() === keyLower
+      );
+      if (matchedCustom) {
+        if (matchedCustom.id) renderedKeys.add(matchedCustom.id.toLowerCase().trim());
+        if (matchedCustom.title) renderedKeys.add(matchedCustom.title.toLowerCase().trim());
+      }
+    }
+  }
+
+  // Append any custom sections not explicitly specified in activeOrder
+  for (const sec of customSections) {
+    const idKey = (sec.id || '').toLowerCase().trim();
+    const titleKey = (sec.title || '').toLowerCase().trim();
+    if (!renderedKeys.has(idKey) && !renderedKeys.has(titleKey)) {
+      const html = customSectionsHtmlMap[idKey] || customSectionsHtmlMap[titleKey];
+      if (html) {
+        renderedSections.push(html);
+        if (idKey) renderedKeys.add(idKey);
+        if (titleKey) renderedKeys.add(titleKey);
+      }
+    }
+  }
+
+  const renderedSectionsHtml = renderedSections.join('\n');
 
   return `<!doctype html>
 <html lang="en">

@@ -316,4 +316,76 @@ describe('buildResumeHtml Skills Kicker & Shared Stack Tests', () => {
 
     expect(html).not.toContain('Shared Stack');
   });
+
+  describe('Phase 2 polymorphic custom sections rendering', () => {
+    it('renders timeline and credential custom sections with proper headers and entries', () => {
+      const html = buildResumeHtml({
+        ...baseBasics,
+        customSections: [
+          {
+            id: 'clinical_rotations',
+            title: 'Clinical Rotations',
+            type: 'timeline',
+            items: [
+              {
+                role: 'Pediatric ICU Resident',
+                organization: 'Childrens Hospital of Philadelphia',
+                date_range: '2022 - 2023',
+                location: 'Philadelphia, PA',
+                bullets: ['Managed ventilator care for 15+ neonatal patients.'],
+              },
+            ],
+          },
+          {
+            id: 'bar_admissions',
+            title: 'Bar Admissions & Licensure',
+            type: 'credentials',
+            items: [
+              {
+                name: 'State Bar of California',
+                issuer: 'Supreme Court of California',
+                date: 'Dec 2021',
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(html).toContain('Clinical Rotations');
+      expect(html).toContain('Childrens Hospital of Philadelphia');
+      expect(html).toContain('Pediatric ICU Resident');
+      expect(html).toContain('Managed ventilator care for 15+ neonatal patients.');
+      expect(html).toContain('Bar Admissions &amp; Licensure');
+      expect(html).toContain('State Bar of California');
+      expect(html).toContain('Supreme Court of California');
+    });
+
+    it('honors custom section placement in sectionOrder', () => {
+      const html = buildResumeHtml({
+        ...baseBasics,
+        sectionOrder: ['clinical_rotations', 'experience', 'skills'],
+        customSections: [
+          {
+            id: 'clinical_rotations',
+            title: 'Clinical Rotations',
+            type: 'timeline',
+            items: [
+              {
+                role: 'Rotational Intern',
+                organization: 'Metro Hospital',
+                date_range: '2023',
+                bullets: ['Supported patient triage.'],
+              },
+            ],
+          },
+        ],
+      });
+
+      const rotIndex = html.indexOf('Clinical Rotations');
+      const expIndex = html.indexOf('Work Experience');
+      expect(rotIndex).toBeGreaterThan(-1);
+      expect(expIndex).toBeGreaterThan(-1);
+      expect(rotIndex).toBeLessThan(expIndex);
+    });
+  });
 });
