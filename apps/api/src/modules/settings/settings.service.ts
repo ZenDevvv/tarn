@@ -11,6 +11,7 @@ import {
   AuthenticationError,
   NotFoundError,
 } from "../../middleware/error-handler";
+import { DEFAULT_STATUSES } from "../statuses/status.repository";
 
 export const settingsService = {
   async getSettings(userId: string): Promise<UserSettingsDTO> {
@@ -271,5 +272,61 @@ export const settingsService = {
       followUps: user.followUps,
       resumes: user.resumes,
     };
+  },
+
+  async resetUserData(userId: string): Promise<UserSettingsDTO> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Clear foreign key reference on user
+      await tx.user.update({
+        where: { id: userId },
+        data: { defaultResumeId: null },
+      });
+
+      // 2. Delete timeline events tied to the user's applications
+      await tx.timelineEvent.deleteMany({
+        where: { application: { userId } },
+      });
+
+      // 3. Delete follow-ups, interviews, and cover letters
+      await tx.followUp.deleteMany({ where: { userId } });
+      await tx.interview.deleteMany({ where: { userId } });
+      await tx.coverLetter.deleteMany({ where: { userId } });
+
+      // 4. Delete applications
+      await tx.application.deleteMany({ where: { userId } });
+
+      // 5. Delete contacts, jobs, companies, resumes, and master profile
+      await tx.contact.deleteMany({ where: { userId } });
+      await tx.job.deleteMany({ where: { userId } });
+      await tx.company.deleteMany({ where: { userId } });
+      await tx.resume.deleteMany({ where: { userId } });
+      await tx.masterProfile.deleteMany({ where: { userId } });
+
+      // 6. Delete custom application statuses
+      await tx.applicationStatus.deleteMany({ where: { userId } });
+
+      // 7. Re-seed default pipeline statuses
+      for (const status of DEFAULT_STATUSES) {
+        await tx.applicationStatus.create({
+          data: {
+            userId,
+            name: status.name,
+            order: status.order,
+            closeType: status.closeType,
+            isDefault: status.isDefault,
+          },
+        });
+      }
+    });
+
+    return this.getSettings(userId);
   },
 };

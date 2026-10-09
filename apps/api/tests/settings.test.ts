@@ -189,4 +189,44 @@ describe('Settings API Integration Tests', () => {
     expect(resB.body.data.defaultCurrency).toBe('PHP');
     expect(resB.body.data.stats.totalApplications).toBe(0);
   });
+
+  it('POST /api/v1/settings/reset returns 401 when unauthenticated', async () => {
+    const res = await request(app).post('/api/v1/settings/reset');
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /api/v1/settings/reset wipes user data, resets stats to zero, and retains user profile and session', async () => {
+    // Before reset, User A has at least 1 application
+    const beforeRes = await request(app)
+      .get('/api/v1/settings')
+      .set('Cookie', userACookie);
+    expect(beforeRes.body.data.stats.totalApplications).toBeGreaterThan(0);
+
+    // Call reset endpoint
+    const resetRes = await request(app)
+      .post('/api/v1/settings/reset')
+      .set('Cookie', userACookie);
+
+    expect(resetRes.status).toBe(200);
+    expect(resetRes.body.message).toContain('Account data has been reset successfully');
+    expect(resetRes.body.data.stats.totalApplications).toBe(0);
+    expect(resetRes.body.data.stats.activeApplications).toBe(0);
+    expect(resetRes.body.data.stats.totalCompanies).toBe(0);
+    expect(resetRes.body.data.stats.totalInterviews).toBe(0);
+    expect(resetRes.body.data.stats.totalContacts).toBe(0);
+    expect(resetRes.body.data.stats.totalResumes).toBe(0);
+
+    // Verify user profile, email, name, preferences were preserved
+    expect(resetRes.body.data.email).toBe(userAEmail);
+    expect(resetRes.body.data.name).toBe('Alex Rivera');
+    expect(resetRes.body.data.defaultCurrency).toBe('EUR');
+
+    // Verify pipeline statuses were re-seeded
+    const statusesRes = await request(app)
+      .get('/api/v1/statuses')
+      .set('Cookie', userACookie);
+    expect(statusesRes.status).toBe(200);
+    expect(statusesRes.body.data.length).toBeGreaterThanOrEqual(8);
+  });
 });
+

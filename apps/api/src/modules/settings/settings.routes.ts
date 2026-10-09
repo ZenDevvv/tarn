@@ -21,3 +21,5 @@ settingsRouter.patch(
 );
 settingsRouter.post('/password', validateBody(changePasswordSchema), settingsController.changePassword);
 settingsRouter.get('/export', settingsController.exportData);
+settingsRouter.post('/reset', settingsController.resetAccountData);
+

@@ -1,16 +1,45 @@
 import React, { useState } from 'react';
 import { UserSettingsDTO } from '@tracker/types';
-import { Download, Loader2, Database, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Download, Loader2, Database, ShieldAlert, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ResetAccountModal } from './reset-account-modal';
+import { settingsApi } from '../api/settings-api';
 
 interface DataSectionProps {
   settings: UserSettingsDTO;
   onExport: () => Promise<void>;
+  onReset?: () => Promise<void>;
+  isResetting?: boolean;
 }
 
-export function DataSection({ settings, onExport }: DataSectionProps) {
+export function DataSection({ settings, onExport, onReset, isResetting }: DataSectionProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [localResetting, setLocalResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const handleResetConfirm = async () => {
+    setLocalResetting(true);
+    setResetError(null);
+    try {
+      if (onReset) {
+        await onReset();
+      } else {
+        await settingsApi.resetAccountData();
+      }
+      setIsResetModalOpen(false);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 5000);
+    } catch (err: any) {
+      setResetError(err?.message || 'Could not reset account data. Try again later.');
+      throw err;
+    } finally {
+      setLocalResetting(false);
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -174,15 +203,54 @@ export function DataSection({ settings, onExport }: DataSectionProps) {
       </div>
 
       {/* Danger Zone */}
-      <div className="border-t border-border pt-6 flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-destructive">
-          <ShieldAlert size={18} />
-          <h3 className="text-subheading font-sans font-semibold">Danger zone</h3>
+      <div className="border-t border-border pt-6 flex flex-col gap-4">
+        <div className="p-5 rounded-xl border border-destructive/25 bg-destructive-tint/10 flex flex-col gap-4">
+          <div className="flex items-center gap-2 text-destructive">
+            <ShieldAlert size={18} />
+            <h3 className="text-subheading font-sans font-semibold">Danger zone</h3>
+          </div>
+          <p className="text-small text-muted-foreground">
+            Resetting your account permanently erases all job applications, companies, recruiter contacts, interview rounds, custom resumes, and cover letters. Your account credentials and default pipeline stages will be retained, but all activity records will be cleared to zero.
+          </p>
+
+          {resetSuccess && (
+            <div
+              role="status"
+              className="flex items-center gap-2.5 p-3 rounded-lg text-small bg-success-tint text-success border border-success/20"
+            >
+              <CheckCircle2 size={16} />
+              <span>Your account data has been reset successfully.</span>
+            </div>
+          )}
+
+          {resetError && (
+            <div
+              role="alert"
+              className="flex items-center gap-2.5 p-3 rounded-lg text-small bg-destructive-tint text-destructive border border-destructive/20"
+            >
+              <span>{resetError}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsResetModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-destructive text-destructive-foreground font-medium text-small hover:bg-destructive/90 transition-colors cursor-pointer shadow-xs focus-visible:outline-2 focus-visible:outline-destructive"
+            >
+              <RotateCcw size={15} />
+              <span>Reset account data</span>
+            </button>
+          </div>
         </div>
-        <p className="text-small text-muted-foreground">
-          Need to delete or reset your account? Contact your database administrator or run hard delete in your local environment. All cascaded applications, timeline events, and uploaded documents are permanently erased on account deletion.
-        </p>
       </div>
+
+      <ResetAccountModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onConfirm={handleResetConfirm}
+        isPending={isResetting || localResetting}
+      />
     </div>
   );
 }

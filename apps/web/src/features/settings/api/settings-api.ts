@@ -27,6 +27,12 @@ export const settingsApi = {
     return res;
   },
 
+  async resetAccountData(): Promise<UserSettingsDTO> {
+    const res = await apiClient.post<UserSettingsDTO>('/settings/reset');
+    return res;
+  },
+
+
   async downloadExport(): Promise<void> {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
     const response = await fetch(`${baseUrl}/settings/export`, {
