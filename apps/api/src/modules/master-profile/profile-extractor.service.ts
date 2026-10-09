@@ -401,25 +401,52 @@ export class ProfileExtractorService {
     const eduLines = getSectionText('EDUCATION');
     const education: Array<{ school: string; location?: string | null; degree?: string | null; honors?: string | null; graduation?: string | null; bullets?: string[] }> = [];
     if (eduLines.length > 0) {
-      const [firstEdu, secondEdu] = eduLines;
+      // `pdftotext -layout` aligns columns with runs of spaces, so a two-column header
+      // arrives as "Institution<padding>City, Region". Split those runs apart so the
+      // padding never survives into school/degree.
+      const eduSegments = eduLines
+        .flatMap((l) => l.trim().split(/\s{6,}/))
+        .map((l) => l.trim())
+        .filter(Boolean);
+      // The degree is the segment naming a qualification, wherever it appears; the school
+      // is the institution segment. Anything left over (locations, honorifics) stays out
+      // of both and is picked up as bullets below.
+      const isDegreeSegment = (s: string) =>
+        /\b(B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?|M\.?B\.?A\.?|Ph\.?D\.?|Bachelor|Master|Doctor|Diploma)\b/i.test(
+          s
+        );
+      // Only reach for the qualification heuristic once an institution is actually
+      // identified. Without that signal the layout is unresolvable, so positional order
+      // stands — "Apprenticeship Certificate" on line 1 stays the school.
+      const institutionIdx = eduSegments.findIndex((s) => looksLikeEmployer(s) && !isDegreeSegment(s));
+      const degreeIdx = institutionIdx >= 0 ? eduSegments.findIndex(isDegreeSegment) : -1;
+      const [firstEdu, secondEdu] = eduSegments;
       let school = firstEdu?.trim() || '';
-      let degree = secondEdu?.trim() || null;
-      // Education is commonly degree-first (qualification on line 1, institution on
-      // line 2). Reuse COMPANY_SIGNAL_REGEX to find the institution instead of assuming
-      // the school always leads; when neither line signals an institution the positional
-      // assignment above stands.
-      if (school && degree && looksLikeEmployer(degree) && !looksLikeEmployer(school)) {
-        // The institution line usually ends in the graduation year, which `graduation`
-        // already carries — drop it so the school field is not duplicated.
-        school = degree.replace(/[,|–—]?\s*\b(?:19|20)\d{2}\b\s*$/, '').trim();
-        degree = firstEdu.trim();
+      let degree = degreeIdx >= 0 ? eduSegments[degreeIdx] : secondEdu?.trim() || null;
+      if (institutionIdx >= 0) {
+        school = eduSegments[institutionIdx].replace(/[,|–—]?\s*\b(?:19|20)\d{2}\b\s*$/, '').trim();
       }
-      const allEduText = eduLines.join(' ');
+      if (looksLikeEmployer(school) && degree === school) {
+        degree = null;
+      }
+      const consumed = new Set([institutionIdx, degreeIdx].filter((i) => i >= 0));
+      const allEduText = eduSegments.join(' ');
       const gradMatch = allEduText.match(/\b(19\d{2}|20\d{2})\b/);
       const graduation = gradMatch ? gradMatch[0] : null;
-      const bullets = consolidateBullets(eduLines.slice(2));
+      // A leftover segment that is only a place (and optional "Graduated <year>" tail)
+      // is the campus location, not an achievement — carry it on the entry instead of
+      // letting it merge into the first bullet.
+      let eduLocation: string | null = null;
+      const leftovers = eduSegments.filter((_s, i) => !consumed.has(i));
+      const placeOnly = /^[A-Z][a-zA-Z.\- ]*,\s*[A-Z][a-zA-Z.\- ]+$/.test(leftovers[0] || '');
+      const rest = placeOnly ? leftovers.slice(1) : leftovers;
+      if (placeOnly) {
+        eduLocation = leftovers[0];
+      }
+      const bullets = consolidateBullets(rest);
       education.push({
         school,
+        location: eduLocation,
         degree,
         graduation,
         bullets,
