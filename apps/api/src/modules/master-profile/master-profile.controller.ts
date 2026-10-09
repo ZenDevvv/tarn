@@ -22,8 +22,8 @@ export const masterProfileController = {
 
   async uploadResume(req: Request, res: Response, next: NextFunction) {
     try {
-      const profile = await masterProfileService.uploadResume(req.user!.id, req.body);
-      res.json({ data: profile, message: 'Resume parsed and profile updated successfully' });
+      const draftResult = await masterProfileService.uploadResume(req.user!.id, req.body);
+      res.json({ data: draftResult, message: 'Resume parsed successfully. Please review before importing.' });
     } catch (err) {
       next(err);
     }
@@ -31,7 +31,16 @@ export const masterProfileController = {
 
   async importJson(req: Request, res: Response, next: NextFunction) {
     try {
-      const profile = await masterProfileService.importJson(req.user!.id, req.body);
+      const draftResult = await masterProfileService.importJson(req.user!.id, req.body);
+      res.json({ data: draftResult, message: 'JSON parsed successfully. Please review before importing.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async confirmImport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const profile = await masterProfileService.confirmImport(req.user!.id, req.body);
       res.json({ data: profile, message: 'Profile imported successfully' });
     } catch (err) {
       next(err);

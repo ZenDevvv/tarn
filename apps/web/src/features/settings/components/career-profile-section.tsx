@@ -68,11 +68,18 @@ export function CareerProfileSection() {
     reader.onload = async () => {
       try {
         const json = JSON.parse(reader.result as string);
-        const updated = await masterProfileApi.importJson(json);
-        queryClient.setQueryData(['master-profile'], updated);
-        setFormData(updated);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        const { profile, warnings } = await masterProfileApi.importJson(json);
+        setFormData((prev) => ({
+          ...prev,
+          ...profile,
+          id: prev?.id || '',
+          userId: prev?.userId || '',
+          createdAt: prev?.createdAt || '',
+          updatedAt: prev?.updatedAt || '',
+        }));
+        if (warnings.length > 0) {
+          alert(`Draft loaded from JSON with warnings:\n• ${warnings.join('\n• ')}\n\nPlease review your Career Profile and click "Save Changes" to confirm.`);
+        }
       } catch (err: any) {
         alert('Invalid JSON file format: ' + err.message);
       }

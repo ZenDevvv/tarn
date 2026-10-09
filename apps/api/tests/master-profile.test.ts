@@ -108,7 +108,13 @@ describe('Master Profile API Integration Tests', () => {
     expect(resB.body.data.workExperience).toHaveLength(0);
   });
 
-  it('POST /api/v1/master-profile/import-json imports full JSON profile', async () => {
+  it('POST /api/v1/master-profile/import-json returns draft and warnings without writing until confirm-import', async () => {
+    // Check initial name for User B
+    const beforeRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userBCookie);
+    expect(beforeRes.body.data.basics.name).toBe('Profile User B');
+
     const jsonImport = {
       basics: {
         name: 'Alex Rivera',
@@ -130,14 +136,40 @@ describe('Master Profile API Integration Tests', () => {
       education: [],
     };
 
-    const res = await request(app)
+    // 1. Import returns draft + warnings, does NOT write to database
+    const draftRes = await request(app)
       .post('/api/v1/master-profile/import-json')
       .set('Cookie', userBCookie)
       .send(jsonImport);
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.basics.name).toBe('Alex Rivera');
-    expect(res.body.data.workExperience[0].company).toBe('Nexus Tech');
+    expect(draftRes.status).toBe(200);
+    expect(draftRes.body.data.profile.basics.name).toBe('Alex Rivera');
+    expect(draftRes.body.data.profile.workExperience[0].company).toBe('Nexus Tech');
+    expect(draftRes.body.data.warnings).toContain('Education not found — please verify');
+
+    // Verify DB profile is UNTOUCHED
+    const untouchedRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userBCookie);
+    expect(untouchedRes.body.data.basics.name).toBe('Profile User B');
+    expect(untouchedRes.body.data.workExperience).toHaveLength(0);
+
+    // 2. confirm-import commits the draft to database
+    const confirmRes = await request(app)
+      .post('/api/v1/master-profile/confirm-import')
+      .set('Cookie', userBCookie)
+      .send(draftRes.body.data.profile);
+
+    expect(confirmRes.status).toBe(200);
+    expect(confirmRes.body.data.basics.name).toBe('Alex Rivera');
+    expect(confirmRes.body.data.workExperience[0].company).toBe('Nexus Tech');
+
+    // Verify DB profile is now updated
+    const afterRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userBCookie);
+    expect(afterRes.body.data.basics.name).toBe('Alex Rivera');
+    expect(afterRes.body.data.workExperience[0].company).toBe('Nexus Tech');
   });
 
   it('GET /api/v1/master-profile/export-json exports structured profile', async () => {
@@ -151,15 +183,13 @@ describe('Master Profile API Integration Tests', () => {
     expect(res.body.data.work_experience).toHaveLength(1);
   });
 
-  it('POST /api/v1/master-profile/upload-resume parses raw text file and updates profile', async () => {
+  it('POST /api/v1/master-profile/upload-resume returns draft and warnings without writing until confirm-import', async () => {
     const sampleResumeText = `
 John Smith
 john.smith@gmail.com | 555-123-4567 | San Francisco, CA
-Portfolio | GitHub
 
 WORK EXPERIENCE
-Globex Corporation                                                                          San Francisco
-Lead Web Architect                                                                     2021 - Present
+Globex Corporation | Lead Web Architect | 2021 - Present
 • Designed resilient microfrontends in React and TypeScript reducing load time by 40%
 • Mentored 8 junior engineers across frontend performance and automated testing
 
@@ -169,12 +199,13 @@ Backend: Node.js, Express, PostgreSQL
 
 EDUCATION
 Stanford University
-BS Computer Science
+BS Computer Science | 2020
     `;
 
     const base64Content = Buffer.from(sampleResumeText, 'utf-8').toString('base64');
 
-    const res = await request(app)
+    // 1. Upload returns draft + warnings, does NOT write to database
+    const draftRes = await request(app)
       .post('/api/v1/master-profile/upload-resume')
       .set('Cookie', userACookie)
       .send({
@@ -183,9 +214,34 @@ BS Computer Science
         fileData: base64Content,
       });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.basics.email).toBe('john.smith@gmail.com');
-    expect(res.body.data.workExperience.length).toBeGreaterThan(0);
-    expect(res.body.data.technicalSkills.Frontend).toBeDefined();
+    expect(draftRes.status).toBe(200);
+    expect(draftRes.body.data.profile.basics.name).toBe('John Smith');
+    expect(draftRes.body.data.profile.basics.email).toBe('john.smith@gmail.com');
+    expect(draftRes.body.data.profile.basics.location).toBe('San Francisco, CA');
+    expect(draftRes.body.data.profile.workExperience.length).toBeGreaterThan(0);
+    expect(draftRes.body.data.profile.technicalSkills.Frontend).toBeDefined();
+    expect(draftRes.body.data.warnings).toBeInstanceOf(Array);
+
+    // Verify DB profile is still Jane Doe (from previous test), NOT John Smith
+    const untouchedRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userACookie);
+    expect(untouchedRes.body.data.basics.name).toBe('Jane Doe');
+
+    // 2. Confirm import commits to DB
+    const confirmRes = await request(app)
+      .post('/api/v1/master-profile/confirm-import')
+      .set('Cookie', userACookie)
+      .send(draftRes.body.data.profile);
+
+    expect(confirmRes.status).toBe(200);
+    expect(confirmRes.body.data.basics.name).toBe('John Smith');
+
+    // Verify DB now holds John Smith
+    const updatedRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userACookie);
+    expect(updatedRes.body.data.basics.name).toBe('John Smith');
+    expect(updatedRes.body.data.basics.email).toBe('john.smith@gmail.com');
   });
 });

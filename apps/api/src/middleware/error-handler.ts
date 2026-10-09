@@ -59,6 +59,20 @@ export class ConflictError extends AppError {
   }
 }
 
+export class ServiceUnavailableError extends AppError {
+  constructor(message = 'Service temporarily unavailable') {
+    super(message, 503, 'SERVICE_UNAVAILABLE');
+  }
+}
+
+export class PlansRequiredError extends AppError {
+  constructor(message = 'Payment or plan required for this feature') {
+    super(message, 402, 'PLANS_REQUIRED');
+  }
+}
+
+
+
 export function errorHandler(
   err: Error,
   _req: Request,

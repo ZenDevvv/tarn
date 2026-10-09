@@ -143,6 +143,35 @@ body { padding: 0; }
   font-size: 10pt;
   font-style: italic;
 }
+.summary-text {
+  margin: 0;
+  font-size: 10.5pt;
+  line-height: 1.4;
+  text-align: justify;
+}
+.cert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10.5pt;
+  margin-bottom: 3.5px;
+}
+.cert-row:last-child {
+  margin-bottom: 0;
+}
+.cert-label {
+  font-weight: 700;
+}
+.cert-issuer {
+  font-style: italic;
+  font-size: 10pt;
+  margin-left: 4px;
+}
+.cert-date {
+  font-style: italic;
+  font-size: 10.5pt;
+  white-space: nowrap;
+}
 @media print {
   body { padding: 0; background: #fff; }
   .resume-page { padding: 0.4in 0.5in; width: 100%; border: none; box-shadow: none; }
@@ -162,7 +191,19 @@ export function buildResumeHtml(payload: any): string {
     .map((l: any) => `<a class="hero-link" href="${escapeHtml(l.url)}">${escapeHtml(l.label)}</a>`)
     .join('');
 
-  const educationHtml = education
+  // 1. Summary
+  const summaryText = typeof payload.summary === 'string' ? payload.summary.trim() : '';
+  const summarySectionHtml = summaryText
+    ? `<section class="section">
+      <div class="section-kicker">Professional Summary</div>
+      <div class="section-body">
+        <p class="summary-text">${escapeHtml(summaryText)}</p>
+      </div>
+    </section>`
+    : '';
+
+  // 2. Education
+  const educationEntriesHtml = education
     .map((edu: any) => {
       const degreeLine = [edu.degree, edu.honors].filter(Boolean).join(' | ') || edu.details || '';
       const bullets = consolidateBullets(edu.bullets || [])
@@ -184,7 +225,25 @@ export function buildResumeHtml(payload: any): string {
     })
     .join('');
 
-  const experienceHtml = experience
+  const educationSectionHtml = educationEntriesHtml
+    ? `<section class="section">
+      <div class="section-kicker">Education</div>
+      <div class="section-body">
+        ${educationEntriesHtml}
+      </div>
+    </section>`
+    : '';
+
+  // 3. Work Experience
+  const profDev = payload.professional_development
+    ? `<div class="professional-dev">${escapeHtml(
+        Array.isArray(payload.professional_development)
+          ? payload.professional_development.join(' ')
+          : payload.professional_development
+      )}</div>`
+    : '';
+
+  const experienceEntriesHtml = experience
     .map((exp: any) => {
       const bullets = consolidateBullets(exp.bullets || [])
         .map((b: string) => `<li>${escapeHtml(b)}</li>`)
@@ -205,13 +264,24 @@ export function buildResumeHtml(payload: any): string {
     })
     .join('');
 
+  const experienceSectionHtml = experienceEntriesHtml
+    ? `<section class="section">
+      <div class="section-kicker">Work Experience</div>
+      <div class="section-body">
+        ${experienceEntriesHtml}
+        ${profDev}
+      </div>
+    </section>`
+    : '';
+
+  // 4. Projects
   const sharedStack = payload.shared_stack
     ? `<div class="shared-stack"><strong>Shared Stack:</strong> ${escapeHtml(
         Array.isArray(payload.shared_stack) ? payload.shared_stack.join(', ') : payload.shared_stack
       )}</div>`
     : '';
 
-  const projectsHtml = projects
+  const projectsEntriesHtml = projects
     .map((proj: any) => {
       const bullets = consolidateBullets(proj.bullets || [])
         .map((b: string) => `<li>${escapeHtml(b)}</li>`)
@@ -227,7 +297,18 @@ export function buildResumeHtml(payload: any): string {
     })
     .join('');
 
-  const skillsHtml = Object.entries(skills)
+  const projectsSectionHtml = projectsEntriesHtml
+    ? `<section class="section">
+      <div class="section-kicker">Project Experience</div>
+      <div class="section-body">
+        ${sharedStack}
+        ${projectsEntriesHtml}
+      </div>
+    </section>`
+    : '';
+
+  // 5. Skills
+  const skillsRowsHtml = Object.entries(skills)
     .map(([cat, items]: [string, any]) => {
       const val = Array.isArray(items) ? items.join(', ') : String(items);
       return `
@@ -238,13 +319,93 @@ export function buildResumeHtml(payload: any): string {
     })
     .join('');
 
-  const profDev = payload.professional_development
-    ? `<div class="professional-dev">${escapeHtml(
-        Array.isArray(payload.professional_development)
-          ? payload.professional_development.join(' ')
-          : payload.professional_development
-      )}</div>`
+  const skillsSectionHtml = skillsRowsHtml
+    ? `<section class="section">
+      <div class="section-kicker">Technical Skills</div>
+      <div class="section-body">
+        <div class="skills-grid">
+          ${skillsRowsHtml}
+        </div>
+      </div>
+    </section>`
     : '';
+
+  // 6. Certifications
+  const rawCerts = payload.certifications || [];
+  const certItems: Array<{ name: string; issuer?: string; date?: string }> = Array.isArray(rawCerts)
+    ? rawCerts
+        .map((c: any) => {
+          if (typeof c === 'string') {
+            const match = c.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+            return {
+              name: match ? match[1].trim() : c.trim(),
+              issuer: match && match[2] ? match[2].trim() : undefined,
+            };
+          }
+          return {
+            name: c?.name || '',
+            issuer: c?.issuer,
+            date: c?.date,
+          };
+        })
+        .filter((c) => Boolean(c.name))
+    : [];
+
+  const certRowsHtml = certItems
+    .map(
+      (cert) => `
+        <div class="cert-row">
+          <div>
+            <span class="cert-label">${escapeHtml(cert.name)}</span>
+            ${cert.issuer ? `<span class="cert-issuer">— ${escapeHtml(cert.issuer)}</span>` : ''}
+          </div>
+          ${cert.date ? `<div class="cert-date">${escapeHtml(cert.date)}</div>` : ''}
+        </div>
+      `
+    )
+    .join('');
+
+  const certificationsSectionHtml = certRowsHtml
+    ? `<section class="section">
+      <div class="section-kicker">Certifications & Licenses</div>
+      <div class="section-body">
+        ${certRowsHtml}
+      </div>
+    </section>`
+    : '';
+
+  // Section mapping
+  const sectionMap: Record<string, string> = {
+    summary: summarySectionHtml,
+    experience: experienceSectionHtml,
+    projects: projectsSectionHtml,
+    skills: skillsSectionHtml,
+    education: educationSectionHtml,
+    certifications: certificationsSectionHtml,
+  };
+
+  // Determine section ordering
+  const totalWorkBullets = experience.reduce(
+    (acc: number, exp: any) => acc + (exp.bullets || []).length,
+    0
+  );
+  const isExperienced = experience.length >= 2 || totalWorkBullets >= 4;
+
+  let activeOrder: string[];
+  if (Array.isArray(payload.sectionOrder) && payload.sectionOrder.length > 0) {
+    activeOrder = payload.sectionOrder;
+  } else if (isExperienced) {
+    // Experienced: Work Experience top, Education towards bottom, no summary unless explicitly supplied
+    activeOrder = ['summary', 'experience', 'projects', 'skills', 'education', 'certifications'];
+  } else {
+    // Early Career / Student: Summary (if sparse) -> Education -> Skills -> Projects -> Experience -> Certifications
+    activeOrder = ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
+  }
+
+  const renderedSectionsHtml = activeOrder
+    .map((secKey) => sectionMap[secKey.toLowerCase().trim()] || '')
+    .filter(Boolean)
+    .join('\n');
 
   return `<!doctype html>
 <html lang="en">
@@ -262,37 +423,7 @@ export function buildResumeHtml(payload: any): string {
       ${linksHtml ? `<div class="hero-links">${linksHtml}</div>` : ''}
     </header>
 
-    <section class="section">
-      <div class="section-kicker">Education</div>
-      <div class="section-body">
-        ${educationHtml}
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-kicker">Work Experience</div>
-      <div class="section-body">
-        ${experienceHtml}
-        ${profDev}
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-kicker">Project Experience</div>
-      <div class="section-body">
-        ${sharedStack}
-        ${projectsHtml}
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-kicker">Technical Skills</div>
-      <div class="section-body">
-        <div class="skills-grid">
-          ${skillsHtml}
-        </div>
-      </div>
-    </section>
+    ${renderedSectionsHtml}
   </main>
 </body>
 </html>`;

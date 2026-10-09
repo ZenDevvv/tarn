@@ -2,8 +2,12 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { MasterProfileDTO } from '@tracker/types';
+import { MasterProfileDTO, MasterProfileDraftDTO } from '@tracker/types';
 import { consolidateBullets } from '../tailoring/utils/bullet-utils';
+
+const ACRONYM_GUARD = /\b(IoT|LMS|AWS|API|SQL|CSS|PHP|HTML|HRIS|ERP|SaaS|LLM|AI|PMS)\b/i;
+
+const REGION_ALLOWLIST = /\b(PH|Philippines|US|USA|United States|UK|United Kingdom|CA|Canada|AU|Australia|SG|Singapore|JP|Japan|IN|India|DE|Germany|NL|Netherlands|IE|Ireland|AL|AK|AZ|AR|CO|CT|FL|GA|HI|ID|IL|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|AB|BC|MB|NB|NS|NT|NU|ON|PE|QC|SK|YT)\b/i;
 
 export class ProfileExtractorService {
   /**
@@ -35,58 +39,133 @@ export class ProfileExtractorService {
   }
 
   /**
-   * Parse extracted raw resume text into structured MasterProfile fields
+   * Parse extracted raw resume text into structured MasterProfile draft and warnings
    */
-  public static parseResumeText(rawText: string): Omit<MasterProfileDTO, 'id' | 'userId' | 'createdAt' | 'updatedAt'> {
+  public static parseResumeText(rawText: string): MasterProfileDraftDTO {
+    const warnings: string[] = [];
     const lines = rawText.split('\n').map((l) => l.trimEnd());
-    
+
     // 1. Extract contact basics from first 15 lines
     const headerLines = lines.slice(0, 15).filter((l) => l.trim().length > 0);
     const fullHeaderText = headerLines.join(' ');
 
+    // Email
     const emailMatch = fullHeaderText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const email = emailMatch ? emailMatch[0] : '';
+    const email = emailMatch ? emailMatch[0] : null;
+    if (!email) {
+      warnings.push('Email not found — please verify');
+    }
 
-    const phoneMatch = fullHeaderText.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b09\d{9}\b/);
-    const phone = phoneMatch ? phoneMatch[0].trim() : '';
+    // Phone (supports 7-digit, 10-digit, international, or PH mobile)
+    const phoneMatch = fullHeaderText.match(/(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}\b|\b09\d{9}\b/);
+    const phone = phoneMatch ? phoneMatch[0].trim() : null;
+    if (!phone) {
+      warnings.push('Phone number not found — please verify');
+    }
 
-    // First non-empty line usually candidate name
-    const candidateName = headerLines[0] ? headerLines[0].trim() : 'Candidate';
+    // Candidate name (first non-empty line that isn't a doc title)
+    let candidateName = '';
+    for (const hLine of headerLines) {
+      const trimmed = hLine.trim();
+      if (/^(curriculum vitae|resume|cv)$/i.test(trimmed)) {
+        continue;
+      }
+      candidateName = trimmed;
+      break;
+    }
+    if (!candidateName) {
+      warnings.push('Candidate name not found — please verify');
+    }
 
-    // Location heuristic
-    let location = '';
-    const locMatch = fullHeaderText.match(/([A-Z][a-zA-Z\s]+,\s*[A-Z][a-zA-Z\s]+)/);
-    if (locMatch && !locMatch[1].toLowerCase().includes('phone') && !locMatch[1].toLowerCase().includes('email')) {
-      const candidateLoc = locMatch[1].trim();
-      if (!/\b(IoT|LMS|AWS|API|SQL|CSS|PHP|HTML|HRIS|ERP|SaaS|LLM|AI|PMS)\b/i.test(candidateLoc)) {
-        location = candidateLoc;
+    // Location: Generic parsing with Remote detection, two-token pattern, and acronym guard
+    let location: string | null = null;
+    if (/\bRemote\b/i.test(fullHeaderText)) {
+      location = 'Remote';
+    }
+
+    const headerSegments = headerLines.flatMap((l) => l.split(/[|•·]/)).map((s) => s.trim()).filter(Boolean);
+    const locPattern = /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3}),\s*([A-Z]{2,}|[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\b/;
+
+    for (const segment of headerSegments) {
+      if (segment.toLowerCase() === 'remote') {
+        location = 'Remote';
+        break;
+      }
+      const match = segment.match(locPattern);
+      if (match) {
+        const cityPart = match[1].trim();
+        const regionPart = match[2].trim();
+
+        if (
+          /\d/.test(cityPart) ||
+          /\d/.test(regionPart) ||
+          cityPart.includes('@') ||
+          regionPart.includes('@') ||
+          ACRONYM_GUARD.test(cityPart) ||
+          ACRONYM_GUARD.test(regionPart)
+        ) {
+          continue;
+        }
+
+        if (
+          /^(Phone|Email|Links|Portfolio|GitHub|LinkedIn|Skills|Education)$/i.test(cityPart) ||
+          /^(Phone|Email|Links|Portfolio|GitHub|LinkedIn|Skills|Education)$/i.test(regionPart)
+        ) {
+          continue;
+        }
+
+        if (REGION_ALLOWLIST.test(regionPart) || /City$/i.test(cityPart)) {
+          location = `${cityPart}, ${regionPart}`;
+          break;
+        }
       }
     }
 
-    // Links heuristic
+    if (!location) {
+      warnings.push('Location not found — please verify');
+    }
+
+    // Links: extract only literal https?:// URLs
     const links: Array<{ label: string; url: string }> = [];
-    if (/github/i.test(fullHeaderText)) {
-      links.push({ label: 'GitHub', url: 'https://github.com/' });
-    }
-    if (/portfolio/i.test(fullHeaderText)) {
-      links.push({ label: 'Portfolio', url: 'https://portfolio.dev' });
-    }
-    if (/linkedin/i.test(fullHeaderText)) {
-      links.push({ label: 'LinkedIn', url: 'https://linkedin.com/' });
+    const urlMatches = rawText.match(/https?:\/\/[^\s)>,]+/g) || [];
+    for (const rawUrl of urlMatches) {
+      const cleanUrl = rawUrl.replace(/[.,;:)]+$/, '');
+      try {
+        const parsedUrl = new URL(cleanUrl);
+        const host = parsedUrl.hostname.toLowerCase().replace(/^www\./, '');
+        let label = host;
+        if (host.includes('github.com')) {
+          label = 'GitHub';
+        } else if (host.includes('linkedin.com')) {
+          label = 'LinkedIn';
+        } else if (host.includes('gitlab.com')) {
+          label = 'GitLab';
+        } else if (host.includes('twitter.com') || host === 'x.com') {
+          label = 'Twitter';
+        }
+
+        if (!links.some((l) => l.url === cleanUrl)) {
+          links.push({ label, url: cleanUrl });
+        }
+      } catch {
+        // Skip invalid URLs
+      }
     }
 
     // 2. Partition text into primary sections based on uppercase headers
     const sectionIndices: Array<{ name: string; lineIndex: number }> = [];
     lines.forEach((line, idx) => {
       const clean = line.trim().toUpperCase();
-      if (/^(WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|EMPLOYMENT)/i.test(clean)) {
+      if (/^(WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|EMPLOYMENT HISTORY|EMPLOYMENT)\b/i.test(clean)) {
         sectionIndices.push({ name: 'EXPERIENCE', lineIndex: idx });
-      } else if (/^(PROJECT EXPERIENCE|PROJECTS|KEY PROJECTS)/i.test(clean)) {
+      } else if (/^(PROJECT EXPERIENCE|PROJECTS|KEY PROJECTS|PERSONAL PROJECTS)\b/i.test(clean)) {
         sectionIndices.push({ name: 'PROJECTS', lineIndex: idx });
-      } else if (/^(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES)/i.test(clean)) {
+      } else if (/^(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|AREAS OF EXPERTISE|TECHNOLOGIES)\b/i.test(clean)) {
         sectionIndices.push({ name: 'SKILLS', lineIndex: idx });
-      } else if (/^(EDUCATION|ACADEMIC BACKGROUND)/i.test(clean)) {
+      } else if (/^(EDUCATION|ACADEMIC BACKGROUND|ACADEMIC HISTORY)\b/i.test(clean)) {
         sectionIndices.push({ name: 'EDUCATION', lineIndex: idx });
+      } else if (/^(CERTIFICATIONS|CERTIFICATES|LICENSES|LICENSES & CERTIFICATIONS|CREDENTIALS)\b/i.test(clean)) {
+        sectionIndices.push({ name: 'CERTIFICATIONS', lineIndex: idx });
       }
     });
 
@@ -119,8 +198,9 @@ export class ProfileExtractorService {
         }
       }
     });
+
     if (Object.keys(technicalSkills).length === 0) {
-      technicalSkills['Technical'] = ['TypeScript', 'JavaScript', 'React', 'Node.js', 'Git'];
+      warnings.push('Technical skills not found — please verify');
     }
 
     // 4. Parse Work Experience
@@ -129,28 +209,25 @@ export class ProfileExtractorService {
     let curJob: { company: string; location?: string | null; role: string; date_range: string; rawLines: string[] } | null = null;
     let pendingTitle = '';
 
+    const titleRegex = /^(IT Intern|Intern|[A-Za-z\s]+(Developer|Engineer|Architect|Manager|Intern|Specialist|Lead|Designer|Officer|Consultant|Analyst))\b/i;
+
     for (const l of expLines) {
       const trimmed = l.trim();
       if (!trimmed) continue;
 
-      const dateMatch = trimmed.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})\s*(\d{4})?\s*[-–—]\s*(Present|\w+\s*\d{4}|\d{4})/i);
+      const dateMatch = trimmed.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})\s*(\d{4})?\s*[-–—]\s*(Present|Current|\w+\s*\d{4}|\d{4})/i);
       if (dateMatch) {
         if (curJob) {
           if (curJob.rawLines.length > 0) {
             const lastLine = curJob.rawLines[curJob.rawLines.length - 1];
-            if (
-              /^(IT Intern|Intern|[A-Za-z\s]+(Developer|Engineer|Architect|Manager|Intern|Specialist|Lead|Designer|Officer|Consultant|Analyst))\b/i.test(
-                lastLine
-              ) &&
-              lastLine.length < 50
-            ) {
+            if (titleRegex.test(lastLine) && lastLine.length < 50) {
               pendingTitle = curJob.rawLines.pop()!;
             }
           }
 
           workExperience.push({
             company: curJob.company,
-            location: curJob.location,
+            location: curJob.location || null,
             role: curJob.role,
             date_range: curJob.date_range,
             bullets: consolidateBullets(curJob.rawLines),
@@ -158,36 +235,51 @@ export class ProfileExtractorService {
         }
 
         const headerWithoutDate = trimmed.replace(dateMatch[0], '').replace(/\s+/g, ' ').trim();
-        let role = 'Engineer / Developer';
-        let company = headerWithoutDate || 'Company';
+        let role = '';
+        let company = '';
+        let jobLocation = '';
 
-        if (pendingTitle) {
+        if (headerWithoutDate.includes('|')) {
+          const parts = headerWithoutDate.split('|').map((p) => p.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            if (titleRegex.test(parts[0])) {
+              role = parts[0];
+              company = parts[1];
+            } else {
+              company = parts[0];
+              role = parts[1];
+            }
+          } else if (parts.length === 1) {
+            company = parts[0];
+          }
+        } else if (pendingTitle) {
           role = pendingTitle;
-          company = headerWithoutDate || 'Company';
+          company = headerWithoutDate;
         } else if (headerWithoutDate) {
-          if (/Developer|Engineer|Architect|Manager|Intern|Specialist|Lead|Designer/i.test(headerWithoutDate)) {
+          if (titleRegex.test(headerWithoutDate)) {
             role = headerWithoutDate;
-            company = 'Company';
+          } else {
+            company = headerWithoutDate;
           }
         }
 
-        let jobLocation = '';
-        const cityMatch = company.match(/\b(Pasig City|Quezon City|Makati City|Manila|Cebu|Davao|Taguig|[A-Z][a-z]+ City)\b/i);
+        // Generic job location detection
+        const cityMatch = company.match(/\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*(?:[A-Z]{2,}|[A-Z][a-z]+)|[A-Z][a-z]+\sCity|San Francisco|New York|London|Toronto|Berlin|Remote)\b/);
         if (cityMatch) {
           jobLocation = cityMatch[0];
           company = company.replace(cityMatch[0], '').trim();
         }
 
         curJob = {
-          company: company || 'Company',
-          location: jobLocation,
-          role,
+          company: company.replace(/[|,-]+$/, '').trim(),
+          location: jobLocation || null,
+          role: role.replace(/[|,-]+$/, '').trim(),
           date_range: dateMatch[0].trim(),
           rawLines: [],
         };
         pendingTitle = '';
       } else if (!curJob || curJob.rawLines.length === 0) {
-        if (/Developer|Engineer|Architect|Manager|Intern|Specialist|Lead|Designer/i.test(trimmed) && trimmed.length < 50) {
+        if (titleRegex.test(trimmed) && trimmed.length < 50) {
           pendingTitle = trimmed;
         } else if (curJob) {
           curJob.rawLines.push(trimmed);
@@ -202,11 +294,15 @@ export class ProfileExtractorService {
     if (curJob) {
       workExperience.push({
         company: curJob.company,
-        location: curJob.location,
+        location: curJob.location || null,
         role: curJob.role,
         date_range: curJob.date_range,
         bullets: consolidateBullets(curJob.rawLines),
       });
+    }
+
+    if (workExperience.length === 0) {
+      warnings.push('Work experience not found — please verify');
     }
 
     // 5. Parse Projects
@@ -260,39 +356,66 @@ export class ProfileExtractorService {
     const eduLines = getSectionText('EDUCATION');
     const education: Array<{ school: string; location?: string | null; degree?: string | null; honors?: string | null; graduation?: string | null; bullets?: string[] }> = [];
     if (eduLines.length > 0) {
-      const school = eduLines[0]?.trim() || 'University';
-      const degree = eduLines[1]?.trim() || 'Bachelor of Science in Computer Science';
+      const school = eduLines[0]?.trim() || '';
+      const degree = eduLines[1]?.trim() || null;
+      const allEduText = eduLines.join(' ');
+      const gradMatch = allEduText.match(/\b(19\d{2}|20\d{2})\b/);
+      const graduation = gradMatch ? gradMatch[0] : null;
       const bullets = consolidateBullets(eduLines.slice(2));
       education.push({
         school,
         degree,
-        graduation: '2024',
+        graduation,
         bullets,
       });
     }
 
+    if (education.length === 0) {
+      warnings.push('Education not found — please verify');
+    }
+
+    // 7. Parse Certifications
+    const certLines = getSectionText('CERTIFICATIONS');
+    const certifications: string[] = [];
+    certLines.forEach((l) => {
+      const trimmed = l.trim();
+      if (!trimmed) return;
+      const cleaned = trimmed
+        .replace(/^[•·*–—▪▫◦►✓○\u2022\u25E6\u25AA\u25CF\u25CB\u2043\u2219\u25B6\-]\s*/, '')
+        .trim();
+      if (cleaned && !certifications.includes(cleaned)) {
+        certifications.push(cleaned);
+      }
+    });
+
+    const allSkills = Object.values(technicalSkills).flat();
+
     return {
-      basics: {
-        name: candidateName,
-        location: location || null,
-        phone: phone || null,
-        email: email || null,
-        links,
+      profile: {
+        basics: {
+          name: candidateName,
+          location,
+          phone,
+          email,
+          links,
+        },
+        positioningRules: [
+          'Lead with professional full-stack delivery.',
+          'Emphasize measurable outcomes and production systems.',
+        ],
+        factBank: {
+          core_positioning: allSkills.length > 0 ? [`Full-stack engineer with expertise in ${allSkills.slice(0, 4).join(', ')}`] : [],
+          priority_themes: Object.keys(technicalSkills),
+          quantified_highlights: workExperience.flatMap((w) => w.bullets).filter((b) => /\d+/.test(b)).slice(0, 5),
+          certifications,
+        },
+        summaryCandidates: [],
+        workExperience,
+        projectExperience,
+        technicalSkills,
+        education,
       },
-      positioningRules: [
-        'Lead with professional full-stack delivery.',
-        'Emphasize measurable outcomes and production systems.',
-      ],
-      factBank: {
-        core_positioning: [`Full-stack engineer with expertise in ${Object.values(technicalSkills).flat().slice(0, 4).join(', ')}`],
-        priority_themes: Object.keys(technicalSkills),
-        quantified_highlights: workExperience.flatMap((w) => w.bullets).filter((b) => /\d+/.test(b)).slice(0, 5),
-      },
-      summaryCandidates: [],
-      workExperience: workExperience.length > 0 ? workExperience : [{ company: 'Company', role: 'Software Engineer', date_range: '2024 - Present', bullets: ['Engineered scalable web applications.'] }],
-      projectExperience: projectExperience.length > 0 ? projectExperience : [{ name: 'Project Highlight', bullets: ['Built production-ready web application.'] }],
-      technicalSkills,
-      education: education.length > 0 ? education : [{ school: 'University', degree: 'Computer Science', graduation: '2024' }],
+      warnings,
     };
   }
 }

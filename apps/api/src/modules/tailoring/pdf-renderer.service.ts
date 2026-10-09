@@ -4,6 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { buildResumeHtml } from './templates/resume-template';
 import { buildCoverLetterHtml } from './templates/cover-letter-template';
+import { ServiceUnavailableError } from '../../middleware/error-handler';
 
 const CHROMIUM_CANDIDATES = [
   '/usr/bin/chromium',
@@ -14,23 +15,36 @@ const CHROMIUM_CANDIDATES = [
 
 export class PdfRendererService {
   public static findChromiumBinary(): string | null {
+    if (process.env.CHROMIUM_PATH && fs.existsSync(process.env.CHROMIUM_PATH)) {
+      return process.env.CHROMIUM_PATH;
+    }
     for (const bin of CHROMIUM_CANDIDATES) {
       if (fs.existsSync(bin)) return bin;
     }
     return null;
   }
 
+  public static checkAvailability(): void {
+    const bin = this.findChromiumBinary();
+    if (!bin) {
+      console.warn('⚠️  WARNING: No Chromium binary found on system. PDF rendering will fail with 503 Service Unavailable. Deliverables are degraded.');
+    } else {
+      console.log(`✓ Chromium renderer located at ${bin}`);
+    }
+  }
+
+  public static executeChromium(binary: string, args: string[], options: { timeout: number }): void {
+    execFileSync(binary, args, options);
+  }
+
   public static async renderHtmlToPdf(html: string, destinationPath: string): Promise<string> {
     const chromiumBin = this.findChromiumBinary();
+    if (!chromiumBin) {
+      throw new ServiceUnavailableError('PDF generation is temporarily unavailable');
+    }
+
     const destDir = path.dirname(destinationPath);
     await fs.promises.mkdir(destDir, { recursive: true });
-
-    if (!chromiumBin) {
-      // If no headless browser is found on server, write the HTML file alongside destination
-      const htmlFallbackPath = destinationPath.replace(/\.pdf$/, '.html');
-      await fs.promises.writeFile(htmlFallbackPath, html, 'utf-8');
-      return htmlFallbackPath;
-    }
 
     // Write temporary HTML file
     const tmpDir = path.resolve(process.cwd(), 'uploads', 'tmp');
@@ -39,7 +53,7 @@ export class PdfRendererService {
     await fs.promises.writeFile(tmpHtml, html, 'utf-8');
 
     try {
-      execFileSync(
+      this.executeChromium(
         chromiumBin,
         [
           '--headless=new',
@@ -52,10 +66,31 @@ export class PdfRendererService {
         ],
         { timeout: 30000 }
       );
+
+      if (!fs.existsSync(destinationPath)) {
+        throw new ServiceUnavailableError('PDF generation failed: output file not created');
+      }
+
       return destinationPath;
+    } catch (err: any) {
+      if (fs.existsSync(destinationPath)) {
+        try {
+          fs.unlinkSync(destinationPath);
+        } catch {
+          // Ignore cleanup error
+        }
+      }
+      if (err instanceof ServiceUnavailableError) {
+        throw err;
+      }
+      throw new ServiceUnavailableError(`PDF generation failed: ${err.message || 'renderer error'}`);
     } finally {
       if (fs.existsSync(tmpHtml)) {
-        await fs.promises.unlink(tmpHtml);
+        try {
+          await fs.promises.unlink(tmpHtml);
+        } catch {
+          // Ignore cleanup error
+        }
       }
     }
   }

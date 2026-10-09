@@ -85,6 +85,23 @@ export function SettingsPage() {
     mutationFn: (data: ChangePasswordInput) => settingsApi.changePassword(data),
   });
 
+  const resetMutation = useMutation({
+    mutationFn: () => settingsApi.resetAccountData(),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["settings"], updated);
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["resumes"] });
+      queryClient.invalidateQueries({ queryKey: ["statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["cover-letters"] });
+      queryClient.invalidateQueries({ queryKey: ["master-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+    },
+  });
+
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-8 w-full max-w-[800px] mx-auto animate-pulse">
@@ -177,6 +194,10 @@ export function SettingsPage() {
           <DataSection
             settings={settings}
             onExport={() => settingsApi.downloadExport()}
+            onReset={async () => {
+              await resetMutation.mutateAsync();
+            }}
+            isResetting={resetMutation.isPending}
           />
         )}
       </div>

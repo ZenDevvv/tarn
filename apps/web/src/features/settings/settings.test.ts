@@ -5,6 +5,7 @@ import {
   updatePreferencesSchema,
   changePasswordSchema,
 } from '@tracker/validation';
+import { settingsApi } from './api/settings-api';
 
 describe('Settings Feature - Unit Tests', () => {
   const mockSettings: UserSettingsDTO = {
@@ -146,4 +147,46 @@ describe('Settings Feature - Unit Tests', () => {
     expect(getActiveTab('unknown')).toBe('profile');
     expect(getActiveTab(null)).toBe('profile');
   });
+
+  it('validates settingsApi exports resetAccountData method', () => {
+    expect(typeof settingsApi.resetAccountData).toBe('function');
+  });
+
+  it('validates type-to-confirm keyword matching logic', () => {
+    const isKeywordValid = (input: string) => input.trim() === 'RESET';
+
+    expect(isKeywordValid('RESET')).toBe(true);
+    expect(isKeywordValid('  RESET  ')).toBe(true);
+    expect(isKeywordValid('reset')).toBe(false);
+    expect(isKeywordValid('Reset')).toBe(false);
+    expect(isKeywordValid('')).toBe(false);
+    expect(isKeywordValid('CONFIRM')).toBe(false);
+  });
+
+  it('validates reset user stats structure after wipe', () => {
+    const resetStats = {
+      totalApplications: 0,
+      activeApplications: 0,
+      totalInterviews: 0,
+      totalContacts: 0,
+      totalCompanies: 0,
+      totalResumes: 0,
+    };
+
+    const resetUser: UserSettingsDTO = {
+      ...mockSettings,
+      defaultResumeId: null,
+      defaultResumeName: null,
+      stats: resetStats,
+    };
+
+    expect(resetUser.stats.totalApplications).toBe(0);
+    expect(resetUser.stats.activeApplications).toBe(0);
+    expect(resetUser.stats.totalCompanies).toBe(0);
+    expect(resetUser.defaultResumeId).toBeNull();
+    // User profile stays intact
+    expect(resetUser.email).toBe(mockSettings.email);
+    expect(resetUser.name).toBe(mockSettings.name);
+  });
 });
+

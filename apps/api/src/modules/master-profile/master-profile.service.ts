@@ -1,5 +1,5 @@
 import { prisma } from '@tracker/database';
-import { MasterProfileDTO } from '@tracker/types';
+import { MasterProfileDTO, MasterProfileDraftDTO } from '@tracker/types';
 import { UpdateMasterProfileInput, UploadProfileResumeInput } from '@tracker/validation';
 import { ProfileExtractorService } from './profile-extractor.service';
 import { BadRequestError, NotFoundError } from '../../middleware/error-handler';
@@ -104,7 +104,7 @@ export const masterProfileService = {
     };
   },
 
-  async uploadResume(userId: string, input: UploadProfileResumeInput): Promise<MasterProfileDTO> {
+  async uploadResume(userId: string, input: UploadProfileResumeInput): Promise<MasterProfileDraftDTO> {
     const base64Data = input.fileData.includes('base64,')
       ? input.fileData.split('base64,')[1]
       : input.fileData;
@@ -114,47 +114,71 @@ export const masterProfileService = {
       throw new BadRequestError('File size exceeds 10MB limit');
     }
 
-    let parsedSections: any;
-
     if (input.mimeType === 'application/json' || input.filename.endsWith('.json')) {
       try {
-        parsedSections = JSON.parse(buffer.toString('utf-8'));
-      } catch {
+        const parsedJson = JSON.parse(buffer.toString('utf-8'));
+        return this.importJson(userId, parsedJson);
+      } catch (err: any) {
+        if (err instanceof BadRequestError) throw err;
         throw new BadRequestError('Invalid JSON format in resume file');
       }
-    } else {
-      const extractedText = ProfileExtractorService.extractTextFromBuffer(buffer, input.mimeType);
-      parsedSections = ProfileExtractorService.parseResumeText(extractedText);
     }
 
-    return this.updateProfile(userId, {
-      basics: parsedSections.basics || { name: 'Applicant', links: [] },
-      positioningRules: parsedSections.positioningRules || parsedSections.meta?.positioning_rules || [],
-      factBank: parsedSections.factBank || parsedSections.fact_bank || {},
-      summaryCandidates: parsedSections.summaryCandidates || parsedSections.summary_candidates || [],
-      workExperience: parsedSections.workExperience || parsedSections.work_experience || [],
-      projectExperience: parsedSections.projectExperience || parsedSections.project_experience || [],
-      technicalSkills: parsedSections.technicalSkills || parsedSections.technical_skills || {},
-      education: parsedSections.education || [],
-    });
+    const extractedText = ProfileExtractorService.extractTextFromBuffer(buffer, input.mimeType);
+    return ProfileExtractorService.parseResumeText(extractedText);
   },
 
-  async importJson(userId: string, jsonPayload: any): Promise<MasterProfileDTO> {
+  async importJson(_userId: string, jsonPayload: any): Promise<MasterProfileDraftDTO> {
     if (!jsonPayload || typeof jsonPayload !== 'object') {
       throw new BadRequestError('Invalid JSON payload');
     }
 
-    const basics = jsonPayload.basics || { name: 'Applicant', links: [] };
+    const warnings: string[] = [];
+    const basics = jsonPayload.basics || { name: '', links: [] };
+    if (!basics.name) {
+      warnings.push('Candidate name not found — please verify');
+    }
+    if (!basics.email) {
+      warnings.push('Email not found — please verify');
+    }
+    if (!basics.phone) {
+      warnings.push('Phone number not found — please verify');
+    }
+    if (!basics.location) {
+      warnings.push('Location not found — please verify');
+    }
+
     const positioningRules = jsonPayload.positioningRules || jsonPayload.meta?.positioning_rules || [];
     const factBank = jsonPayload.factBank || jsonPayload.fact_bank || {};
     const summaryCandidates = jsonPayload.summaryCandidates || jsonPayload.summary_candidates || [];
     const workExperience = jsonPayload.workExperience || jsonPayload.work_experience || [];
-    const projectExperience = jsonPayload.projectExperience || jsonPayload.project_experience || [];
-    const technicalSkills = jsonPayload.technicalSkills || jsonPayload.technical_skills || {};
-    const education = jsonPayload.education || [];
+    if (!workExperience.length) {
+      warnings.push('Work experience not found — please verify');
+    }
 
-    return this.updateProfile(userId, {
-      basics,
+    const projectExperience = jsonPayload.projectExperience || jsonPayload.project_experience || [];
+    if (!projectExperience.length) {
+      warnings.push('Project experience not found — please verify');
+    }
+
+    const technicalSkills = jsonPayload.technicalSkills || jsonPayload.technical_skills || {};
+    if (Object.keys(technicalSkills).length === 0) {
+      warnings.push('Technical skills not found — please verify');
+    }
+
+    const education = jsonPayload.education || [];
+    if (!education.length) {
+      warnings.push('Education not found — please verify');
+    }
+
+    const profile = {
+      basics: {
+        name: basics.name || 'Applicant',
+        location: basics.location || null,
+        phone: basics.phone || null,
+        email: basics.email || null,
+        links: Array.isArray(basics.links) ? basics.links : [],
+      },
       positioningRules,
       factBank,
       summaryCandidates,
@@ -162,7 +186,13 @@ export const masterProfileService = {
       projectExperience,
       technicalSkills,
       education,
-    });
+    };
+
+    return { profile, warnings };
+  },
+
+  async confirmImport(userId: string, input: UpdateMasterProfileInput): Promise<MasterProfileDTO> {
+    return this.updateProfile(userId, input);
   },
 
   async exportJson(userId: string): Promise<Record<string, any>> {

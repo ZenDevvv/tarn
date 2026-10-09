@@ -586,6 +586,14 @@ export function ApplicationDetailPage() {
             isLoading={isAnalysisLoading}
             hasJobDescription={Boolean(jobDesc.trim())}
             isTailored={Boolean(application.resume?.isTailored || currentCoverLetter)}
+            tailoredScore={application.resume?.matchScore ?? currentCoverLetter?.matchScore}
+            coverageDelta={
+              application.resume?.isTailored &&
+              application.resume.matchScore &&
+              analysis?.matchScore
+                ? Math.max(0, application.resume.matchScore - analysis.matchScore)
+                : undefined
+            }
             onOpenStudio={() => setIsStudioOpen(true)}
           />
 

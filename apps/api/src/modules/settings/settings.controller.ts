@@ -60,4 +60,16 @@ export const settingsController = {
       return next(error);
     }
   },
+
+  async resetAccountData(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await settingsService.resetUserData(req.user!.id);
+      return res.json({
+        data,
+        message: 'Account data has been reset successfully',
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
 };
