@@ -567,8 +567,212 @@ export class ProfileExtractorService {
         projectExperience,
         skills,
         education,
+        customSections: [],
       },
       warnings,
     };
+  }
+
+  /**
+   * Extract structured resume via Gemini AI zero-shot schema induction,
+   * with automatic fallback and consensus verification against deterministic parser.
+   */
+  public static async extractWithAi(rawText: string, apiKey?: string): Promise<MasterProfileDraftDTO> {
+    const fallbackDraft = this.parseResumeText(rawText);
+
+    if (!apiKey) {
+      return fallbackDraft;
+    }
+
+    try {
+      const prompt = `
+You are an expert universal resume parser and schema induction engine.
+Your task is to accurately extract all information from the provided raw resume text into a structured, domain-agnostic MasterProfile JSON format.
+
+INSTRUCTIONS:
+1. Extract contact basics: name, email, phone, location, and web links.
+2. Extract work experience: company, role, date_range, location, and achievement bullets.
+3. Extract education: school, degree, graduation year, location, honors, and bullets.
+4. Extract skills: group into sensible domain categories (e.g. Clinical, Technical, Management, Languages).
+5. Extract credentials & licenses: place verified certifications, state licenses, or bar admissions into factBank.certifications.
+6. POLYMORPHIC CUSTOM SECTIONS:
+   If the candidate has non-traditional sections such as:
+   - Clinical Rotations / Medical Residencies
+   - Bar Admissions / Judicial Clerkships
+   - Scholarly Publications / Patents
+   - Trade Apprenticeships
+   - Security Clearances
+   Extract them into "customSections": [
+     {
+       "id": "kebab-case-id",
+       "title": "Section Title",
+       "type": "timeline" | "credentials" | "publications" | "skills_matrix" | "freeform",
+       "items": [...]
+     }
+   ]
+
+OUTPUT SCHEMA:
+Return ONLY valid JSON matching this structure:
+{
+  "basics": {
+    "name": "Full Name",
+    "email": "email or null",
+    "phone": "phone or null",
+    "location": "City, Country or null",
+    "links": [{ "label": "string", "url": "string" }]
+  },
+  "workExperience": [
+    {
+      "company": "Organization Name",
+      "role": "Title / Position",
+      "date_range": "Dates",
+      "location": "Location or null",
+      "bullets": ["achievement bullet"]
+    }
+  ],
+  "education": [
+    {
+      "school": "Institution Name",
+      "degree": "Degree / Qualification or null",
+      "graduation": "Year or null",
+      "location": "Location or null",
+      "bullets": []
+    }
+  ],
+  "skills": {
+    "Category": ["skill1", "skill2"]
+  },
+  "factBank": {
+    "certifications": ["cert1"],
+    "core_positioning": ["Role or title positioning"]
+  },
+  "customSections": [
+    {
+      "id": "clinical_rotations",
+      "title": "Clinical Rotations",
+      "type": "timeline",
+      "items": [
+        {
+          "organization": "Hospital",
+          "role": "Fellow",
+          "date_range": "2020",
+          "bullets": []
+        }
+      ]
+    }
+  ]
+}
+
+RAW RESUME TEXT:
+${rawText}
+`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+            },
+          }),
+          signal: AbortSignal.timeout(20000),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini API HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawJson) {
+        throw new Error('Gemini response missing text part');
+      }
+
+      const parsed = JSON.parse(rawJson);
+
+      // Consensus reconciliation with deterministic fallback
+      const basics = parsed.basics || {};
+      const rawAiLinks = Array.isArray(basics.links)
+        ? basics.links
+            .filter((l: any) => l && typeof l === 'object' && typeof l.url === 'string' && l.url.trim().length > 0)
+            .map((l: any) => ({
+              label: String(l.label || l.url).trim(),
+              url: String(l.url).trim(),
+            }))
+        : [];
+      const finalLinks = rawAiLinks.length > 0 ? rawAiLinks : fallbackDraft.profile.basics.links;
+
+      const finalBasics = {
+        name: (basics.name && String(basics.name).trim()) || fallbackDraft.profile.basics.name || 'Applicant',
+        email: basics.email || fallbackDraft.profile.basics.email || null,
+        phone: basics.phone || fallbackDraft.profile.basics.phone || null,
+        location: basics.location || fallbackDraft.profile.basics.location || null,
+        links: finalLinks,
+      };
+
+      const rawAiWork = Array.isArray(parsed.workExperience) && parsed.workExperience.length > 0
+        ? parsed.workExperience
+        : fallbackDraft.profile.workExperience;
+      const finalWork = rawAiWork.map((w: any) => ({
+        company: String(w.company || '').trim(),
+        role: String(w.role || '').trim(),
+        date_range: w.date_range ? String(w.date_range).trim() : null,
+        location: w.location ? String(w.location).trim() : null,
+        bullets: Array.isArray(w.bullets) ? w.bullets.map((b: any) => String(b).trim()).filter(Boolean) : [],
+      }));
+
+      const rawAiEdu = Array.isArray(parsed.education) && parsed.education.length > 0
+        ? parsed.education
+        : fallbackDraft.profile.education;
+      const finalEdu = rawAiEdu.map((e: any) => ({
+        school: String(e.school || '').trim(),
+        degree: e.degree ? String(e.degree).trim() : null,
+        graduation: e.graduation ? String(e.graduation).trim() : null,
+        location: e.location ? String(e.location).trim() : null,
+        bullets: Array.isArray(e.bullets) ? e.bullets.map((b: any) => String(b).trim()).filter(Boolean) : [],
+      }));
+
+      const finalProfile: MasterProfileDraftDTO['profile'] = {
+        basics: finalBasics,
+        positioningRules: parsed.positioningRules || fallbackDraft.profile.positioningRules || [],
+        factBank: {
+          core_positioning: parsed.factBank?.core_positioning || fallbackDraft.profile.factBank.core_positioning || [],
+          priority_themes: Object.keys(parsed.skills || {}),
+          quantified_highlights: fallbackDraft.profile.factBank.quantified_highlights,
+          certifications: parsed.factBank?.certifications || fallbackDraft.profile.factBank.certifications || [],
+          customSections: parsed.customSections || [],
+        },
+        summaryCandidates: parsed.summaryCandidates || [],
+        workExperience: finalWork,
+        projectExperience: Array.isArray(parsed.projectExperience) ? parsed.projectExperience : fallbackDraft.profile.projectExperience,
+        skills: parsed.skills || fallbackDraft.profile.skills,
+        education: finalEdu,
+        customSections: parsed.customSections || [],
+      };
+
+      const warnings: string[] = [];
+      if (!finalBasics.email) warnings.push('Email not found — please verify');
+      if (!finalBasics.phone) warnings.push('Phone number not found — please verify');
+      if (!finalBasics.location) warnings.push('Location not found — please verify');
+
+      return {
+        profile: finalProfile,
+        warnings,
+      };
+    } catch (err: any) {
+      console.warn('Gemini zero-shot resume extraction failed; falling back to deterministic parser:', err?.message || err);
+      return {
+        profile: fallbackDraft.profile,
+        warnings: [
+          ...fallbackDraft.warnings,
+          'AI extraction unavailable; extracted via deterministic engine',
+        ],
+      };
+    }
   }
 }

@@ -52,35 +52,42 @@ export const masterProfileService = {
       projectExperience: (profile.projectExperience as any[]) || [],
       skills: (profile.skills as Record<string, string[]>) || {},
       education: (profile.education as any[]) || [],
+      customSections: (profile.factBank as any)?.customSections || [],
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
     };
   },
 
   async updateProfile(userId: string, input: UpdateMasterProfileInput): Promise<MasterProfileDTO> {
+    const customSections = input.customSections ?? (input.factBank as any)?.customSections ?? [];
+    const factBankData = {
+      ...(input.factBank || {}),
+      customSections,
+    };
+
     const profile = await prisma.masterProfile.upsert({
       where: { userId },
       create: {
         userId,
         basics: input.basics,
-          positioningRules: input.positioningRules || [],
-          factBank: input.factBank || {},
-          summaryCandidates: input.summaryCandidates || [],
-          workExperience: input.workExperience || [],
-          projectExperience: input.projectExperience || [],
-          skills: input.skills || {},
-          education: input.education || [],
-        },
-        update: {
-          basics: input.basics,
-          positioningRules: input.positioningRules || [],
-          factBank: input.factBank || {},
-          summaryCandidates: input.summaryCandidates || [],
-          workExperience: input.workExperience || [],
-          projectExperience: input.projectExperience || [],
-          skills: input.skills || {},
-          education: input.education || [],
-        },
+        positioningRules: input.positioningRules || [],
+        factBank: factBankData,
+        summaryCandidates: input.summaryCandidates || [],
+        workExperience: input.workExperience || [],
+        projectExperience: input.projectExperience || [],
+        skills: input.skills || {},
+        education: input.education || [],
+      },
+      update: {
+        basics: input.basics,
+        positioningRules: input.positioningRules || [],
+        factBank: factBankData,
+        summaryCandidates: input.summaryCandidates || [],
+        workExperience: input.workExperience || [],
+        projectExperience: input.projectExperience || [],
+        skills: input.skills || {},
+        education: input.education || [],
+      },
     });
 
     return {
@@ -94,6 +101,7 @@ export const masterProfileService = {
       projectExperience: (profile.projectExperience as any[]) || [],
       skills: (profile.skills as Record<string, string[]>) || {},
       education: (profile.education as any[]) || [],
+      customSections: (profile.factBank as any)?.customSections || customSections,
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
     };
@@ -120,7 +128,7 @@ export const masterProfileService = {
     }
 
     const extractedText = ProfileExtractorService.extractTextFromBuffer(buffer, input.mimeType);
-    return ProfileExtractorService.parseResumeText(extractedText);
+    return ProfileExtractorService.extractWithAi(extractedText, process.env.GEMINI_API_KEY);
   },
 
   async importJson(_userId: string, jsonPayload: any): Promise<MasterProfileDraftDTO> {
@@ -166,6 +174,8 @@ export const masterProfileService = {
       warnings.push('Education not found — please verify');
     }
 
+    const customSections = jsonPayload.customSections || jsonPayload.factBank?.customSections || jsonPayload.custom_sections || [];
+
     const profile = {
       basics: {
         name: basics.name || 'Applicant',
@@ -181,6 +191,7 @@ export const masterProfileService = {
       projectExperience,
       skills,
       education,
+      customSections,
     };
 
     return { profile, warnings };
@@ -205,6 +216,7 @@ export const masterProfileService = {
       project_experience: profile.projectExperience,
       skills: profile.skills,
       education: profile.education,
+      custom_sections: profile.customSections || [],
     };
   },
 };

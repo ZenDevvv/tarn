@@ -303,6 +303,6 @@ BS Computer Science | 2020
         expect(job.company.trim()).not.toBe('');
         expect(job.role.trim()).not.toBe('');
       }
-    });
+    }, 30000);
   });
 });

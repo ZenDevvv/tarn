@@ -75,7 +75,7 @@ export const updateMasterProfileSchema = z.object({
     email: z.string().trim().optional().nullable(),
     links: z.array(z.object({
       label: z.string().trim().min(1),
-      url: z.string().trim().min(1),
+      url: z.string().trim(),
     })).default([]),
   }),
   positioningRules: z.array(z.string().trim()).default([]),

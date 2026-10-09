@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ProfileExtractorService } from '../src/modules/master-profile/profile-extractor.service';
 import { updateMasterProfileSchema } from '@tracker/validation';
 
@@ -610,6 +610,186 @@ Jan 2020 - Present
 
       expect(profile.basics.location).toBe('Bangalore, India');
       expect(warnings).not.toContain('Location not found — please verify');
+    });
+  });
+
+  describe('Phase 3 AI zero-shot extraction & dual consensus', () => {
+    it('extracts structured profile with polymorphic customSections when Gemini succeeds', async () => {
+      const mockGeminiResponse = {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    basics: {
+                      name: 'Dr. Gregory House',
+                      email: 'house@ppth.org',
+                      phone: '555-0199',
+                      location: 'Princeton, NJ',
+                      links: [],
+                    },
+                    workExperience: [
+                      {
+                        company: 'Princeton Plainsboro Hospital',
+                        role: 'Head of Diagnostic Medicine',
+                        date_range: '2012 - Present',
+                        bullets: ['Led differential diagnosis team.'],
+                      },
+                    ],
+                    education: [
+                      {
+                        school: 'Johns Hopkins University',
+                        degree: 'M.D.',
+                        graduation: '2004',
+                      },
+                    ],
+                    skills: { Clinical: ['Diagnostics', 'Nephrology'] },
+                    customSections: [
+                      {
+                        id: 'clinical_rotations',
+                        title: 'Clinical Rotations',
+                        type: 'timeline',
+                        items: [
+                          {
+                            organization: 'Mayo Clinic',
+                            role: 'Visiting Fellow',
+                            date_range: '2005',
+                            bullets: ['Rare pathology rotation.'],
+                          },
+                        ],
+                      },
+                    ],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockGeminiResponse,
+      } as any);
+
+      try {
+        const result = await ProfileExtractorService.extractWithAi(
+          'Dr. Gregory House\nhouse@ppth.org\nPrinceton, NJ\n...',
+          'test_gemini_key'
+        );
+
+        expect(result.profile.basics.name).toBe('Dr. Gregory House');
+        expect(result.profile.customSections).toBeDefined();
+        expect(result.profile.customSections?.[0].title).toBe('Clinical Rotations');
+        expect(result.profile.customSections?.[0].items[0].organization).toBe('Mayo Clinic');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('coalesces contact basics from regex if AI missed phone or email', async () => {
+      const mockGeminiResponse = {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    basics: {
+                      name: 'Elena Rostova',
+                      location: 'Berlin, Germany',
+                      links: [],
+                    },
+                    workExperience: [
+                      {
+                        company: 'Charite Hospital',
+                        role: 'Staff Surgeon',
+                        date_range: '2020 - Present',
+                        bullets: ['Performed complex neurosurgeries.'],
+                      },
+                    ],
+                    education: [],
+                    skills: {},
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockGeminiResponse,
+      } as any);
+
+      try {
+        const rawText = `
+Elena Rostova
+elena@charite.de | +49 170 1234567
+Berlin, Germany
+
+WORK EXPERIENCE
+Charite Hospital | Staff Surgeon
+2020 - Present
+- Performed complex neurosurgeries.
+        `.trim();
+
+        const result = await ProfileExtractorService.extractWithAi(rawText, 'test_gemini_key');
+
+        expect(result.profile.basics.email).toBe('elena@charite.de');
+        expect(result.profile.basics.phone).toContain('1234567');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('falls back cleanly to deterministic parser when Gemini throws or times out', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network timeout'));
+
+      try {
+        const rawText = `
+John Miller
+john@miller.com
+Chicago, IL
+
+EXPERIENCE
+Acme Corp | Analyst
+2021 - Present
+- Analyzed quarterly financial trends.
+        `.trim();
+
+        const result = await ProfileExtractorService.extractWithAi(rawText, 'test_gemini_key');
+
+        expect(result.profile.basics.name).toBe('John Miller');
+        expect(result.profile.basics.email).toBe('john@miller.com');
+        expect(result.profile.workExperience[0].company).toBe('Acme Corp');
+        expect(result.warnings.some((w) => w.includes('deterministic engine'))).toBe(true);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('uses deterministic parser directly when apiKey is not provided', async () => {
+      const rawText = `
+John Miller
+john@miller.com
+Chicago, IL
+
+EXPERIENCE
+Acme Corp | Analyst
+2021 - Present
+- Analyzed quarterly financial trends.
+      `.trim();
+
+      const result = await ProfileExtractorService.extractWithAi(rawText);
+
+      expect(result.profile.basics.name).toBe('John Miller');
+      expect(result.profile.workExperience[0].company).toBe('Acme Corp');
     });
   });
 });
