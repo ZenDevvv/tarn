@@ -587,7 +587,7 @@ export class ProfileExtractorService {
 
     if (!apiKey) {
       if (options.throwOnError) {
-        throw new ServiceUnavailableError('AI service is not configured (missing GEMINI_API_KEY). No AI credits were deducted.');
+        throw new ServiceUnavailableError('AI extraction service is currently unavailable. No AI credits were deducted.');
       }
       return fallbackDraft;
     }

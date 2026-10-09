@@ -7,7 +7,6 @@ import {
   Loader2,
   X,
   Check,
-  Sparkles,
   Zap,
   RotateCcw,
   FileText,
@@ -221,7 +220,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
               Browse Files
             </button>
             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-              <Sparkles size={11} className="text-primary" />
+              <Zap size={12} className="text-amber-500 fill-amber-500/20" />
               <span>{remainingQuota} of {totalLimit} AI credits left today</span>
             </span>
           </div>
@@ -478,14 +477,14 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
             {/* Quota Banner */}
             <div className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/60 border border-border text-caption">
               <span className="font-medium text-foreground flex items-center gap-1.5">
-                <Sparkles size={14} className="text-primary" />
+                <Zap size={14} className="text-amber-500 fill-amber-500/20" />
                 <span>Daily AI Generations Allowance</span>
               </span>
               <span
                 className={`font-semibold px-2 py-0.5 rounded text-[11px] ${
                   hasQuota
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                    : 'bg-destructive/10 text-destructive border border-destructive/20'
                 }`}
               >
                 {remainingQuota} of {totalLimit} credits remaining today
@@ -515,15 +514,15 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-small text-foreground flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-primary" />
+                        <Zap size={14} className="text-amber-500 fill-amber-500/20" />
                         AI-Powered Extraction
                       </span>
-                      <span className="text-[11px] px-2 py-0.5 rounded font-medium bg-primary/15 text-primary">
+                      <span className="text-[11px] px-2 py-0.5 rounded font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400">
                         1 Credit
                       </span>
                     </div>
                     <p className="text-caption text-muted-foreground">
-                      Uses Gemini 2.5 Flash schema induction. Discovers non-traditional sections (clinical rotations, clerkships, publications) and complex multi-column layouts across any profession.
+                      Deep zero-shot schema induction. Discovers non-traditional sections (clinical rotations, clerkships, publications) and complex multi-column layouts across any profession.
                     </p>
                     {!hasQuota && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium pt-1">
@@ -554,7 +553,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-small text-foreground flex items-center gap-1.5">
-                        <Zap size={14} className="text-amber-500" />
+                        <FileText size={14} className="text-muted-foreground" />
                         Standard Extraction
                       </span>
                       <span className="text-[11px] px-2 py-0.5 rounded font-medium bg-secondary text-muted-foreground border border-border">
