@@ -29,9 +29,37 @@ export class JdAnalyzerService {
   }
 
   /**
+   * Light stemmer stripping common English inflectional suffixes:
+   * ings?, ments?, tions?, sions?, ers?, ed, es, s.
+   * Unifies manage/management/managing/managed -> manag.
+   */
+  public static stemWord(word: string): string {
+    const lower = word.toLowerCase().trim();
+    if (lower.length <= 3) return lower;
+    if (!/^[a-z]+$/i.test(lower)) return lower;
+
+    let stem = lower;
+    const suffixRegex = /(?:ments?|tions?|sions?|ings?|ers?|ed|es|s)$/i;
+    const match = stem.match(suffixRegex);
+    if (match && stem.length - match[0].length >= 3) {
+      stem = stem.slice(0, -match[0].length);
+    }
+
+    if (stem.endsWith('e') && stem.length > 3) {
+      stem = stem.slice(0, -1);
+    }
+
+    return stem;
+  }
+
+  /**
    * Frequency-based n-gram extraction for high-impact keywords/phrases
    */
-  public static extractKeywordsFromText(text: string, topN: number = 30): string[] {
+  public static extractKeywordsFromText(
+    text: string,
+    topN: number = 30,
+    profileTechPrior?: Set<string>
+  ): string[] {
     const lowered = text.toLowerCase();
     const words = lowered.match(/[a-zA-Z][a-zA-Z0-9.\-+#/]*/g) || [];
     const ngrams: string[] = [];
@@ -75,7 +103,19 @@ export class JdAnalyzerService {
       if ([...COMMON_ACTION_VERBS].some((v) => phrase.includes(v))) {
         score += 1.5;
       }
-      if (TECH_PATTERN.test(phrase)) {
+
+      const phraseLower = phrase.toLowerCase();
+      const phraseTokens = phraseLower.split(/\W+/).filter((t) => t.length > 1);
+      const matchesTechPrior =
+        TECH_PATTERN.test(phrase) ||
+        Boolean(
+          profileTechPrior &&
+            phraseTokens.some(
+              (t) => profileTechPrior.has(t) || profileTechPrior.has(this.stemWord(t))
+            )
+        );
+
+      if (matchesTechPrior) {
         score += 2.0;
       }
       if (count >= 2) {
@@ -152,32 +192,72 @@ export class JdAnalyzerService {
       };
     }
 
-    const keywords = this.extractKeywordsFromText(jdText, 30);
+    const profileTechPrior = new Set<string>();
+    const profileSkillList: string[] = [
+      ...Object.values(profile.technicalSkills || {}).flat(),
+      ...(profile.projectExperience || []).flatMap((p) => p.stack || []),
+    ];
+    profileSkillList.forEach((s) => {
+      const norm = s.toLowerCase().trim();
+      if (norm.length > 1) {
+        profileTechPrior.add(norm);
+        profileTechPrior.add(this.stemWord(norm));
+        norm.split(/\W+/).filter((t) => t.length > 1).forEach((token) => {
+          profileTechPrior.add(token);
+          profileTechPrior.add(this.stemWord(token));
+        });
+      }
+    });
+
+    const keywords = this.extractKeywordsFromText(jdText, 30, profileTechPrior);
     const keyVerbs = this.extractKeyVerbs(jdText);
     const exactPhrases = this.extractExactPhrases(jdText, 8);
 
     // Build user's factual corpus
     const profileTokens = new Set<string>();
+    const profileStemmedTokens = new Set<string>();
+
+    const addProfileToken = (token: string) => {
+      const clean = token.toLowerCase().trim();
+      if (clean.length > 1) {
+        profileTokens.add(clean);
+        profileStemmedTokens.add(this.stemWord(clean));
+      }
+    };
 
     // Technical skills
-    Object.values(profile.technicalSkills || {}).flat().forEach((s) => {
-      profileTokens.add(s.toLowerCase().trim());
+    profileSkillList.forEach((s) => {
+      addProfileToken(s);
+      s.split(/\W+/).filter((t) => t.length > 1).forEach(addProfileToken);
     });
 
-    // Work bullets
+    // Work roles and bullets
     (profile.workExperience || []).forEach((w) => {
+      if (w.role) w.role.split(/\W+/).forEach(addProfileToken);
       w.bullets.forEach((b) => {
-        b.toLowerCase().split(/\W+/).filter((t) => t.length > 2).forEach((token) => profileTokens.add(token));
+        b.split(/\W+/).filter((t) => t.length > 2).forEach(addProfileToken);
       });
     });
 
-    // Project tech stacks and bullets
+    // Project names, stacks, and bullets
     (profile.projectExperience || []).forEach((p) => {
-      (p.stack || []).forEach((s) => profileTokens.add(s.toLowerCase().trim()));
+      if (p.name) p.name.split(/\W+/).forEach(addProfileToken);
+      (p.stack || []).forEach(addProfileToken);
       p.bullets.forEach((b) => {
-        b.toLowerCase().split(/\W+/).filter((t) => t.length > 2).forEach((token) => profileTokens.add(token));
+        b.split(/\W+/).filter((t) => t.length > 2).forEach(addProfileToken);
       });
     });
+
+    // FactBank highlights
+    if (profile.factBank) {
+      [
+        ...(profile.factBank.core_positioning || []),
+        ...(profile.factBank.priority_themes || []),
+        ...(profile.factBank.quantified_highlights || []),
+      ].forEach((text) => {
+        text.split(/\W+/).filter((t) => t.length > 2).forEach(addProfileToken);
+      });
+    }
 
     const matchedKeywords: string[] = [];
     const missingKeywords: string[] = [];
@@ -185,12 +265,24 @@ export class JdAnalyzerService {
     keywords.forEach((kw) => {
       const lower = kw.toLowerCase().trim();
       const contentWords = lower.split(/\W+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
-      const isMatched =
-        profileTokens.has(lower) ||
-        (contentWords.length > 0 && contentWords.every((w) => profileTokens.has(w))) ||
-        contentWords.some((w) => profileTokens.has(w) && TECH_PATTERN.test(w));
 
-      if (isMatched) {
+      const exactMatch =
+        profileTokens.has(lower) || profileStemmedTokens.has(this.stemWord(lower));
+
+      // Multi-word keyword match: require any content word (word-boundary/stem), not every
+      const contentMatch =
+        contentWords.length > 0 &&
+        contentWords.some((w) => {
+          const stemmed = this.stemWord(w);
+          return (
+            profileTokens.has(w) ||
+            profileStemmedTokens.has(stemmed) ||
+            profileTechPrior.has(w) ||
+            profileTechPrior.has(stemmed)
+          );
+        });
+
+      if (exactMatch || contentMatch) {
         matchedKeywords.push(kw);
       } else {
         missingKeywords.push(kw);

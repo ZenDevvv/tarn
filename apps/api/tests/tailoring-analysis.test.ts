@@ -133,4 +133,69 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
     expect(report.fidelityWarnings.some((w) => w.includes('Notion'))).toBe(true);
     expect(report.isValid).toBe(false);
   });
+
+  describe('Task 7 Keyword Extraction Improvements', () => {
+    it('stems common inflections (manage, management, managing, managed)', () => {
+      expect(JdAnalyzerService.stemWord('manage')).toBe('manag');
+      expect(JdAnalyzerService.stemWord('management')).toBe('manag');
+      expect(JdAnalyzerService.stemWord('managing')).toBe('manag');
+      expect(JdAnalyzerService.stemWord('managed')).toBe('manag');
+      expect(JdAnalyzerService.stemWord('deployments')).toBe('deploy');
+      expect(JdAnalyzerService.stemWord('deployment')).toBe('deploy');
+      expect(JdAnalyzerService.stemWord('microservices')).toBe('microservic');
+    });
+
+    it('matches "managing deployments" when candidate profile has "management"', () => {
+      const jd = `
+        We need an experienced lead to handle managing deployments across global cloud infrastructure.
+      `;
+      const profileWithManagement: MasterProfileDTO = {
+        ...mockProfile,
+        technicalSkills: {
+          Management: ['Release Management'],
+        },
+      };
+
+      const analysis = JdAnalyzerService.analyze(jd, profileWithManagement);
+      expect(
+        analysis.matchedKeywords.some((k) =>
+          k.toLowerCase().includes('managing') || k.toLowerCase().includes('deployments')
+        )
+      ).toBe(true);
+    });
+
+    it('partial-matches multi-word keyword "microservices architecture" when profile contains "microservices"', () => {
+      const jd = `
+        Requires strong experience in microservices architecture and distributed systems.
+      `;
+      const profileWithMicroservices: MasterProfileDTO = {
+        ...mockProfile,
+        technicalSkills: {
+          Backend: ['Microservices'],
+        },
+      };
+
+      const analysis = JdAnalyzerService.analyze(jd, profileWithMicroservices);
+      expect(
+        analysis.matchedKeywords.some((k) => k.toLowerCase().includes('microservices'))
+      ).toBe(true);
+    });
+
+    it('treats candidate profile skills as tech priors even if not in hardcoded TECH_PATTERN', () => {
+      const jd = `
+        Building scalable apps using Solidity and decentralized protocols.
+      `;
+      const profileWithSolidity: MasterProfileDTO = {
+        ...mockProfile,
+        technicalSkills: {
+          Blockchain: ['Solidity'],
+        },
+      };
+
+      const analysis = JdAnalyzerService.analyze(jd, profileWithSolidity);
+      expect(analysis.highPriorityKeywords.some((k) => k.toLowerCase().includes('solidity'))).toBe(true);
+      expect(analysis.matchedKeywords.some((k) => k.toLowerCase().includes('solidity'))).toBe(true);
+    });
+  });
 });
+
