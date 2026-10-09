@@ -8,10 +8,11 @@ export class TailoringValidatorService {
    */
   public static validate(
     resumePayload: {
-      experience?: Array<{ company: string; role: string; date_range?: string; bullets: string[] }>;
-      projects?: Array<{ name: string; subtitle?: string; bullets: string[] }>;
+      basics?: any;
+      experience?: Array<{ company: string; role: string; date_range?: string | null; bullets: string[] }>;
+      projects?: Array<{ name: string; subtitle?: string | null; bullets?: string[] }>;
       skills?: Record<string, string[]>;
-      education?: Array<{ school?: string; graduation?: string }>;
+      education?: Array<{ school?: string | null; graduation?: string | null }>;
     },
     coverLetterMarkdown: string,
     jdKeywords: string[],

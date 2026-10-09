@@ -72,6 +72,48 @@ export const updateCoverLetterSchema = z.object({
 
 export const confirmImportMasterProfileSchema = updateMasterProfileSchema;
 
+export const aiResumePayloadSchema = z.object({
+  basics: z.object({
+    name: z.string().trim().min(1, 'Candidate name is required'),
+    location: z.string().trim().optional().nullable(),
+    phone: z.string().trim().optional().nullable(),
+    email: z.string().trim().optional().nullable(),
+    links: z.array(z.object({
+      label: z.string().trim().min(1),
+      url: z.string().trim().min(1),
+    })).optional().default([]),
+  }),
+  education: z.array(z.object({
+    school: z.string().trim().min(1),
+    location: z.string().trim().optional().nullable(),
+    degree: z.string().trim().optional().nullable(),
+    honors: z.string().trim().optional().nullable(),
+    date_range: z.string().trim().optional().nullable(),
+    graduation: z.string().trim().optional().nullable(),
+    details: z.string().trim().optional().nullable(),
+    bullets: z.array(z.string().trim()).optional().default([]),
+  })).optional().default([]),
+  experience: z.array(z.object({
+    company: z.string().trim().min(1),
+    location: z.string().trim().optional().nullable(),
+    role: z.string().trim().min(1),
+    date_range: z.string().trim().optional(),
+    bullets: z.array(z.string().trim()).default([]),
+  })).default([]),
+  projects: z.array(z.object({
+    name: z.string().trim().min(1),
+    subtitle: z.string().trim().optional().nullable(),
+    stack: z.array(z.string().trim()).optional().default([]),
+    bullets: z.array(z.string().trim()).default([]),
+  })).optional().default([]),
+  skills: z.record(z.array(z.string().trim())).default({}),
+});
+
+export const aiTailoringOutputSchema = z.object({
+  resume: aiResumePayloadSchema,
+  coverLetterMarkdown: z.string().trim().min(1, 'Cover letter content is required'),
+});
+
 export type GenerateTailoringInput = z.input<typeof generateTailoringSchema>;
 export type GenerateTailoringOutput = z.output<typeof generateTailoringSchema>;
 export type UpdateMasterProfileInput = z.infer<typeof updateMasterProfileSchema>;
@@ -79,4 +121,6 @@ export type ConfirmImportMasterProfileInput = UpdateMasterProfileInput;
 export type UploadProfileResumeInput = z.infer<typeof uploadProfileResumeSchema>;
 export type CreateCoverLetterInput = z.infer<typeof createCoverLetterSchema>;
 export type UpdateCoverLetterInput = z.infer<typeof updateCoverLetterSchema>;
+export type AiResumePayload = z.infer<typeof aiResumePayloadSchema>;
+export type AiTailoringOutput = z.infer<typeof aiTailoringOutputSchema>;
 

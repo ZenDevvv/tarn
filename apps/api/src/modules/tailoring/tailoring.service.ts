@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import { prisma, TimelineEventType } from '@tracker/database';
-import { GenerateTailoringInput } from '@tracker/validation';
+import { GenerateTailoringInput, aiTailoringOutputSchema, AiTailoringOutput } from '@tracker/validation';
 import { MasterProfileDTO, GenerationQuotaDTO } from '@tracker/types';
 import { JdAnalyzerService } from './jd-analyzer.service';
 import { TailoringValidatorService } from './tailoring-validator.service';
@@ -116,13 +116,15 @@ export const tailoringService = {
     }
 
     // 3. AI synthesis call (Hard error on failure or timeout)
-    let aiResult: { resume: any; coverLetterMarkdown: string };
+    let aiResult: AiTailoringOutput;
     try {
       aiResult = await this.callGeminiSynthesis(profile, analysis, jdText, role, company, apiKey);
     } catch (err: any) {
       console.error('Gemini AI synthesis error:', err);
+      const rawMsg = err?.message || 'synthesis failed';
+      const safeMsg = apiKey ? rawMsg.replace(new RegExp(apiKey, 'g'), '[REDACTED]') : rawMsg;
       throw new ServiceUnavailableError(
-        `AI tailoring is temporarily unavailable: ${err.message || 'synthesis failed'}`
+        `AI tailoring is temporarily unavailable: ${safeMsg}`
       );
     }
 
@@ -290,7 +292,7 @@ export const tailoringService = {
     role: string,
     company: string,
     apiKey: string
-  ): Promise<{ resume: any; coverLetterMarkdown: string }> {
+  ): Promise<AiTailoringOutput> {
     const prompt = `
 You are an expert ATS resume and cover letter tailoring engine.
 
@@ -360,7 +362,9 @@ Respond ONLY with valid JSON in this exact structure:
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API returned status ${response.status}: ${await response.text()}`);
+      const respText = await response.text();
+      const safeRespText = apiKey ? respText.replace(new RegExp(apiKey, 'g'), '[REDACTED]') : respText;
+      throw new Error(`Gemini API returned status ${response.status}: ${safeRespText}`);
     }
 
     const data = await response.json();
@@ -369,11 +373,21 @@ Respond ONLY with valid JSON in this exact structure:
       throw new Error('Empty response from Gemini API');
     }
 
-    const parsed = JSON.parse(textOutput);
-    if (!parsed.resume || !parsed.coverLetterMarkdown) {
-      throw new Error('Malformed JSON output from Gemini API');
+    let parsed: any;
+    try {
+      parsed = JSON.parse(textOutput);
+    } catch {
+      throw new Error('Invalid JSON received from Gemini API');
     }
 
-    return parsed;
+    const validation = aiTailoringOutputSchema.safeParse(parsed);
+    if (!validation.success) {
+      const issues = validation.error.issues
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('; ');
+      throw new Error(`Malformed AI tailoring output structure: ${issues}`);
+    }
+
+    return validation.data;
   },
 };

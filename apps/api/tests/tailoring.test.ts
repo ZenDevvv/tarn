@@ -554,9 +554,93 @@ Zen Andrei Obrero
     expect(res.body.error.message).toContain('paid plan is required');
   });
 
+  it('POST /api/v1/tailoring/applications/:id/generate redacts GEMINI_API_KEY on failure', async () => {
+    const testSecretKey = 'secret_gemini_test_api_key_12345';
+    process.env.GEMINI_API_KEY = testSecretKey;
+
+    const spy = vi
+      .spyOn(tailoringService, 'callGeminiSynthesis')
+      .mockRejectedValueOnce(
+        new Error(`Google API network timeout at https://generativelanguage.googleapis.com/v1beta/models?key=${testSecretKey}`)
+      );
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'package' });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(503);
+    expect(res.body.error.message).not.toContain(testSecretKey);
+    expect(res.body.error.message).toContain('[REDACTED]');
+  });
+
+  it('POST /api/v1/tailoring/applications/:id/generate rejects malformed AI output without saving deliverables', async () => {
+    const spy = vi
+      .spyOn(tailoringService, 'callGeminiSynthesis')
+      .mockRejectedValueOnce(
+        new Error('Malformed AI tailoring output structure: resume.basics.name: Candidate name is required')
+      );
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'package' });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(503);
+    expect(res.body.error.message).toContain('Malformed AI tailoring output structure');
+  });
+
+  it('POST /api/v1/tailoring/applications/:id/generate rolls back DB writes and quota when transaction fails mid-flight', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const initialUsage = await prisma.generationUsage.findUnique({
+      where: { userId_date: { userId, date: today } },
+    });
+    const initialCount = initialUsage?.count || 0;
+
+    const spy = vi
+      .spyOn(tailoringService, 'callGeminiSynthesis')
+      .mockResolvedValueOnce({
+        resume: mockResumePayload,
+        coverLetterMarkdown: mockCoverLetter,
+      });
+
+    const originalTransaction = prisma.$transaction.bind(prisma);
+    const txSpy = vi
+      .spyOn(prisma, '$transaction')
+      .mockImplementationOnce(async (fn: any, ...args: any[]) => {
+        return originalTransaction(async (tx: any) => {
+          tx.timelineEvent.create = vi
+            .fn()
+            .mockRejectedValueOnce(new Error('Simulated mid-transaction failure'));
+          return fn(tx);
+        }, ...args);
+      });
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'package' });
+
+    spy.mockRestore();
+    txSpy.mockRestore();
+
+    expect(res.status).toBe(500);
+
+    // Verify quota count was NOT incremented due to transaction rollback
+    const afterUsage = await prisma.generationUsage.findUnique({
+      where: { userId_date: { userId, date: today } },
+    });
+    expect(afterUsage?.count || 0).toBe(initialCount);
+  });
+
   it('serves static /uploads files with framing allowed for in-app previews', async () => {
     const res = await request(app).get('/uploads/health-check-nonexistent.pdf');
     expect(res.headers['x-frame-options']).toBeUndefined();
     expect(res.headers['content-security-policy']).toContain("frame-ancestors 'self' *");
   });
 });
+
