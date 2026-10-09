@@ -448,7 +448,7 @@ export interface MasterProfileDTO {
   summaryCandidates?: any[];
   workExperience: MasterProfileWorkExperienceItem[];
   projectExperience: MasterProfileProjectItem[];
-  technicalSkills: Record<string, string[]>;
+  skills: Record<string, string[]>;
   education: MasterProfileEducationItem[];
   createdAt: string;
   updatedAt: string;

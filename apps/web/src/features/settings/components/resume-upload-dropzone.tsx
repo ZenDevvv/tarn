@@ -71,7 +71,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
           stack: p.stack || [],
           bullets: p.bullets || [],
         })),
-        technicalSkills: draft.technicalSkills || {},
+        skills: draft.skills || {},
         education: (draft.education || []).map((e) => ({
           ...e,
           bullets: e.bullets || [],
@@ -277,7 +277,7 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
             <div className="p-2 rounded-lg bg-secondary/50 border border-border">
               <span className="text-[11px] text-muted-foreground block">Skills</span>
               <span className="font-semibold text-small text-foreground">
-                {Object.values(draft.technicalSkills).flat().length} items
+                {Object.values(draft.skills || {}).flat().length} items
               </span>
             </div>
             <div className="p-2 rounded-lg bg-secondary/50 border border-border">

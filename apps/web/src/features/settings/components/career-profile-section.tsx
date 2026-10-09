@@ -12,7 +12,7 @@ import {
   Layers,
   Briefcase,
   GraduationCap,
-  Code2,
+  ListChecks,
   Save,
 } from 'lucide-react';
 import { masterProfileApi } from '@/features/master-profile/api/master-profile-api';
@@ -110,7 +110,7 @@ export function CareerProfileSection() {
         stack: p.stack || [],
         bullets: p.bullets || [],
       })),
-      technicalSkills: formData.technicalSkills || {},
+      skills: formData.skills || {},
       education: (formData.education || []).map((e) => ({
         ...e,
         bullets: e.bullets || [],
@@ -172,8 +172,8 @@ export function CareerProfileSection() {
               { id: 'basics', label: 'Contact Basics', icon: <FileText size={15} /> },
               { id: 'rules', label: 'Positioning Rules', icon: <Sparkles size={15} /> },
               { id: 'experience', label: 'Work Experience', icon: <Briefcase size={15} /> },
-              { id: 'projects', label: 'Project Catalog', icon: <Layers size={15} /> },
-              { id: 'skills', label: 'Technical Skills', icon: <Code2 size={15} /> },
+              { id: 'projects', label: 'Projects', icon: <Layers size={15} /> },
+              { id: 'skills', label: 'Skills & Competencies', icon: <ListChecks size={15} /> },
               { id: 'education', label: 'Education', icon: <GraduationCap size={15} /> },
             ].map((tab) => (
               <button
@@ -610,19 +610,19 @@ export function CareerProfileSection() {
           </div>
         )}
 
-        {/* Tab 5: Technical Skills */}
+        {/* Tab 5: Skills & Competencies */}
         {activeSubTab === 'skills' && (
           <div className="space-y-4">
-            {Object.entries(formData.technicalSkills || {}).map(([cat, skills], sIdx) => (
+            {Object.entries(formData.skills || {}).map(([cat, skills], sIdx) => (
               <div key={sIdx} className="p-3.5 rounded-lg border border-border bg-secondary/30 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-display font-medium text-small text-foreground">{cat}</span>
                   <button
                     type="button"
                     onClick={() => {
-                      const updated = { ...formData.technicalSkills };
+                      const updated = { ...formData.skills };
                       delete updated[cat];
-                      setFormData({ ...formData, technicalSkills: updated });
+                      setFormData({ ...formData, skills: updated });
                     }}
                     className="text-caption text-destructive hover:underline cursor-pointer"
                   >
@@ -637,8 +637,8 @@ export function CareerProfileSection() {
                     const items = e.target.value.split(',').map((s) => s.trim());
                     setFormData({
                       ...formData,
-                      technicalSkills: {
-                        ...formData.technicalSkills,
+                      skills: {
+                        ...formData.skills,
                         [cat]: items,
                       },
                     });
@@ -655,8 +655,8 @@ export function CareerProfileSection() {
                 if (name && name.trim()) {
                   setFormData({
                     ...formData,
-                    technicalSkills: {
-                      ...formData.technicalSkills,
+                    skills: {
+                      ...formData.skills,
                       [name.trim()]: [],
                     },
                   });

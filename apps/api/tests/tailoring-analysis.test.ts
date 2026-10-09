@@ -35,7 +35,7 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
         bullets: ['Multi-tenant HRIS module with role-based visibility across tenants.'],
       },
     ],
-    technicalSkills: {
+    skills: {
       Frontend: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
       Backend: ['Node.js', 'Express', 'Prisma', 'MongoDB'],
     },
@@ -85,7 +85,7 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
         },
       ],
       projects: mockProfile.projectExperience,
-      skills: mockProfile.technicalSkills,
+      skills: mockProfile.skills,
     };
 
     const tailoredCoverLetter = `
@@ -151,7 +151,7 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
       `;
       const profileWithManagement: MasterProfileDTO = {
         ...mockProfile,
-        technicalSkills: {
+        skills: {
           Management: ['Release Management'],
         },
       };
@@ -170,7 +170,7 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
       `;
       const profileWithMicroservices: MasterProfileDTO = {
         ...mockProfile,
-        technicalSkills: {
+        skills: {
           Backend: ['Microservices'],
         },
       };
@@ -187,7 +187,7 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
       `;
       const profileWithSolidity: MasterProfileDTO = {
         ...mockProfile,
-        technicalSkills: {
+        skills: {
           Blockchain: ['Solidity'],
         },
       };
@@ -195,6 +195,102 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
       const analysis = JdAnalyzerService.analyze(jd, profileWithSolidity);
       expect(analysis.highPriorityKeywords.some((k) => k.toLowerCase().includes('solidity'))).toBe(true);
       expect(analysis.matchedKeywords.some((k) => k.toLowerCase().includes('solidity'))).toBe(true);
+    });
+
+    it('weights keywords by phrase length only — no hardcoded tech dictionary advantage', () => {
+      // 'React' (a hardcoded tech token in the legacy TECH_PATTERN) and 'Epic' (the healthcare EHR,
+      // never in any dictionary) must carry identical weight: matching either yields the same score.
+      const shared = {
+        totalKeywords: ['React', 'Epic'],
+        bullets: [],
+        titles: [],
+        targetRole: '',
+        targetCompany: '',
+      };
+
+      const matchReact = JdAnalyzerService.calculateMultiFactorAtsScore({
+        ...shared,
+        matchedKeywords: ['React'],
+      });
+      const matchEpic = JdAnalyzerService.calculateMultiFactorAtsScore({
+        ...shared,
+        matchedKeywords: ['Epic'],
+      });
+
+      expect(matchReact.skillsScore).toBe(50);
+      expect(matchEpic.skillsScore).toBe(50);
+    });
+
+    it('credits domain-specific action verbs in impact scoring', () => {
+      const breakdown = JdAnalyzerService.calculateMultiFactorAtsScore({
+        matchedKeywords: [],
+        totalKeywords: [],
+        bullets: [
+          'Triaged 30+ emergency patients per shift under 1:1 acuity protocols.',
+          'Audited quarterly SOX controls across a $400M revenue unit.',
+          'Differentiated literacy instruction for 28 students across 4 IEPs.',
+          'Fabricated and installed HVAC ductwork for 40 commercial sites.',
+        ],
+        titles: ['Registered Nurse'],
+        targetRole: '',
+        targetCompany: '',
+      });
+      expect(breakdown.verbsCount).toBe(4);
+    });
+
+    it('extracts non-technical action verbs from JD text', () => {
+      const verbs = JdAnalyzerService.extractKeyVerbs(
+        'You will triage patients, audit controls, instruct students, and fabricate components.'
+      );
+      expect(verbs).toContain('triage');
+      expect(verbs).toContain('audit');
+      expect(verbs).toContain('instruct');
+      expect(verbs).toContain('fabricate');
+    });
+    it('detects quantified impact metrics across domains', () => {
+      const breakdown = JdAnalyzerService.calculateMultiFactorAtsScore({
+        matchedKeywords: [],
+        totalKeywords: [],
+        bullets: [
+          'Managed a 12-bed ICU with 1:1 patient acuity.',
+          'Taught 28 students across 4 classroom sections.',
+          'Oversaw 6 audits covering $2.1B in annual revenue.',
+          'Reduced API latency by 45% using Redis caching.',
+        ],
+        titles: [],
+        targetRole: '',
+        targetCompany: '',
+      });
+      expect(breakdown.metricsCount).toBeGreaterThanOrEqual(4);
+    });
+
+    it('extracts exact echo phrases from non-technical JDs via keyword fallback', () => {
+      const nursingJd = `
+        We are seeking a Clinical Nurse Specialist to provide direct patient care in the ICU.
+        You will triage emergency patients, administer medications, and coordinate with physicians.
+        Requirements: BLS, ACLS, and PALS certifications. Epic EHR experience preferred.
+      `;
+      const phrases = JdAnalyzerService.extractExactPhrases(nursingJd, 8);
+      expect(phrases.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('counts certification-only keywords when evaluating a tailored resume payload', () => {
+      const evalResult = JdAnalyzerService.evaluateResumePayload(
+        {
+          basics: { name: 'Maria Santos' },
+          experience: [
+            { company: 'Mercy General Hospital', role: 'Registered Nurse, ICU', bullets: ['Triaged 30+ emergency patients per shift.'] },
+          ],
+          skills: {},
+          certifications: ['Basic Life Support (BLS)', 'ACLS'],
+        },
+        'Clinical Nurse Specialist',
+        'Mercy General Hospital',
+        ['BLS', 'ACLS']
+      );
+
+      expect(evalResult.matchedKeywords).toContain('BLS');
+      expect(evalResult.matchedKeywords).toContain('ACLS');
     });
   });
 });

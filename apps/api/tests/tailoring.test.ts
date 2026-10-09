@@ -126,7 +126,7 @@ Zen Andrei Obrero
             bullets: ['Built enterprise surfaces handling 6,000+ employee records.'],
           },
         ],
-        technicalSkills: {
+        skills: {
           Frontend: ['React', 'TypeScript', 'Tailwind CSS'],
           Backend: ['Node.js', 'Express', 'Prisma', 'MongoDB'],
         },
@@ -606,6 +606,78 @@ Zen Andrei Obrero
     const res = await request(app).get('/uploads/health-check-nonexistent.pdf');
     expect(res.headers['x-frame-options']).toBeUndefined();
     expect(res.headers['content-security-policy']).toContain("frame-ancestors 'self' *");
+  });
+
+  it('synthesis prompt requests a professional summary for experienced (non-sparse) profiles', async () => {
+    // Capture and restore shared state so this test stays isolated within the file.
+    const originalProfileRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userCookie);
+    const originalProfile = originalProfileRes.body.data;
+
+    try {
+      // Build a senior, non-sparse, non-technical profile (3 roles, 6 bullets)
+      await request(app)
+        .put('/api/v1/master-profile')
+        .set('Cookie', userCookie)
+        .send({
+          basics: { name: 'Dana Controller', links: [] },
+          positioningRules: [],
+          factBank: {
+            core_positioning: ['Division Controller with expertise in US GAAP'],
+            quantified_highlights: ['Closed monthly P&L for a $400M revenue unit.'],
+          },
+          workExperience: [
+            { company: 'Acme Manufacturing, Inc.', role: 'Division Controller', date_range: '2018 - Present', bullets: ['Closed monthly P&L for a $400M unit.', 'Led a 6-person accounting team through 3 SOX audits.'] },
+            { company: 'Beta Industries LLC', role: 'Senior Accountant', date_range: '2014 - 2018', bullets: ['Reconciled 6 legal entity accounts.', 'Modeled quarterly forecasts within 2% variance.'] },
+            { company: 'Gamma Corp', role: 'Staff Accountant', date_range: '2011 - 2014', bullets: ['Audited SOX controls.', 'Prepared journal entries for 40 monthly closings.'] },
+          ],
+          projectExperience: [],
+          skills: { 'Core Competencies': ['US GAAP', 'SOX', 'NetSuite'] },
+          education: [],
+        });
+
+      const geminiJson = JSON.stringify({
+        resume: {
+          basics: { name: 'Dana Controller' },
+          education: [],
+          experience: [
+            { company: 'Acme Manufacturing, Inc.', role: 'Division Controller', date_range: '2018 - Present', bullets: ['Closed monthly P&L for a $400M unit.'] },
+          ],
+          skills: { 'Core Competencies': ['US GAAP', 'SOX', 'NetSuite'] },
+          certifications: [],
+        },
+        coverLetterMarkdown: 'Dear Hiring Team, I am a Division Controller with GAAP expertise.',
+      });
+
+      let capturedPrompt = '';
+      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementationOnce(async (_url: any, init: any) => {
+        const body = JSON.parse(init.body);
+        capturedPrompt = body.contents[0].parts[0].text;
+        return {
+          ok: true,
+          json: async () => ({ candidates: [{ content: { parts: [{ text: geminiJson }] } }] }),
+        } as any;
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ role: 'VP of Finance', company: 'Target Finance Co' });
+
+      fetchSpy.mockRestore();
+
+      expect(res.status).toBe(200);
+      expect(capturedPrompt).toContain('summary');
+      expect(capturedPrompt).not.toContain('Do NOT include a summary');
+      expect(capturedPrompt).not.toContain('full-stack');
+    } finally {
+      await request(app)
+        .put('/api/v1/master-profile')
+        .set('Cookie', userCookie)
+        .send(originalProfile);
+      await prisma.generationUsage.deleteMany({ where: { userId } });
+    }
   });
 });
 

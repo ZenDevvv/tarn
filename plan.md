@@ -63,3 +63,19 @@
 - [x] **Task 11: Multi-Module Verification & Testing (SHIP)**
   - Run full test suite across monorepo (`pnpm test`)
   - Run build verification (`pnpm build`)
+
+---
+
+## Domain-Agnostic Remediation (2026-10-09)
+
+> **Objective:** Remove software-engineering bias from the tailoring engine per the Cross-Domain Audit
+> **Specification:** [spec-domain-agnostic.md](spec-domain-agnostic.md)
+> **Detailed Task Plan:** [tasks/plan-domain-agnostic.md](tasks/plan-domain-agnostic.md)
+
+- [x] **Tasks 1–3: Contracts** — `technicalSkills` → `skills` rename (Prisma + DTO + validation), DB reset, legacy import compat
+- [x] **Tasks 4–5: Ingestion** — delete "full-stack engineer" positioning seeds; `titleRegex` role/company disambiguation with ambiguity warnings
+- [x] **Tasks 6–9: Scoring** — remove `TECH_PATTERN` weights; cross-domain verb lexicon + POS-agnostic gate; generalized metric nouns; keyword-sourced exact phrases
+- [x] **Tasks 10–11: Synthesis policy** — default-on professional summary; certifications float order + widened key matching
+- [x] **Task 12: Corpora** — certifications + summary counted in validator coverage and score-lift evaluation
+- [x] **Tasks 13–14: Presentation** — data-driven skills kicker ("Skills & Competencies"); UI relabels
+- [x] **Task 15: Verification** — Persona A/B/C regression suite + repo grep gates + full suite/lint/typecheck

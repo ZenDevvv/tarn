@@ -1,4 +1,5 @@
 import { MasterProfileDTO, ValidationReportDTO } from '@tracker/types';
+import { collectVerifiedCerts } from './utils/cert-utils';
 
 export type ValidationReport = ValidationReportDTO;
 
@@ -57,6 +58,14 @@ export class TailoringValidatorService {
     Object.entries(resumePayload.skills || {}).forEach(([cat, vals]) => {
       resumeTextParts.push(cat, ...(vals || []));
     });
+    // Certifications and the summary carry primary ATS keywords for licensed professions
+    // (BLS, ACLS, RN, CPA, state licensure) — they must count toward coverage.
+    (resumePayload.certifications || []).forEach((c: any) => {
+      resumeTextParts.push(typeof c === 'string' ? c : c?.name || '');
+    });
+    if (resumePayload.summary) {
+      resumeTextParts.push(resumePayload.summary);
+    }
     const resumeCorpus = resumeTextParts.join(' ').toLowerCase();
 
     // 3. Keyword Coverage Calculation
@@ -91,7 +100,7 @@ export class TailoringValidatorService {
 
     // 5a. Skills Grounding
     const masterSkills = new Set(
-      Object.values(profile.technicalSkills || {})
+      Object.values(profile.skills || {})
         .flat()
         .map((s) => s.toLowerCase().trim())
     );
@@ -139,15 +148,7 @@ export class TailoringValidatorService {
 
     // 5c2. Certifications Grounding
     const masterCerts = new Set(
-      [
-        ...(Array.isArray(profile.factBank?.certifications) ? profile.factBank.certifications : []),
-        ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Certifications']))
-          ? profile.technicalSkills['Certifications']
-          : []),
-        ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Licenses & Certifications']))
-          ? profile.technicalSkills['Licenses & Certifications']
-          : []),
-      ].map((c: any) => (typeof c === 'string' ? c : c.name || '').toLowerCase().trim())
+      collectVerifiedCerts(profile).map((c) => c.toLowerCase().trim())
     );
 
     (resumePayload.certifications || []).forEach((cert: any) => {

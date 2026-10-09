@@ -38,7 +38,7 @@ describe('TailoringValidatorService Unit Tests', () => {
         bullets: ['Enterprise platform handling 6,000+ employee records.'],
       },
     ],
-    technicalSkills: {
+    skills: {
       Frontend: ['React', 'TypeScript', 'Tailwind CSS'],
       Backend: ['Node.js', 'Express', 'Prisma', 'PostgreSQL'],
     },
@@ -289,7 +289,7 @@ Now I look forward to bringing that experience to Acme Software.
     const resumePayload = {
       experience: sampleProfile.workExperience,
       projects: sampleProfile.projectExperience,
-      skills: sampleProfile.technicalSkills,
+      skills: sampleProfile.skills,
     };
 
     const coverLetter = `
@@ -329,7 +329,7 @@ My tenure at Uzaro Solutions Technology Inc. focused on building enterprise appl
     const resumePayload = {
       experience: transposedProfile.workExperience,
       projects: transposedProfile.projectExperience,
-      skills: transposedProfile.technicalSkills,
+      skills: transposedProfile.skills,
     };
 
     const coverLetter = `
@@ -481,5 +481,37 @@ In my work at Uzaro Solutions Technology Inc., I delivered reliable solutions.
         w.includes('Ungrounded certification claim: "Google Cloud Professional Cloud Architect"')
       )
     ).toBe(true);
+  });
+
+  it('counts certifications and summary text in keyword coverage (licensed professions)', () => {
+    const nursePayload = {
+      basics: { name: 'Maria Santos' },
+      experience: [
+        {
+          company: 'Mercy General Hospital',
+          role: 'Registered Nurse, ICU',
+          bullets: ['Triaged 30+ emergency patients per shift.'],
+        },
+      ],
+      skills: {},
+      certifications: ['Basic Life Support (BLS)', 'ACLS', 'Registered Nurse (RN)'],
+      summary: 'ICU nurse with Epic EHR expertise and 1:1 patient acuity protocols.',
+    };
+
+    const report = TailoringValidatorService.validate(
+      nursePayload,
+      'Dear Hiring Team, I bring BLS, ACLS, and Epic EHR experience.',
+      ['BLS', 'ACLS', 'Epic', 'acuity'],
+      [],
+      sampleProfile,
+      'Mercy General Hospital'
+    );
+
+    // License keywords live only in certifications/summary — they must still count as coverage.
+    expect(report.matchedKeywords).toContain('BLS');
+    expect(report.matchedKeywords).toContain('ACLS');
+    expect(report.matchedKeywords).toContain('Epic');
+    expect(report.matchedKeywords).toContain('acuity');
+    expect(report.keywordCoveragePercent).toBe(100);
   });
 });

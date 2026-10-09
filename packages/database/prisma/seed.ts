@@ -92,7 +92,7 @@ async function main() {
       summaryCandidates: masterData?.summary_candidates || [],
       workExperience: masterData?.work_experience || [],
       projectExperience: masterData?.project_experience || [],
-      technicalSkills: masterData?.technical_skills || {},
+      skills: masterData?.technical_skills || {},
       education: masterData?.education || [],
     },
   });

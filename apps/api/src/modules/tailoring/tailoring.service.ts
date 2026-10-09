@@ -6,6 +6,7 @@ import { MasterProfileDTO, GenerationQuotaDTO } from '@tracker/types';
 import { JdAnalyzerService } from './jd-analyzer.service';
 import { TailoringValidatorService } from './tailoring-validator.service';
 import { PdfRendererService } from './pdf-renderer.service';
+import { collectVerifiedCerts, shouldFloatCertifications } from './utils/cert-utils';
 import { masterProfileService } from '../master-profile/master-profile.service';
 import {
   AppError,
@@ -20,18 +21,27 @@ export function determineOptimalSectionOrder(profile: MasterProfileDTO): string[
   const projExp = profile.projectExperience || [];
   const totalWorkBullets = workExp.reduce((acc, w) => acc + (w.bullets?.length || 0), 0);
 
+  let order: string[];
   // 1. Experienced Professional: >= 2 work experiences or >= 4 work bullets
   if (workExp.length >= 2 || totalWorkBullets >= 4) {
-    return ['experience', 'projects', 'skills', 'education', 'certifications'];
+    order = ['summary', 'experience', 'projects', 'skills', 'education', 'certifications'];
   }
-
   // 2. Portfolio / Project-First: 0 formal work roles or 0 work bullets, but >= 2 projects
-  if ((workExp.length === 0 || totalWorkBullets === 0) && projExp.length >= 2) {
-    return ['projects', 'skills', 'education', 'certifications', 'experience'];
+  else if ((workExp.length === 0 || totalWorkBullets === 0) && projExp.length >= 2) {
+    order = ['summary', 'projects', 'skills', 'education', 'certifications', 'experience'];
+  }
+  // 3. Early Career / Student / Sparse Experience
+  else {
+    order = ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
   }
 
-  // 3. Early Career / Student / Sparse Experience
-  return ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
+  // Regulated professions (RN, CPA, state licensure, teaching credentials) are screened on
+  // licenses first — float certifications to position 2 when 2+ are verified.
+  if (shouldFloatCertifications(profile)) {
+    order = ['summary', 'certifications', ...order.filter((s) => s !== 'summary' && s !== 'certifications')];
+  }
+
+  return order;
 }
 
 export const tailoringService = {
@@ -151,15 +161,7 @@ export const tailoringService = {
     const coverLetterMd = aiResult.coverLetterMarkdown;
 
     // Attach verified certifications from Master Profile if available
-    const verifiedCerts = [
-      ...(Array.isArray(profile.factBank?.certifications) ? profile.factBank.certifications : []),
-      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Certifications']))
-        ? profile.technicalSkills['Certifications']
-        : []),
-      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Licenses & Certifications']))
-        ? profile.technicalSkills['Licenses & Certifications']
-        : []),
-    ];
+    const verifiedCerts = collectVerifiedCerts(profile);
     if (verifiedCerts.length > 0 && (!resumePayload.certifications || resumePayload.certifications.length === 0)) {
       resumePayload.certifications = verifiedCerts;
     }
@@ -360,16 +362,7 @@ export const tailoringService = {
       0
     );
     const isSparse = (profile.workExperience?.length || 0) <= 1 || totalWorkBullets < 4;
-
-    const verifiedCerts = [
-      ...(Array.isArray(profile.factBank?.certifications) ? profile.factBank.certifications : []),
-      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Certifications']))
-        ? profile.technicalSkills['Certifications']
-        : []),
-      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Licenses & Certifications']))
-        ? profile.technicalSkills['Licenses & Certifications']
-        : []),
-    ];
+    const verifiedCerts = collectVerifiedCerts(profile);
 
     const prompt = `
 You are an expert ATS resume and cover letter tailoring engine.
@@ -380,13 +373,13 @@ NON-NEGOTIABLE FIDELITY RULES:
 1. Grounding: Stay 100% faithful to the candidate's Master Profile. NEVER invent employers, tools, projects, dates, or metrics.
 2. Verified Metrics: ONLY use metrics and quantities that exist in the candidate's profile (e.g. from factBank or experience bullets).
 3. Positioning: Follow the candidate's positioning rules: ${JSON.stringify(profile.positioningRules)}.
-${
-  isSparse
-    ? `4. Sparse Profile Summary: The candidate's profile is early-career/sparse (<= 1 role). Include a concise 2-sentence "summary" field targeted directly to "${role}" using their verified factBank positioning: ${JSON.stringify(
-        profile.factBank?.core_positioning || []
-      )}. Do NOT invent claims.`
-    : `4. No Summary: Do NOT include a summary section in the resume. Focus strictly on concrete achievements in experience, projects, and skills.`
-}
+4. Professional Summary: ALWAYS include a concise 2-4 sentence "summary" field targeted directly to "${role}", grounded strictly in the candidate's verified factBank positioning: ${JSON.stringify(
+      profile.factBank?.core_positioning || []
+    )}. ${
+      isSparse
+        ? 'The candidate is early-career/sparse (<= 1 role), so lean harder on education, certifications, and transferable competencies.'
+        : 'The candidate is experienced; lead with scope, seniority, and domain credentials.'
+    } Do NOT invent claims.
 5. Certifications: If verified certifications exist in the profile: ${JSON.stringify(
       verifiedCerts
     )}, include them in the "certifications" array. NEVER invent certifications.
@@ -413,7 +406,7 @@ ${JSON.stringify({
   basics: profile.basics,
   workExperience: profile.workExperience,
   projectExperience: profile.projectExperience,
-  technicalSkills: profile.technicalSkills,
+  skills: profile.skills,
   education: profile.education,
   factBank: profile.factBank,
 })}
@@ -425,7 +418,7 @@ Respond ONLY with valid JSON in this exact structure:
 {
   "resume": {
     "basics": ...,
-    ${isSparse ? '"summary": "2-sentence targeted summary...",' : ''}
+    "summary": "2-4 sentence professional summary targeted at the role...",
     "education": ...,
     "experience": [...],
     "projects": [...],

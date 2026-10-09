@@ -223,8 +223,10 @@ describe('buildResumeHtml Dynamic Section Ordering & Certifications Tests', () =
 });
 
 describe('determineOptimalSectionOrder Profile Heuristic Tests', () => {
-  it('returns experience-first order for experienced candidates (>=2 roles)', () => {
-    const profile: any = {
+  // Updated 2026-10-09 (domain-agnostic remediation): the professional summary is now
+  // always part of the order (summary policy inversion), so every canonical order leads
+  // with 'summary'. Cert-float behavior is covered in tailoring-section-order.test.ts.
+  it('returns summary-first, experience-first order for experienced candidates (>=2 roles)', () => {    const profile: any = {
       workExperience: [
         { company: 'A', role: 'Dev', bullets: ['Built APIs'] },
         { company: 'B', role: 'Dev', bullets: ['Built UI'] },
@@ -232,10 +234,10 @@ describe('determineOptimalSectionOrder Profile Heuristic Tests', () => {
       projectExperience: [],
     };
     const order = determineOptimalSectionOrder(profile);
-    expect(order).toEqual(['experience', 'projects', 'skills', 'education', 'certifications']);
+    expect(order).toEqual(['summary', 'experience', 'projects', 'skills', 'education', 'certifications']);
   });
 
-  it('returns experience-first order for candidate with 1 role but >=4 bullets', () => {
+  it('returns summary-first order for candidate with 1 role but >=4 bullets', () => {
     const profile: any = {
       workExperience: [
         { company: 'A', role: 'Dev', bullets: ['b1', 'b2', 'b3', 'b4'] },
@@ -243,10 +245,10 @@ describe('determineOptimalSectionOrder Profile Heuristic Tests', () => {
       projectExperience: [],
     };
     const order = determineOptimalSectionOrder(profile);
-    expect(order).toEqual(['experience', 'projects', 'skills', 'education', 'certifications']);
+    expect(order).toEqual(['summary', 'experience', 'projects', 'skills', 'education', 'certifications']);
   });
 
-  it('returns portfolio/project-first order for candidates with 0 roles and >=2 projects', () => {
+  it('returns summary-first portfolio/project-first order for candidates with 0 roles and >=2 projects', () => {
     const profile: any = {
       workExperience: [],
       projectExperience: [
@@ -255,7 +257,7 @@ describe('determineOptimalSectionOrder Profile Heuristic Tests', () => {
       ],
     };
     const order = determineOptimalSectionOrder(profile);
-    expect(order).toEqual(['projects', 'skills', 'education', 'certifications', 'experience']);
+    expect(order).toEqual(['summary', 'projects', 'skills', 'education', 'certifications', 'experience']);
   });
 
   it('returns early-career/student order with summary placeholder for sparse profiles', () => {
@@ -269,5 +271,49 @@ describe('determineOptimalSectionOrder Profile Heuristic Tests', () => {
     };
     const order = determineOptimalSectionOrder(profile);
     expect(order).toEqual(['summary', 'education', 'skills', 'projects', 'experience', 'certifications']);
+  });
+});
+
+describe('buildResumeHtml Skills Kicker & Shared Stack Tests', () => {
+  const baseBasics = {
+    basics: { name: 'Maria Santos', email: 'maria@rn.org' },
+    experience: [
+      {
+        company: 'Mercy General Hospital',
+        role: 'Registered Nurse, ICU',
+        date_range: '2020 - Present',
+        bullets: ['Triaged 30+ emergency patients per shift.'],
+      },
+    ],
+    education: [],
+  };
+
+  it('uses a self-describing first category as the skills kicker (e.g. Clinical Competencies)', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      skills: { 'Clinical Competencies': ['Epic EHR', 'Triage protocols'] },
+    });
+
+    expect(html).toContain('Clinical Competencies');
+    expect(html).not.toContain('Technical Skills');
+  });
+
+  it('falls back to "Skills & Competencies" for generic category names', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      skills: { General: ['Communication', 'Charting'] },
+    });
+
+    expect(html).toContain('Skills &amp; Competencies');
+    expect(html).not.toContain('Technical Skills');
+  });
+
+  it('omits the Shared Stack line when there are no projects', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      skills: { General: ['Communication'] },
+    });
+
+    expect(html).not.toContain('Shared Stack');
   });
 });

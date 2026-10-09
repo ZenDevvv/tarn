@@ -26,21 +26,16 @@ export const masterProfileService = {
             location: user?.location || '',
             links: [],
           },
-          positioningRules: [
-            'Lead with professional full-stack delivery.',
-            'Emphasize measurable outcomes and production systems.',
-          ],
+          positioningRules: [],
           factBank: {
-            core_positioning: ['Professional developer shipping production software'],
-            priority_themes: ['Frontend engineering', 'Full-stack delivery'],
+            core_positioning: [],
+            priority_themes: [],
             quantified_highlights: [],
           },
           summaryCandidates: [],
           workExperience: [],
           projectExperience: [],
-          technicalSkills: {
-            'Core': ['TypeScript', 'JavaScript', 'React', 'Node.js', 'Git'],
-          },
+          skills: {},
           education: [],
         },
       });
@@ -55,7 +50,7 @@ export const masterProfileService = {
       summaryCandidates: (profile.summaryCandidates as any[]) || [],
       workExperience: (profile.workExperience as any[]) || [],
       projectExperience: (profile.projectExperience as any[]) || [],
-      technicalSkills: (profile.technicalSkills as Record<string, string[]>) || {},
+      skills: (profile.skills as Record<string, string[]>) || {},
       education: (profile.education as any[]) || [],
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
@@ -68,24 +63,24 @@ export const masterProfileService = {
       create: {
         userId,
         basics: input.basics,
-        positioningRules: input.positioningRules || [],
-        factBank: input.factBank || {},
-        summaryCandidates: input.summaryCandidates || [],
-        workExperience: input.workExperience || [],
-        projectExperience: input.projectExperience || [],
-        technicalSkills: input.technicalSkills || {},
-        education: input.education || [],
-      },
-      update: {
-        basics: input.basics,
-        positioningRules: input.positioningRules || [],
-        factBank: input.factBank || {},
-        summaryCandidates: input.summaryCandidates || [],
-        workExperience: input.workExperience || [],
-        projectExperience: input.projectExperience || [],
-        technicalSkills: input.technicalSkills || {},
-        education: input.education || [],
-      },
+          positioningRules: input.positioningRules || [],
+          factBank: input.factBank || {},
+          summaryCandidates: input.summaryCandidates || [],
+          workExperience: input.workExperience || [],
+          projectExperience: input.projectExperience || [],
+          skills: input.skills || {},
+          education: input.education || [],
+        },
+        update: {
+          basics: input.basics,
+          positioningRules: input.positioningRules || [],
+          factBank: input.factBank || {},
+          summaryCandidates: input.summaryCandidates || [],
+          workExperience: input.workExperience || [],
+          projectExperience: input.projectExperience || [],
+          skills: input.skills || {},
+          education: input.education || [],
+        },
     });
 
     return {
@@ -97,7 +92,7 @@ export const masterProfileService = {
       summaryCandidates: (profile.summaryCandidates as any[]) || [],
       workExperience: (profile.workExperience as any[]) || [],
       projectExperience: (profile.projectExperience as any[]) || [],
-      technicalSkills: (profile.technicalSkills as Record<string, string[]>) || {},
+      skills: (profile.skills as Record<string, string[]>) || {},
       education: (profile.education as any[]) || [],
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
@@ -161,9 +156,9 @@ export const masterProfileService = {
       warnings.push('Project experience not found — please verify');
     }
 
-    const technicalSkills = jsonPayload.technicalSkills || jsonPayload.technical_skills || {};
-    if (Object.keys(technicalSkills).length === 0) {
-      warnings.push('Technical skills not found — please verify');
+    const skills = jsonPayload.skills || jsonPayload.technicalSkills || jsonPayload.technical_skills || {};
+    if (Object.keys(skills).length === 0) {
+      warnings.push('Skills not found — please verify');
     }
 
     const education = jsonPayload.education || [];
@@ -184,7 +179,7 @@ export const masterProfileService = {
       summaryCandidates,
       workExperience,
       projectExperience,
-      technicalSkills,
+      skills,
       education,
     };
 
@@ -208,7 +203,7 @@ export const masterProfileService = {
       summary_candidates: profile.summaryCandidates,
       work_experience: profile.workExperience,
       project_experience: profile.projectExperience,
-      technical_skills: profile.technicalSkills,
+      skills: profile.skills,
       education: profile.education,
     };
   },

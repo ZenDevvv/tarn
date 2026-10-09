@@ -179,7 +179,7 @@ export class ProfileExtractorService {
 
     // 3. Parse Skills
     const skillLines = getSectionText('SKILLS');
-    const technicalSkills: Record<string, string[]> = {};
+    const skills: Record<string, string[]> = {};
     let currentCategory = 'General';
     skillLines.forEach((l) => {
       const trimmed = l.trim();
@@ -187,20 +187,20 @@ export class ProfileExtractorService {
       if (trimmed.includes(':')) {
         const [cat, val] = trimmed.split(':');
         currentCategory = cat.trim();
-        technicalSkills[currentCategory] = (val || '')
+        skills[currentCategory] = (val || '')
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean);
       } else {
         const items = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
         if (items.length > 0) {
-          technicalSkills[currentCategory] = (technicalSkills[currentCategory] || []).concat(items);
+          skills[currentCategory] = (skills[currentCategory] || []).concat(items);
         }
       }
     });
 
-    if (Object.keys(technicalSkills).length === 0) {
-      warnings.push('Technical skills not found — please verify');
+    if (Object.keys(skills).length === 0) {
+      warnings.push('Skills not found — please verify');
     }
 
     // 4. Parse Work Experience
@@ -209,7 +209,15 @@ export class ProfileExtractorService {
     let curJob: { company: string; location?: string | null; role: string; date_range: string; rawLines: string[] } | null = null;
     let pendingTitle = '';
 
-    const titleRegex = /^(IT Intern|Intern|[A-Za-z\s]+(Developer|Engineer|Architect|Manager|Intern|Specialist|Lead|Designer|Officer|Consultant|Analyst))\b/i;
+    // Two-signal role/employer disambiguation (domain-agnostic).
+    // A segment is a TITLE if it carries a profession suffix; an EMPLOYER if it carries an org suffix.
+    const TITLE_SUFFIX_REGEX =
+      /\b(Nurse|Teacher|Professor|Instructor|Accountant|Controller|Comptroller|Auditor|Therapist|Technician|Technologist|Paramedic|Counselor|Attorney|Paralegal|Coordinator|Administrator|Director|Manager|Supervisor|Engineer|Developer|Architect|Designer|Specialist|Lead|Officer|Consultant|Analyst|Intern|Executive|President|Owner|Operator|Salesperson|Sales|Representative|Agent|Clerk|Practitioner|Resident|Dietitian|Electrician|Plumber|Welder|Mechanic|Machinist|Carpenter|Scientist|Researcher|Librarian|Social Worker|Case Manager|Program Manager|Product Manager)\b/i;
+    const COMPANY_SIGNAL_REGEX =
+      /\b(Inc|LLC|Ltd|Corp|Corporation|Company|Co|Hospital|University|College|School|District|Bank|Group|Systems|Technologies|Labs|Center|Centre|Clinic|Department|Agency|Association|GmbH|Foundation|Partners|Industries)\b/i;
+
+    const looksLikeTitle = (s: string) => TITLE_SUFFIX_REGEX.test(s);
+    const looksLikeEmployer = (s: string) => !TITLE_SUFFIX_REGEX.test(s) && COMPANY_SIGNAL_REGEX.test(s);
 
     for (const l of expLines) {
       const trimmed = l.trim();
@@ -220,7 +228,7 @@ export class ProfileExtractorService {
         if (curJob) {
           if (curJob.rawLines.length > 0) {
             const lastLine = curJob.rawLines[curJob.rawLines.length - 1];
-            if (titleRegex.test(lastLine) && lastLine.length < 50) {
+            if (looksLikeTitle(lastLine) && lastLine.length < 50) {
               pendingTitle = curJob.rawLines.pop()!;
             }
           }
@@ -242,12 +250,19 @@ export class ProfileExtractorService {
         if (headerWithoutDate.includes('|')) {
           const parts = headerWithoutDate.split('|').map((p) => p.trim()).filter(Boolean);
           if (parts.length >= 2) {
-            if (titleRegex.test(parts[0])) {
-              role = parts[0];
-              company = parts[1];
+            const titleIdx = parts.findIndex((p) => looksLikeTitle(p));
+            const employerIdx = parts.findIndex((p) => looksLikeEmployer(p));
+            if (titleIdx >= 0 && employerIdx >= 0 && titleIdx !== employerIdx) {
+              role = parts[titleIdx];
+              company = parts[employerIdx];
+            } else if (titleIdx >= 0) {
+              role = parts[titleIdx];
+              company = parts.find((p, i) => i !== titleIdx) || '';
             } else {
+              // Neither segment carries a title signal — keep legacy order but warn, never silently swap.
               company = parts[0];
-              role = parts[1];
+              role = parts.slice(1).join(' | ');
+              warnings.push(`Verify role/employer split for "${headerWithoutDate}"`);
             }
           } else if (parts.length === 1) {
             company = parts[0];
@@ -256,15 +271,16 @@ export class ProfileExtractorService {
           role = pendingTitle;
           company = headerWithoutDate;
         } else if (headerWithoutDate) {
-          if (titleRegex.test(headerWithoutDate)) {
+          if (looksLikeTitle(headerWithoutDate)) {
             role = headerWithoutDate;
           } else {
             company = headerWithoutDate;
           }
         }
 
-        // Generic job location detection
-        const cityMatch = company.match(/\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*(?:[A-Z]{2,}|[A-Z][a-z]+)|[A-Z][a-z]+\sCity|San Francisco|New York|London|Toronto|Berlin|Remote)\b/);
+        // Generic job location detection — region must be a 2-letter code (TX, IL, UK) so
+        // employer suffixes like "Inc" / "Ltd" are never mistaken for regions.
+        const cityMatch = company.match(/\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*(?:[A-Z]{2}\b)|[A-Z][a-z]+\sCity|San Francisco|New York|London|Toronto|Berlin|Remote)\b/);
         if (cityMatch) {
           jobLocation = cityMatch[0];
           company = company.replace(cityMatch[0], '').trim();
@@ -279,7 +295,7 @@ export class ProfileExtractorService {
         };
         pendingTitle = '';
       } else if (!curJob || curJob.rawLines.length === 0) {
-        if (titleRegex.test(trimmed) && trimmed.length < 50) {
+        if (looksLikeTitle(trimmed) && trimmed.length < 50) {
           pendingTitle = trimmed;
         } else if (curJob) {
           curJob.rawLines.push(trimmed);
@@ -388,7 +404,16 @@ export class ProfileExtractorService {
       }
     });
 
-    const allSkills = Object.values(technicalSkills).flat();
+    const allSkills = Object.values(skills).flat();
+
+    // Positioning is derived strictly from parsed content — never seeded with industry defaults.
+    const mostRecentRole = workExperience[0]?.role?.trim();
+    const topSkillCategory = Object.keys(skills)[0];
+    const corePositioning = mostRecentRole
+      ? topSkillCategory
+        ? [`${mostRecentRole} with expertise in ${topSkillCategory}`]
+        : [mostRecentRole]
+      : [];
 
     return {
       profile: {
@@ -399,20 +424,17 @@ export class ProfileExtractorService {
           email,
           links,
         },
-        positioningRules: [
-          'Lead with professional full-stack delivery.',
-          'Emphasize measurable outcomes and production systems.',
-        ],
+        positioningRules: [],
         factBank: {
-          core_positioning: allSkills.length > 0 ? [`Full-stack engineer with expertise in ${allSkills.slice(0, 4).join(', ')}`] : [],
-          priority_themes: Object.keys(technicalSkills),
+          core_positioning: corePositioning,
+          priority_themes: Object.keys(skills),
           quantified_highlights: workExperience.flatMap((w) => w.bullets).filter((b) => /\d+/.test(b)).slice(0, 5),
           certifications,
         },
         summaryCandidates: [],
         workExperience,
         projectExperience,
-        technicalSkills,
+        skills,
         education,
       },
       warnings,

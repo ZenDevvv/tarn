@@ -39,7 +39,7 @@ export const updateMasterProfileSchema = z.object({
     stack: z.array(z.string().trim()).optional().default([]),
     bullets: z.array(z.string().trim()).default([]),
   })).default([]),
-  technicalSkills: z.record(z.array(z.string().trim())).default({}),
+  skills: z.record(z.array(z.string().trim())).default({}),
   education: z.array(z.object({
     school: z.string().trim().min(1),
     location: z.string().trim().optional().nullable(),

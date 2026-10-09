@@ -34,7 +34,7 @@ jane@plain.io
     // Verify empty arrays for unparsed sections
     expect(profile.workExperience).toEqual([]);
     expect(profile.projectExperience).toEqual([]);
-    expect(profile.technicalSkills).toEqual({});
+    expect(profile.skills).toEqual({});
     expect(profile.education).toEqual([]);
 
     // Verify NO fabricated strings exist anywhere in the output JSON
@@ -45,9 +45,35 @@ jane@plain.io
 
     // Verify warnings for empty expected fields
     expect(warnings).toContain('Location not found — please verify');
-    expect(warnings).toContain('Technical skills not found — please verify');
+    expect(warnings).toContain('Skills not found — please verify');
     expect(warnings).toContain('Work experience not found — please verify');
     expect(warnings).toContain('Education not found — please verify');
+  });
+
+  it('derives positioning from parsed content without tech-biased seeds', () => {
+    const nurseResume = `
+Maria Santos
+maria.santos@rn.org | Chicago, IL
+
+WORK EXPERIENCE
+Mercy General Hospital | Registered Nurse, ICU | Jan 2020 - Present
+• Triaged 30+ emergency patients per shift under 1:1 acuity protocols.
+
+SKILLS
+Patient Care: BLS, ACLS, PALS, Epic EHR, triage
+
+LICENSES
+• Registered Nurse (RN) — Illinois
+• Basic Life Support (BLS)
+    `.trim();
+
+    const { profile } = ProfileExtractorService.parseResumeText(nurseResume);
+
+    expect(profile.positioningRules).toEqual([]);
+    const factBankJson = JSON.stringify(profile.factBank);
+    expect(factBankJson).not.toContain('full-stack');
+    expect(factBankJson).not.toContain('Full-stack engineer');
+    expect(profile.factBank.core_positioning?.[0]).toContain('Registered Nurse');
   });
 
   it('extracts only literal URLs and labels them from hostname without inventing fake links', () => {
@@ -141,8 +167,8 @@ Bachelor of Science in Electrical Engineering | 2021
     expect(profile.workExperience[0].role).toBe('Senior Developer');
     expect(profile.workExperience[0].bullets).toHaveLength(2);
 
-    expect(profile.technicalSkills.Languages).toEqual(['TypeScript', 'Go', 'Python']);
-    expect(profile.technicalSkills.Databases).toEqual(['PostgreSQL', 'Redis']);
+    expect(profile.skills.Languages).toEqual(['TypeScript', 'Go', 'Python']);
+    expect(profile.skills.Databases).toEqual(['PostgreSQL', 'Redis']);
 
     expect(profile.education).toHaveLength(1);
     expect(profile.education[0].school).toBe('University of Texas at Austin');
@@ -152,12 +178,11 @@ Bachelor of Science in Electrical Engineering | 2021
     // Should not have warnings for fields that were present
     expect(warnings).not.toContain('Work experience not found — please verify');
     expect(warnings).not.toContain('Education not found — please verify');
-    expect(warnings).not.toContain('Technical skills not found — please verify');
+    expect(warnings).not.toContain('Skills not found — please verify');
     expect(warnings).not.toContain('Location not found — please verify');
   });
 
-  it('extracts CERTIFICATIONS section into factBank.certifications', () => {
-    const resumeWithCerts = `
+  it('extracts CERTIFICATIONS section into factBank.certifications', () => {    const resumeWithCerts = `
 David Cloud
 david@cloud.io | Seattle, WA
 
@@ -186,5 +211,57 @@ CERTIFICATIONS
       'Certified Kubernetes Administrator (CKA)',
       'HashiCorp Certified: Terraform Associate',
     ]);
+  });
+
+  it('disambiguates role and employer across professions via two-signal detection', () => {
+    const cases = [
+      {
+        // employer first, non-tech title
+        header: 'Mercy General Hospital | Registered Nurse, ICU | Jan 2020 - Present',
+        role: 'Registered Nurse, ICU',
+        company: 'Mercy General Hospital',
+      },
+      {
+        // title first, non-tech employer
+        header: 'Registered Nurse, ICU | Mercy General Hospital | Jan 2020 - Present',
+        role: 'Registered Nurse, ICU',
+        company: 'Mercy General Hospital',
+      },
+      {
+        // finance
+        header: 'Acme Manufacturing, Inc. | Division Controller | Mar 2018 - Present',
+        role: 'Division Controller',
+        company: 'Acme Manufacturing, Inc.',
+      },
+      {
+        // education
+        header: 'Lincoln Elementary School | Elementary School Teacher | Aug 2019 - Present',
+        role: 'Elementary School Teacher',
+        company: 'Lincoln Elementary School',
+      },
+    ];
+
+    for (const tc of cases) {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(
+        `Jane Doe\njane@x.io\n\nWORK EXPERIENCE\n${tc.header}\n• Delivered measurable outcomes in the role.`
+      );
+      expect(profile.workExperience[0].role).toBe(tc.role);
+      expect(profile.workExperience[0].company).toBe(tc.company);
+      expect(warnings.some((w) => w.includes('Verify role/employer split'))).toBe(false);
+    }
+  });
+
+  it('warns instead of silently guessing on ambiguous role/employer split', () => {
+    const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Acme Group | Nightingale Health | 2021 - 2024
+• Did important work.
+    `.trim());
+
+    expect(profile.workExperience[0].company).toBe('Acme Group');
+    expect(warnings.some((w) => w.includes('Verify role/employer split'))).toBe(true);
   });
 });

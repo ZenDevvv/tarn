@@ -308,6 +308,15 @@ export function buildResumeHtml(payload: any): string {
     : '';
 
   // 5. Skills
+  // Kicker is data-driven: a self-describing first category (e.g. "Clinical Competencies",
+  // "Core Competencies") becomes the section label; generic buckets fall back to a neutral label.
+  const GENERIC_SKILL_CATEGORIES = /^(general|core|skills|other|misc|key)/i;
+  const firstSkillCategory = Object.keys(skills)[0];
+  const skillsKicker =
+    firstSkillCategory && !GENERIC_SKILL_CATEGORIES.test(firstSkillCategory)
+      ? firstSkillCategory
+      : 'Skills & Competencies';
+
   const skillsRowsHtml = Object.entries(skills)
     .map(([cat, items]: [string, any]) => {
       const val = Array.isArray(items) ? items.join(', ') : String(items);
@@ -321,7 +330,7 @@ export function buildResumeHtml(payload: any): string {
 
   const skillsSectionHtml = skillsRowsHtml
     ? `<section class="section">
-      <div class="section-kicker">Technical Skills</div>
+      <div class="section-kicker">${escapeHtml(skillsKicker)}</div>
       <div class="section-body">
         <div class="skills-grid">
           ${skillsRowsHtml}

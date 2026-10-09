@@ -359,7 +359,7 @@ model MasterProfile {
   summaryCandidates Json?    @default("[]")
   workExperience    Json
   projectExperience Json
-  technicalSkills   Json
+  skills            Json
   education         Json
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

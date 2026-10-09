@@ -17,13 +17,35 @@ export const STOP_WORDS = new Set([
 ]);
 
 export const COMMON_ACTION_VERBS = new Set([
-  'build', 'develop', 'design', 'implement', 'create', 'manage', 'lead', 'analyze',
-  'research', 'synthesize', 'organize', 'maintain', 'track', 'collaborate', 'support',
-  'iterate', 'prototype', 'automate', 'optimize', 'deliver', 'coordinate', 'improve',
-  'integrate', 'test', 'deploy', 'review', 'architect', 'drive', 'ensure', 'identify',
+  // Engineering & product delivery
+  'build', 'develop', 'design', 'implement', 'create', 'prototype', 'automate', 'optimize',
+  'deliver', 'integrate', 'test', 'deploy', 'architect', 'iterate', 'refactor', 'scale', 'ship',
+  // Healthcare & clinical
+  'triage', 'assess', 'administer', 'monitor', 'diagnose', 'treat', 'stabilize', 'admit',
+  'discharge', 'medicate', 'chart', 'escalate', 'counsel', 'refer', 'vaccinate', 'rehabilitate',
+  // Finance & accounting
+  'audit', 'reconcile', 'forecast', 'consolidate', 'model', 'close', 'budget', 'accrue', 'file',
+  'report', 'underwrite', 'appraise', 'liquidate', 'capitalize', 'amortize',
+  // Education & training
+  'instruct', 'teach', 'facilitate', 'mentor', 'tutor', 'differentiate', 'grade', 'scaffold',
+  'moderate', 'coach', 'train', 'onboard',
+  // Trades & operations
+  'fabricate', 'install', 'calibrate', 'repair', 'service', 'weld', 'assemble', 'inspect',
+  'retrofit', 'troubleshoot', 'operate', 'maintain', 'retool',
+  // Sales & business development
+  'negotiate', 'prospect', 'pitch', 'upsell', 'exceed', 'acquire', 'retain', 'convert',
+  // Legal & compliance
+  'litigate', 'draft', 'advise', 'mediate', 'arbitrate', 'depose', 'comply',
+  // Management & leadership
+  'manage', 'lead', 'spearhead', 'orchestrate', 'direct', 'supervise', 'delegate', 'recruit',
+  // Research & analysis
+  'research', 'analyze', 'synthesize', 'evaluate', 'survey', 'benchmark', 'quantify',
+  // Communication & coordination
+  'present', 'publish', 'author', 'collaborate', 'coordinate', 'liaise', 'document', 'review',
+  // General impact verbs
+  'organize', 'improve', 'drive', 'ensure', 'identify', 'resolve', 'streamline', 'transform',
+  'reduce', 'increase', 'accelerate', 'standardize', 'centralize', 'establish', 'champion',
 ]);
-
-export const TECH_PATTERN = /\b(React|TypeScript|Node\.?js|MongoDB|Prisma|Next\.?js|Tailwind|Jest|Playwright|GitHub|Docker|Firebase|Python|JavaScript|REST|API|JWT|Zod|Express|Agile|Scrum|CI\/CD|GraphQL|PostgreSQL|AWS|Kubernetes|Vue|Angular|Redux|Zustand|CSS|HTML)\b/i;
 
 export class JdAnalyzerService {
   public static cleanPhrase(phrase: string): string {
@@ -44,7 +66,7 @@ export class JdAnalyzerService {
     if (!/^[a-z]+$/i.test(lower)) return lower;
 
     let stem = lower;
-    const suffixRegex = /(?:ments?|tions?|sions?|ings?|ers?|ed|es|s)$/i;
+    const suffixRegex = /(?:iations?|ations?|ments?|tions?|sions?|ings?|ers?|ed|es|s)$/i;
     const match = stem.match(suffixRegex);
     if (match && stem.length - match[0].length >= 3) {
       stem = stem.slice(0, -match[0].length);
@@ -63,7 +85,8 @@ export class JdAnalyzerService {
   public static extractKeywordsFromText(
     text: string,
     topN: number = 30,
-    profileTechPrior?: Set<string>
+    profileTechPrior?: Set<string>,
+    options?: { dedupe?: boolean }
   ): string[] {
     const lowered = text.toLowerCase();
     const words = lowered.match(/[a-zA-Z][a-zA-Z0-9.\-+#/]*/g) || [];
@@ -111,14 +134,13 @@ export class JdAnalyzerService {
 
       const phraseLower = phrase.toLowerCase();
       const phraseTokens = phraseLower.split(/\W+/).filter((t) => t.length > 1);
-      const matchesTechPrior =
-        TECH_PATTERN.test(phrase) ||
-        Boolean(
-          profileTechPrior &&
-            phraseTokens.some(
-              (t) => profileTechPrior.has(t) || profileTechPrior.has(this.stemWord(t))
-            )
-        );
+      // Only candidate-derived skills act as priors — never a hardcoded domain dictionary.
+      const matchesTechPrior = Boolean(
+        profileTechPrior &&
+          phraseTokens.some(
+            (t) => profileTechPrior.has(t) || profileTechPrior.has(this.stemWord(t))
+          )
+      );
 
       if (matchesTechPrior) {
         score += 2.0;
@@ -133,9 +155,22 @@ export class JdAnalyzerService {
 
     const seen = new Set<string>();
     const results: string[] = [];
+    const dedupe = options?.dedupe !== false;
     for (const item of scored) {
       const cleaned = this.cleanPhrase(item.phrase);
       if (cleaned && !seen.has(cleaned) && cleaned.length > 2) {
+        const cleanedLower = cleaned.toLowerCase();
+        // Flood control (opt-out for phrase backfill): drop long n-grams (3+ tokens) that merely
+        // contain an already-accepted phrase (e.g. "triage emergency patients" once "triage" is
+        // accepted). Without this, overlapping n-grams crowd out distinct high-value terms like
+        // BLS/ACLS/GAAP. Two-word phrases are preserved — they are the most useful echo units.
+        const tokenCount = cleanedLower.split(/\W+/).filter(Boolean).length;
+        const isRedundant =
+          dedupe &&
+          tokenCount >= 3 &&
+          results.some((r) => cleanedLower.includes(r.toLowerCase()));
+        if (isRedundant) continue;
+
         seen.add(cleaned);
         results.push(cleaned);
         if (results.length >= topN) break;
@@ -146,7 +181,9 @@ export class JdAnalyzerService {
   }
 
   /**
-   * Extract high-value exact phrases worth echoing in cover letter
+   * Extract high-value exact phrases worth echoing in cover letter.
+   * Primary source is verb-stem phrases; when a JD uses non-technical verbs (triage, audit,
+   * instruct), backfill from frequency-scored multi-word keywords so every domain yields phrases.
    */
   public static extractExactPhrases(text: string, count: number = 8): string[] {
     const rawMatches = text.match(/(?:(?:build|develop|design|collaborate|lead|manage|deliver|maintain|create)\s+[^,.;:()]{10,60})/gi) || [];
@@ -163,21 +200,52 @@ export class JdAnalyzerService {
       }
     }
 
+    if (phrases.length < 3) {
+      const keywordPhrases = this.extractKeywordsFromText(text, count * 2, undefined, {
+        dedupe: false,
+      }).filter((kw) => kw.includes(' ') && kw.length >= 12);
+      for (const kw of keywordPhrases) {
+        const lower = kw.toLowerCase();
+        if (!seen.has(lower)) {
+          seen.add(lower);
+          phrases.push(kw);
+          if (phrases.length >= count) break;
+        }
+      }
+    }
+
     return phrases;
   }
 
   /**
-   * Extract key action verbs from text
+   * Extract key action verbs from text.
+   * Inflected JD forms are normalized to their canonical base verb: "reconciliation" ->
+   * reconcile, "instructing" -> instruct, "reporting" -> report.
    */
   public static extractKeyVerbs(text: string): string[] {
     const words = (text.toLowerCase().match(/[a-z]+/g) || []);
     const found = new Set<string>();
+    const stemToVerb = JdAnalyzerService.stemToVerbMap();
     for (const w of words) {
       if (COMMON_ACTION_VERBS.has(w)) {
         found.add(w);
+      } else {
+        const base = stemToVerb.get(this.stemWord(w));
+        if (base) found.add(base);
       }
     }
     return Array.from(found);
+  }
+
+  private static stemToVerbMapCache: Map<string, string> | null = null;
+
+  private static stemToVerbMap(): Map<string, string> {
+    if (!JdAnalyzerService.stemToVerbMapCache) {
+      JdAnalyzerService.stemToVerbMapCache = new Map(
+        Array.from(COMMON_ACTION_VERBS, (v): [string, string] => [JdAnalyzerService.stemWord(v), v])
+      );
+    }
+    return JdAnalyzerService.stemToVerbMapCache;
   }
 
   /**
@@ -199,7 +267,7 @@ export class JdAnalyzerService {
 
     const profileTechPrior = new Set<string>();
     const profileSkillList: string[] = [
-      ...Object.values(profile.technicalSkills || {}).flat(),
+      ...Object.values(profile.skills || {}).flat(),
       ...(profile.projectExperience || []).flatMap((p) => p.stack || []),
     ];
     profileSkillList.forEach((s) => {
@@ -349,7 +417,7 @@ export class JdAnalyzerService {
     const matchedSet = new Set(matchedKeywords.map((k) => k.toLowerCase()));
 
     totalKeywords.forEach((kw) => {
-      const weight = TECH_PATTERN.test(kw) || kw.length > 6 ? 2.0 : 1.0;
+      const weight = kw.length > 6 ? 2.0 : 1.0;
       totalKwWeight += weight;
       if (matchedSet.has(kw.toLowerCase())) {
         matchedKwWeight += weight;
@@ -393,7 +461,10 @@ export class JdAnalyzerService {
 
     // 3. Impact & Action Verbs Score (15% weight)
     let verbBullets = 0;
-    const metricRegex = /\b\d+%\b|\b\d+[\+kKmMbB]?\s*(?:users|records|endpoints|requests|devices|transactions|clients|builds|tenants)\b|\b\$\d+|\b(?:sub-\d+ms|\d+\s*(?:ms|seconds|minutes|days|weeks|months))\b/i;
+    // Domain-neutral quantified-impact detection: percentages, ratios, currency, time units, and
+    // any number followed by a countable noun (patients, students, audits, beds, tickets, ...).
+    const metricRegex =
+      /\b\d+%|\b\d+:\d+\b|\b\d+[\+kKmMbB]?[\s-]*(?:users?|records?|endpoints?|requests?|devices?|transactions?|clients?|builds?|tenants?|patients?|beds?|students?|cases?|claims?|units?|accounts?|reports?|employees?|members?|customers?|orders?|tickets?|procedures?|sessions?|classes?|lessons?|audits?|policies|projects?|deals?|proposals?|calls?|visits?|admissions?|discharges?)\b|\$\d+|\b(?:sub-\d+ms|\d+\s*(?:ms|seconds|minutes|days|weeks|months))\b/gi;
     let metricsCount = 0;
 
     bullets.forEach((bullet) => {
@@ -403,6 +474,9 @@ export class JdAnalyzerService {
       const isAction =
         COMMON_ACTION_VERBS.has(firstWord) ||
         COMMON_ACTION_VERBS.has(stemmedFirst) ||
+        // POS-agnostic past-tense detector: any verb ending -ed/-ate/-ize/-ise/-ify counts,
+        // so domain verbs outside the lexicon (e.g. "Triaged", "Reconciled") are still credited.
+        /^[a-z]+(?:ed|ate|ize|ise|ify)$/i.test(firstWord) ||
         /^(?:built|designed|developed|implemented|managed|led|delivered|engineered|architected|spearheaded|automated|optimized|orchestrated|authored|created|integrated|shipped|scaled|reduced)/i.test(firstWord);
 
       if (isAction) verbBullets++;
@@ -457,6 +531,16 @@ export class JdAnalyzerService {
     const exp = resumePayload.experience || [];
     const projs = resumePayload.projects || [];
     const skills = resumePayload.skills || {};
+
+    // Certifications & summary — primary ATS keyword carriers for licensed professions (RN, CPA, …)
+    (resumePayload.certifications || []).forEach((c: any) => {
+      const name: string = typeof c === 'string' ? c : c?.name || '';
+      addToken(name);
+      name.split(/\W+/).filter((t: string) => t.length > 1).forEach(addToken);
+    });
+    if (typeof resumePayload.summary === 'string') {
+      resumePayload.summary.split(/\W+/).filter((t: string) => t.length > 2).forEach(addToken);
+    }
 
     // Skills
     Object.values(skills).flat().forEach((s: any) => {

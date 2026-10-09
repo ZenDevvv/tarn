@@ -73,7 +73,7 @@ describe('Master Profile API Integration Tests', () => {
           bullets: ['Built accessible WCAG AA components.'],
         },
       ],
-      technicalSkills: {
+      skills: {
         Frontend: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
       },
       education: [
@@ -145,6 +145,8 @@ describe('Master Profile API Integration Tests', () => {
     expect(draftRes.status).toBe(200);
     expect(draftRes.body.data.profile.basics.name).toBe('Alex Rivera');
     expect(draftRes.body.data.profile.workExperience[0].company).toBe('Nexus Tech');
+    // Legacy key technical_skills is accepted and surfaced under the canonical `skills` field
+    expect(draftRes.body.data.profile.skills.Backend).toEqual(['Go', 'Node.js', 'PostgreSQL']);
     expect(draftRes.body.data.warnings).toContain('Education not found — please verify');
 
     // Verify DB profile is UNTOUCHED
@@ -181,6 +183,8 @@ describe('Master Profile API Integration Tests', () => {
     expect(res.body.data.meta).toBeDefined();
     expect(res.body.data.meta.candidate_name).toBe('Alex Rivera');
     expect(res.body.data.work_experience).toHaveLength(1);
+    expect(res.body.data.skills).toBeDefined();
+    expect(res.body.data.technicalSkills).toBeUndefined();
   });
 
   it('POST /api/v1/master-profile/upload-resume returns draft and warnings without writing until confirm-import', async () => {
@@ -219,7 +223,7 @@ BS Computer Science | 2020
     expect(draftRes.body.data.profile.basics.email).toBe('john.smith@gmail.com');
     expect(draftRes.body.data.profile.basics.location).toBe('San Francisco, CA');
     expect(draftRes.body.data.profile.workExperience.length).toBeGreaterThan(0);
-    expect(draftRes.body.data.profile.technicalSkills.Frontend).toBeDefined();
+    expect(draftRes.body.data.profile.skills.Frontend).toBeDefined();
     expect(draftRes.body.data.warnings).toBeInstanceOf(Array);
 
     // Verify DB profile is still Jane Doe (from previous test), NOT John Smith
