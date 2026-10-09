@@ -706,24 +706,6 @@ export function ResumeUploadDropzone({ onSuccess }: ResumeUploadDropzoneProps) {
                     </div>
                   </div>
 
-                  {draft.customSections && draft.customSections.length > 0 && (
-                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-                      <span className="text-[11px] font-semibold text-primary block uppercase tracking-wider mb-1.5">
-                        Polymorphic Custom Sections Detected
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {draft.customSections.map((sec) => (
-                          <span
-                            key={sec.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] bg-secondary border border-border text-foreground font-medium"
-                          >
-                            <span>{sec.title}</span>
-                            <span className="text-muted-foreground text-[10px]">({sec.type})</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Pinned Footer */}
