@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ProfileExtractorService } from '../src/modules/master-profile/profile-extractor.service';
+import { updateMasterProfileSchema } from '@tracker/validation';
 
 describe('ProfileExtractorService Tests', () => {
   const FABRICATED_STRINGS = [
@@ -263,5 +264,93 @@ Acme Group | Nightingale Health | 2021 - 2024
 
     expect(profile.workExperience[0].company).toBe('Acme Group');
     expect(warnings.some((w) => w.includes('Verify role/employer split'))).toBe(true);
+  });
+
+  // spec-resume-ingestion.md §2.3 — real-world header layouts must never yield an
+  // empty company or role, because updateMasterProfileSchema rejects both and a
+  // single empty field 400s the entire profile import.
+  const REAL_WORLD_LAYOUTS: Array<{ id: string; text: string }> = [
+    {
+      id: 'A — stacked: company line, then role+date line',
+      text: `
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Acme Corp Ltd
+Software Engineer | Jan 2020 - Present
+• Built things that shipped.
+      `.trim(),
+    },
+    {
+      id: 'B — "role | dates" line, then company line',
+      text: `
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Registered Nurse | Jan 2020 - Present
+St Mary Hospital
+• Triaged patients.
+      `.trim(),
+    },
+    {
+      id: 'C — single pipe line "company | role | dates"',
+      text: `
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Acme Corp Ltd | Software Engineer | Jan 2020 - Present
+• Built things that shipped.
+      `.trim(),
+    },
+    {
+      id: 'D — nursing: "Registered Nurse | dates", employer below',
+      text: `
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Registered Nurse | Jan 2020 - Present
+St Mary Hospital
+• Triaged patients.
+      `.trim(),
+    },
+  ];
+
+  for (const layout of REAL_WORLD_LAYOUTS) {
+    it(`never emits an empty company or role — layout ${layout.id}`, () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(layout.text);
+
+      expect(profile.workExperience.length).toBeGreaterThan(0);
+      for (const job of profile.workExperience) {
+        expect(job.company.trim()).not.toBe('');
+        expect(job.role.trim()).not.toBe('');
+      }
+
+      // The invariant that actually matters: the draft must survive schema validation,
+      // because a single empty field 400s the whole profile on confirm-import.
+      const parsed = updateMasterProfileSchema.safeParse({
+        ...profile,
+        basics: { ...profile.basics, name: profile.basics.name || 'Jane Doe' },
+      });
+      expect(parsed.success, JSON.stringify(parsed.success ? [] : parsed.error.issues)).toBe(true);
+      expect(warnings.some((w) => w.includes('Dropped unparseable experience segment'))).toBe(false);
+    });
+  }
+
+  it('drops a segment with no company and no role signal, naming it in warnings', () => {
+    const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+| Jan 2020 - Present
+• Did work with no employer or title anywhere.
+    `.trim());
+
+    expect(profile.workExperience).toEqual([]);
+    expect(warnings).toContain('Work experience not found — please verify');
   });
 });

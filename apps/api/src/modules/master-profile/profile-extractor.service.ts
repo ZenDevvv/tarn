@@ -219,6 +219,28 @@ export class ProfileExtractorService {
     const looksLikeTitle = (s: string) => TITLE_SUFFIX_REGEX.test(s);
     const looksLikeEmployer = (s: string) => !TITLE_SUFFIX_REGEX.test(s) && COMPANY_SIGNAL_REGEX.test(s);
 
+    // D1 invariant: parseResumeText must never return an entry with an empty company or role —
+    // updateMasterProfileSchema rejects both, so one ambiguous header 400s the whole profile.
+    // Degrade one field (coalesce) instead of discarding the profile.
+    const pushJob = (job: NonNullable<typeof curJob>) => {
+      const company = job.company.trim();
+      const role = job.role.trim();
+      if (!company && !role) {
+        warnings.push(`Dropped unparseable experience segment "${job.date_range}" — verify manually`);
+        return;
+      }
+      if (!company || !role) {
+        warnings.push(`Missing ${company ? 'role' : 'company'} for "${job.date_range}" — filled from the other field, please verify`);
+      }
+      workExperience.push({
+        company: job.company || job.role,
+        location: job.location || null,
+        role: job.role || job.company,
+        date_range: job.date_range,
+        bullets: consolidateBullets(job.rawLines),
+      });
+    };
+
     for (const l of expLines) {
       const trimmed = l.trim();
       if (!trimmed) continue;
@@ -233,13 +255,7 @@ export class ProfileExtractorService {
             }
           }
 
-          workExperience.push({
-            company: curJob.company,
-            location: curJob.location || null,
-            role: curJob.role,
-            date_range: curJob.date_range,
-            bullets: consolidateBullets(curJob.rawLines),
-          });
+          pushJob(curJob);
         }
 
         const headerWithoutDate = trimmed.replace(dateMatch[0], '').replace(/\s+/g, ' ').trim();
@@ -308,13 +324,7 @@ export class ProfileExtractorService {
     }
 
     if (curJob) {
-      workExperience.push({
-        company: curJob.company,
-        location: curJob.location || null,
-        role: curJob.role,
-        date_range: curJob.date_range,
-        bullets: consolidateBullets(curJob.rawLines),
-      });
+      pushJob(curJob);
     }
 
     if (workExperience.length === 0) {
