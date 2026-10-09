@@ -214,7 +214,7 @@ export class ProfileExtractorService {
     const TITLE_SUFFIX_REGEX =
       /\b(Nurse|Teacher|Professor|Instructor|Accountant|Controller|Comptroller|Auditor|Therapist|Technician|Technologist|Paramedic|Counselor|Attorney|Paralegal|Coordinator|Administrator|Director|Manager|Supervisor|Engineer|Developer|Architect|Designer|Specialist|Lead|Officer|Consultant|Analyst|Intern|Executive|President|Owner|Operator|Salesperson|Sales|Representative|Agent|Clerk|Practitioner|Resident|Dietitian|Electrician|Plumber|Welder|Mechanic|Machinist|Carpenter|Scientist|Researcher|Librarian|Social Worker|Case Manager|Program Manager|Product Manager)\b/i;
     const COMPANY_SIGNAL_REGEX =
-      /\b(Inc|LLC|Ltd|Corp|Corporation|Company|Co|Hospital|University|College|School|District|Bank|Group|Systems|Technologies|Labs|Center|Centre|Clinic|Department|Agency|Association|GmbH|Foundation|Partners|Industries)\b/i;
+      /\b(Inc|LLC|Ltd|Corp|Corporation|Company|Co|Hospital|University|College|School|Institute|Academy|Polytechnic|District|Bank|Group|Systems|Technologies|Labs|Center|Centre|Clinic|Department|Agency|Association|GmbH|Foundation|Partners|Industries)\b/i;
 
     const looksLikeTitle = (s: string) => TITLE_SUFFIX_REGEX.test(s);
     const looksLikeEmployer = (s: string) => !TITLE_SUFFIX_REGEX.test(s) && COMPANY_SIGNAL_REGEX.test(s);
@@ -401,8 +401,19 @@ export class ProfileExtractorService {
     const eduLines = getSectionText('EDUCATION');
     const education: Array<{ school: string; location?: string | null; degree?: string | null; honors?: string | null; graduation?: string | null; bullets?: string[] }> = [];
     if (eduLines.length > 0) {
-      const school = eduLines[0]?.trim() || '';
-      const degree = eduLines[1]?.trim() || null;
+      const [firstEdu, secondEdu] = eduLines;
+      let school = firstEdu?.trim() || '';
+      let degree = secondEdu?.trim() || null;
+      // Education is commonly degree-first (qualification on line 1, institution on
+      // line 2). Reuse COMPANY_SIGNAL_REGEX to find the institution instead of assuming
+      // the school always leads; when neither line signals an institution the positional
+      // assignment above stands.
+      if (school && degree && looksLikeEmployer(degree) && !looksLikeEmployer(school)) {
+        // The institution line usually ends in the graduation year, which `graduation`
+        // already carries — drop it so the school field is not duplicated.
+        school = degree.replace(/[,|–—]?\s*\b(?:19|20)\d{2}\b\s*$/, '').trim();
+        degree = firstEdu.trim();
+      }
       const allEduText = eduLines.join(' ');
       const gradMatch = allEduText.match(/\b(19\d{2}|20\d{2})\b/);
       const graduation = gradMatch ? gradMatch[0] : null;

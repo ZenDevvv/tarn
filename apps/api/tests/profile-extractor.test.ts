@@ -424,4 +424,62 @@ St Mary Hospital
       expect(warnings.some((w) => w.includes('Missing'))).toBe(false);
     });
   });
+
+  // D3 (spec-resume-ingestion.md §2.3 layout E): education entries are read positionally,
+  // so a degree-first entry — qualification on line 1, institution on line 2 — inverts
+  // school and degree. Silent data corruption, same class as the stacked-header swap.
+  describe('education degree-first ordering', () => {
+    const DEGREE_FIRST_RESUME = `
+Jane Doe
+jane@x.io
+
+EDUCATION
+BS Computer Science
+Some University, 2020
+    `.trim();
+
+    it('assigns the institution line to school and the qualification line to degree', () => {
+      const { profile } = ProfileExtractorService.parseResumeText(DEGREE_FIRST_RESUME);
+
+      expect(profile.education).toHaveLength(1);
+      expect(profile.education[0].school).toBe('Some University');
+      expect(profile.education[0].degree).toBe('BS Computer Science');
+      expect(profile.education[0].graduation).toBe('2020');
+    });
+
+    it('produces a schema-valid draft from the degree-first layout', () => {
+      const { profile } = ProfileExtractorService.parseResumeText(DEGREE_FIRST_RESUME);
+
+      const parsed = updateMasterProfileSchema.safeParse(profile);
+      expect(parsed.success, JSON.stringify(parsed.success ? [] : parsed.error.issues)).toBe(true);
+    });
+
+    it('keeps the school-first layout assigned positionally', () => {
+      const { profile } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+EDUCATION
+Some University
+BS Computer Science, 2020
+      `.trim());
+
+      expect(profile.education[0].school).toBe('Some University');
+      expect(profile.education[0].degree).toBe('BS Computer Science, 2020');
+    });
+
+    it('keeps positional assignment when neither education line carries an institution signal', () => {
+      const { profile } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+EDUCATION
+Apprenticeship Certificate
+Continuing Studies, 2019
+      `.trim());
+
+      expect(profile.education[0].school).toBe('Apprenticeship Certificate');
+      expect(profile.education[0].degree).toBe('Continuing Studies, 2019');
+    });
+  });
 });
