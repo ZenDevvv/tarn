@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   FileText,
@@ -37,12 +37,20 @@ export function CareerProfileSection() {
     }
   }, [profile]);
 
+  const isDirty = useMemo(() => {
+    if (!formData || !profile) return false;
+    return JSON.stringify(formData) !== JSON.stringify(profile);
+  }, [formData, profile]);
+
+  const showBottomBar = isDirty || saveSuccess;
+
   const updateMutation = useMutation({
     mutationFn: masterProfileApi.updateProfile,
     onSuccess: (updated) => {
       queryClient.setQueryData(['master-profile'], updated);
+      setFormData(updated);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => setSaveSuccess(false), 1500);
     },
   });
 
@@ -167,47 +175,29 @@ export function CareerProfileSection() {
 
       {/* Visual Editor Tabs */}
       <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 mb-6 pb-3 border-b border-border overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1 min-w-max">
-            {[
-              { id: 'basics', label: 'Contact Basics', icon: <FileText size={15} /> },
-              { id: 'rules', label: 'Positioning Rules', icon: <Sparkles size={15} /> },
-              { id: 'experience', label: 'Work Experience', icon: <Briefcase size={15} /> },
-              { id: 'projects', label: 'Projects', icon: <Layers size={15} /> },
-              { id: 'skills', label: 'Skills & Competencies', icon: <ListChecks size={15} /> },
-              { id: 'education', label: 'Education', icon: <GraduationCap size={15} /> },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveSubTab(tab.id as any)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-small font-medium transition-colors cursor-pointer ${
-                  activeSubTab === tab.id
-                    ? 'bg-secondary text-foreground font-semibold shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-primary-foreground text-small font-medium cursor-pointer transition-colors shrink-0 disabled:opacity-50"
-          >
-            {updateMutation.isPending ? (
-              <Loader2 className="animate-spin" size={15} />
-            ) : saveSuccess ? (
-              <Check size={15} />
-            ) : (
-              <Save size={15} />
-            )}
-            <span>{saveSuccess ? 'Saved!' : 'Save Fact Bank'}</span>
-          </button>
+        <div className="flex items-center gap-1 mb-6 pb-3 border-b border-border overflow-x-auto scrollbar-none min-w-max">
+          {[
+            { id: 'basics', label: 'Contact Basics', icon: <FileText size={15} /> },
+            { id: 'rules', label: 'Positioning Rules', icon: <Sparkles size={15} /> },
+            { id: 'experience', label: 'Work Experience', icon: <Briefcase size={15} /> },
+            { id: 'projects', label: 'Projects', icon: <Layers size={15} /> },
+            { id: 'skills', label: 'Skills & Competencies', icon: <ListChecks size={15} /> },
+            { id: 'education', label: 'Education', icon: <GraduationCap size={15} /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSubTab(tab.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-small font-medium transition-colors cursor-pointer ${
+                activeSubTab === tab.id
+                  ? 'bg-secondary text-foreground font-semibold shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Tab 1: Basics */}
@@ -757,6 +747,49 @@ export function CareerProfileSection() {
               <Plus size={14} />
               <span>Add Education</span>
             </button>
+          </div>
+        )}
+
+        {/* Bottom Save Action Bar — only visible when form is dirty or showing save success */}
+        {showBottomBar && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl border border-border bg-secondary/30 mt-8 pt-4 border-t animate-in fade-in duration-150">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${saveSuccess ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+              <span className="text-small font-medium text-foreground">
+                {saveSuccess ? 'Career Fact Bank saved successfully!' : 'Unsaved changes in Career Fact Bank'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {!saveSuccess && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(profile || null)}
+                  disabled={updateMutation.isPending}
+                  className="px-3.5 py-1.5 rounded-lg border border-border bg-card hover:bg-secondary text-small font-medium text-foreground transition-colors cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={updateMutation.isPending || saveSuccess}
+                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-small font-medium transition-colors shadow-xs ${
+                  saveSuccess
+                    ? 'bg-emerald-600 text-white cursor-default'
+                    : 'bg-primary hover:bg-primary-hover text-primary-foreground cursor-pointer'
+                }`}
+              >
+                {updateMutation.isPending ? (
+                  <Loader2 className="animate-spin" size={15} />
+                ) : saveSuccess ? (
+                  <Check size={15} />
+                ) : (
+                  <Save size={15} />
+                )}
+                <span>{saveSuccess ? 'Saved!' : 'Save Fact Bank'}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
