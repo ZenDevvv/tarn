@@ -512,6 +512,17 @@ export interface GenerationQuotaDTO {
   isEntitled: boolean;
 }
 
+export interface ValidationReportDTO {
+  keywordCoveragePercent: number;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  exactPhraseEchoes: string[];
+  fidelityWarnings: string[];
+  isValid: boolean;
+  blocking: boolean;
+  checkedDimensions: string[];
+}
+
 
 export interface ResumeWithDetailsDTO extends ResumeDTO {
   applicationsCount: number;

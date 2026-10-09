@@ -42,12 +42,14 @@ export function TailoringStudioModal({
   const [targetArtifact, setTargetArtifact] = useState<'package' | 'resume' | 'cover_letter'>('package');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockingWarnings, setBlockingWarnings] = useState<string[]>([]);
   const [generationResult, setGenerationResult] = useState<TailoredPackageResponse | null>(null);
   const [quota, setQuota] = useState<GenerationQuotaDTO | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setError(null);
+      setBlockingWarnings([]);
       setGenerationResult(null);
       tailoringApi
         .getQuota()
@@ -64,12 +66,14 @@ export function TailoringStudioModal({
   const missingKeywords = analysis?.missingKeywords ?? [];
   const echoPhrases = analysis?.exactPhrases ?? [];
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (overrideWarnings = false) => {
     setIsGenerating(true);
     setError(null);
+    setBlockingWarnings([]);
     try {
       const res = await tailoringApi.generatePackage(applicationId, {
         targetArtifact,
+        overrideWarnings,
       });
       setGenerationResult(res);
       if (res.quota) {
@@ -80,9 +84,22 @@ export function TailoringStudioModal({
       }
       onGenerated?.();
     } catch (err: any) {
-      const msg = err.response?.data?.error || err.message || 'Failed to generate tailored deliverable';
+      const status = err.response?.status;
+      const code = err.response?.data?.error?.code || err.response?.data?.code;
+      const msg =
+        err.response?.data?.error?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to generate tailored deliverable';
       setError(msg);
-      if (err.response?.status === 402 || err.response?.data?.code === 'PLANS_REQUIRED') {
+
+      if (status === 422 || code === 'UNGROUNDED_CLAIMS_DETECTED') {
+        const details = err.response?.data?.error?.details || [];
+        const warnings = details.map((d: any) => d.message).filter(Boolean);
+        setBlockingWarnings(warnings.length > 0 ? warnings : [msg]);
+      }
+
+      if (status === 402 || code === 'PLANS_REQUIRED') {
         tailoringApi.getQuota().then((q) => setQuota(q)).catch(() => {});
       }
     } finally {
@@ -176,12 +193,47 @@ export function TailoringStudioModal({
                   </div>
                   <div className="p-3 rounded-lg bg-background border border-border col-span-2 sm:col-span-1">
                     <p className="text-micro text-muted-foreground">Fidelity Status</p>
-                    <p className="font-display font-bold text-subheading text-primary mt-0.5 flex items-center gap-1">
-                      <CheckCircle2 size={16} />
-                      <span>0 Warnings</span>
+                    <p
+                      className={`font-display font-bold text-subheading mt-0.5 flex items-center gap-1 ${
+                        generationResult.validation.fidelityWarnings.length === 0
+                          ? 'text-primary'
+                          : 'text-amber-500'
+                      }`}
+                    >
+                      {generationResult.validation.fidelityWarnings.length === 0 ? (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Verified</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle size={16} />
+                          <span>{generationResult.validation.fidelityWarnings.length} Warnings</span>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
+
+                <div className="text-micro text-muted-foreground flex items-center gap-1.5 pt-1">
+                  <span>
+                    Verified across 6 dimensions: skills, employers, projects, metrics, dates, and cover letter claims.
+                  </span>
+                </div>
+
+                {generationResult.validation.fidelityWarnings.length > 0 && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 space-y-1">
+                    <p className="text-caption font-semibold flex items-center gap-1.5">
+                      <AlertTriangle size={14} />
+                      <span>Fidelity Warnings (Overridden):</span>
+                    </p>
+                    <ul className="list-disc list-inside text-micro space-y-0.5">
+                      {generationResult.validation.fidelityWarnings.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {generationResult.validation.exactPhraseEchoes.length > 0 && (
                   <div className="pt-2">
@@ -214,8 +266,37 @@ export function TailoringStudioModal({
             </div>
           ) : (
             <>
-              {/* Error Message */}
-              {error && (
+              {/* Blocking Ungrounded Claims Error with Override Option */}
+              {blockingWarnings.length > 0 ? (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 space-y-3 text-destructive">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                    <div className="space-y-1 text-small">
+                      <p className="font-semibold text-foreground">
+                        Ungrounded Claims Blocked Save
+                      </p>
+                      <p className="text-caption text-muted-foreground">
+                        The synthesized output contained claims not verified in your Career Profile. You can edit your profile or choose to save anyway:
+                      </p>
+                      <ul className="list-disc list-inside space-y-0.5 text-micro text-destructive pt-1">
+                        {blockingWarnings.map((w, i) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleGenerate(true)}
+                      disabled={isGenerating}
+                      className="px-3.5 py-1.5 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 text-caption font-semibold transition-colors cursor-pointer"
+                    >
+                      Save Anyway (Override Warnings)
+                    </button>
+                  </div>
+                </div>
+              ) : error ? (
                 <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 text-destructive">
                   <AlertTriangle size={18} className="shrink-0 mt-0.5" />
                   <div className="space-y-1 text-small">
@@ -232,7 +313,7 @@ export function TailoringStudioModal({
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Keyword & Role Alignment Preview */}
               <div className="space-y-3">
@@ -435,7 +516,7 @@ export function TailoringStudioModal({
 
                 <button
                   type="button"
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate(false)}
                   disabled={isGenerating || (quota !== null && (!quota.isEntitled || quota.remainingToday <= 0))}
                   className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-small font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >

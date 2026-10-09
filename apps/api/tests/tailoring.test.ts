@@ -313,6 +313,75 @@ Zen Andrei Obrero
     expect(res.body.data.quota.remainingToday).toBe(2);
   });
 
+  it('POST /api/v1/tailoring/applications/:id/generate blocks ungrounded claims with 422 and does not deduct quota', async () => {
+    const ungroundedResume = {
+      ...mockResumePayload,
+      experience: [
+        {
+          ...mockResumePayload.experience[0],
+          bullets: ['Cut server latency by 40% and improved query speeds by 10x.'],
+        },
+      ],
+    };
+
+    const spy = vi
+      .spyOn(tailoringService, 'callGeminiSynthesis')
+      .mockResolvedValueOnce({
+        resume: ungroundedResume,
+        coverLetterMarkdown: mockCoverLetter,
+      });
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume' });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('UNGROUNDED_CLAIMS_DETECTED');
+    expect(res.body.error.message).toContain('Ungrounded metric claim: "40%"');
+
+    // Quota should NOT have been deducted
+    const quotaRes = await request(app)
+      .get('/api/v1/tailoring/quota')
+      .set('Cookie', userCookie);
+    expect(quotaRes.body.data.usedToday).toBe(3);
+  });
+
+  it('POST /api/v1/tailoring/applications/:id/generate allows ungrounded claims when overrideWarnings is true', async () => {
+    const ungroundedResume = {
+      ...mockResumePayload,
+      experience: [
+        {
+          ...mockResumePayload.experience[0],
+          bullets: ['Cut server latency by 40% and improved query speeds by 10x.'],
+        },
+      ],
+    };
+
+    const spy = vi
+      .spyOn(tailoringService, 'callGeminiSynthesis')
+      .mockResolvedValueOnce({
+        resume: ungroundedResume,
+        coverLetterMarkdown: mockCoverLetter,
+      });
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume', overrideWarnings: true });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.resume).toBeDefined();
+    expect(res.body.data.validation.isValid).toBe(false);
+    expect(res.body.data.validation.blocking).toBe(true);
+    expect(res.body.data.validation.fidelityWarnings.length).toBeGreaterThan(0);
+    expect(res.body.data.quota.usedToday).toBe(4);
+  });
+
   it('POST /api/v1/tailoring/applications/:id/generate fails loudly with 503 and rolls back DB writes when Chromium is missing', async () => {
     const appRes = await request(app)
       .post('/api/v1/applications')
@@ -333,11 +402,22 @@ Zen Andrei Obrero
       where: { company: 'Failing Chromium Corp' },
     });
 
+    const chromCoverLetter = `
+Dear Failing Chromium Corp Team,
+
+I am writing to apply for the Backend Developer position at Failing Chromium Corp.
+In my work at Uzaro Solutions Technology Inc., I delivered reliable platform code.
+I handled 6,000+ records.
+
+Sincerely,
+Zen Andrei Obrero
+    `.trim();
+
     const aiSpy = vi
       .spyOn(tailoringService, 'callGeminiSynthesis')
       .mockResolvedValueOnce({
         resume: mockResumePayload,
-        coverLetterMarkdown: mockCoverLetter,
+        coverLetterMarkdown: chromCoverLetter,
       });
     const chromSpy = vi.spyOn(PdfRendererService, 'findChromiumBinary').mockReturnValue(null);
 

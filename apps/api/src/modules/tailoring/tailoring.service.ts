@@ -8,6 +8,7 @@ import { TailoringValidatorService } from './tailoring-validator.service';
 import { PdfRendererService } from './pdf-renderer.service';
 import { masterProfileService } from '../master-profile/master-profile.service';
 import {
+  AppError,
   NotFoundError,
   BadRequestError,
   ServiceUnavailableError,
@@ -134,8 +135,18 @@ export const tailoringService = {
       coverLetterMd,
       analysis.highPriorityKeywords,
       analysis.exactPhrases,
-      profile
+      profile,
+      company
     );
+
+    if (validation.blocking && !input.overrideWarnings) {
+      throw new AppError(
+        `Tailoring produced ungrounded claims that violate candidate facts: ${validation.fidelityWarnings.join('; ')}`,
+        422,
+        'UNGROUNDED_CLAIMS_DETECTED',
+        validation.fidelityWarnings.map((w) => ({ message: w }))
+      );
+    }
 
     const uniqueId = `${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
     const targetArtifact = input.targetArtifact || 'package';

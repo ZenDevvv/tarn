@@ -6,6 +6,7 @@ export const generateTailoringSchema = z.object({
   role: z.string().trim().optional(),
   company: z.string().trim().optional(),
   additionalInstructions: z.string().trim().optional(),
+  overrideWarnings: z.boolean().optional().default(false),
 });
 
 

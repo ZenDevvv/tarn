@@ -1,19 +1,18 @@
 import { apiClient } from '@/lib/api-client';
-import { JdAnalysisResultDTO, ResumeDTO, CoverLetterDTO, GenerationQuotaDTO } from '@tracker/types';
+import {
+  JdAnalysisResultDTO,
+  ResumeDTO,
+  CoverLetterDTO,
+  GenerationQuotaDTO,
+  ValidationReportDTO,
+} from '@tracker/types';
 import { GenerateTailoringInput } from '@tracker/validation';
 
 export interface TailoredPackageResponse {
   resume?: ResumeDTO;
   coverLetter?: CoverLetterDTO;
   analysis: JdAnalysisResultDTO;
-  validation: {
-    keywordCoveragePercent: number;
-    matchedKeywords: string[];
-    missingKeywords: string[];
-    exactPhraseEchoes: string[];
-    fidelityWarnings: string[];
-    isValid: boolean;
-  };
+  validation: ValidationReportDTO;
   quota?: GenerationQuotaDTO;
 }
 
