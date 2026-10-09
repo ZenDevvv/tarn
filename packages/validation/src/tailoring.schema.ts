@@ -119,6 +119,7 @@ export const uploadProfileResumeSchema = z.object({
   filename: z.string().trim().min(1, 'Filename is required'),
   mimeType: z.string().trim().min(1, 'Mime type is required'),
   fileData: z.string().min(1, 'File content is required'),
+  mode: z.enum(['ai', 'standard']).default('standard'),
 });
 
 export const createCoverLetterSchema = z.object({

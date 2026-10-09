@@ -30,7 +30,7 @@ export function SettingsNav({ activeTab, onTabChange }: SettingsNavProps) {
               type="button"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 text-body font-medium transition-colors relative',
+                'flex items-center gap-2 px-3 sm:px-4 py-2.5 text-body font-medium transition-colors relative',
                 isActive
                   ? 'text-foreground font-semibold'
                   : 'text-muted-foreground hover:text-foreground'

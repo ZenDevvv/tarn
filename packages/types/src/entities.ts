@@ -512,6 +512,7 @@ export interface MasterProfileDTO {
 export interface MasterProfileDraftDTO {
   profile: Omit<MasterProfileDTO, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
   warnings: string[];
+  quota?: GenerationQuotaDTO;
 }
 
 

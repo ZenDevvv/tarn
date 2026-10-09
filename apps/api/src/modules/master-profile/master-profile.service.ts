@@ -2,6 +2,7 @@ import { prisma } from '@tracker/database';
 import { MasterProfileDTO, MasterProfileDraftDTO } from '@tracker/types';
 import { UpdateMasterProfileInput, UploadProfileResumeInput } from '@tracker/validation';
 import { ProfileExtractorService } from './profile-extractor.service';
+import { tailoringService } from '../tailoring/tailoring.service';
 import { BadRequestError, NotFoundError } from '../../middleware/error-handler';
 
 export const masterProfileService = {
@@ -128,7 +129,44 @@ export const masterProfileService = {
     }
 
     const extractedText = ProfileExtractorService.extractTextFromBuffer(buffer, input.mimeType);
-    return ProfileExtractorService.extractWithAi(extractedText, process.env.GEMINI_API_KEY);
+
+    if (input.mode === 'ai') {
+      // 1. Assert user has remaining daily generations
+      await tailoringService.assertCanGenerate(userId);
+
+      // 2. Perform AI zero-shot extraction with strict error bubbling
+      const draft = await ProfileExtractorService.extractWithAi(extractedText, process.env.GEMINI_API_KEY, {
+        throwOnError: true,
+      });
+
+      // 3. Atomically increment daily quota usage
+      const date = tailoringService.getTodayDate();
+      await prisma.generationUsage.upsert({
+        where: { userId_date: { userId, date } },
+        create: { userId, date, count: 1 },
+        update: { count: { increment: 1 } },
+      });
+
+      const quota = await tailoringService.getQuota(userId);
+      return {
+        ...draft,
+        quota,
+      };
+    }
+
+    // Standard Deterministic Extraction (100% Free & Unlimited)
+    const draft = ProfileExtractorService.parseResumeText(extractedText);
+    const standardWarnings = [
+      ...draft.warnings,
+      'Parsed via local domain-agnostic engine. While tuned across multiple professions, unconventional layouts may have minor inaccuracies — please review extracted details.',
+    ];
+
+    const quota = await tailoringService.getQuota(userId);
+    return {
+      profile: draft.profile,
+      warnings: standardWarnings,
+      quota,
+    };
   },
 
   async importJson(_userId: string, jsonPayload: any): Promise<MasterProfileDraftDTO> {

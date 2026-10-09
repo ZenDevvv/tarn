@@ -305,4 +305,79 @@ BS Computer Science | 2020
       }
     }, 30000);
   });
+
+  describe('Quota-Gated Dual-Mode Ingestion', () => {
+    const sampleResume = Buffer.from(`
+Dr. Jane Doe, MD
+jane.doe@hospital.org | 555-987-6543 | Chicago, IL
+
+CLINICAL EXPERIENCE
+Northwestern Memorial Hospital | Cardiology Fellow | 2021 - Present
+• Conducted over 200 diagnostic cardiac catheterizations.
+
+EDUCATION
+Johns Hopkins University
+MD Medicine | 2020
+    `).toString('base64');
+
+    it('processes mode: standard for free without decrementing quota and attaches discretion note', async () => {
+      const quotaBefore = await request(app)
+        .get('/api/v1/tailoring/quota')
+        .set('Cookie', userACookie);
+
+      const res = await request(app)
+        .post('/api/v1/master-profile/upload-resume')
+        .set('Cookie', userACookie)
+        .send({
+          filename: 'jane_resume.txt',
+          mimeType: 'text/plain',
+          fileData: sampleResume,
+          mode: 'standard',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.profile.basics.name).toBe('Dr. Jane Doe, MD');
+      expect(res.body.data.warnings.some((w: string) => w.includes('domain-agnostic engine'))).toBe(true);
+      expect(res.body.data.quota).toBeDefined();
+
+      const quotaAfter = await request(app)
+        .get('/api/v1/tailoring/quota')
+        .set('Cookie', userACookie);
+
+      expect(quotaAfter.body.data.usedToday).toBe(quotaBefore.body.data.usedToday);
+    });
+
+    it('rejects mode: ai when user has exceeded daily quota limit', async () => {
+      const resQuota = await request(app)
+        .get('/api/v1/tailoring/quota')
+        .set('Cookie', userACookie);
+      const limit = resQuota.body.data.limit;
+
+      const { prisma } = await import('@tracker/database');
+      const today = new Date().toISOString().slice(0, 10);
+      const decoded: any = (await import('jsonwebtoken')).default.decode(
+        userACookie[0].split(';')[0].split('=')[1]
+      );
+
+      await prisma.generationUsage.upsert({
+        where: { userId_date: { userId: decoded.userId, date: today } },
+        create: { userId: decoded.userId, date: today, count: limit },
+        update: { count: limit },
+      });
+
+      const res = await request(app)
+        .post('/api/v1/master-profile/upload-resume')
+        .set('Cookie', userACookie)
+        .send({
+          filename: 'jane_resume.txt',
+          mimeType: 'text/plain',
+          fileData: sampleResume,
+          mode: 'ai',
+        });
+
+      expect(res.status).toBe(402);
+      expect(res.body.error.code).toBe('PLANS_REQUIRED');
+      expect(res.body.error.message).toContain('Daily free generation limit');
+    });
+  });
 });

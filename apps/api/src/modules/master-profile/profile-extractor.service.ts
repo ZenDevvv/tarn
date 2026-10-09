@@ -4,6 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { MasterProfileDTO, MasterProfileDraftDTO } from '@tracker/types';
 import { consolidateBullets, isBulletLine } from '../tailoring/utils/bullet-utils';
+import { ServiceUnavailableError } from '../../middleware/error-handler';
 
 const ACRONYM_GUARD = /\b(IoT|LMS|AWS|API|SQL|CSS|PHP|HTML|HRIS|ERP|SaaS|LLM|AI|PMS)\b/i;
 
@@ -577,10 +578,17 @@ export class ProfileExtractorService {
    * Extract structured resume via Gemini AI zero-shot schema induction,
    * with automatic fallback and consensus verification against deterministic parser.
    */
-  public static async extractWithAi(rawText: string, apiKey?: string): Promise<MasterProfileDraftDTO> {
+  public static async extractWithAi(
+    rawText: string,
+    apiKey?: string,
+    options: { throwOnError?: boolean } = {}
+  ): Promise<MasterProfileDraftDTO> {
     const fallbackDraft = this.parseResumeText(rawText);
 
     if (!apiKey) {
+      if (options.throwOnError) {
+        throw new ServiceUnavailableError('AI service is not configured (missing GEMINI_API_KEY). No AI credits were deducted.');
+      }
       return fallbackDraft;
     }
 
@@ -765,6 +773,11 @@ ${rawText}
         warnings,
       };
     } catch (err: any) {
+      if (options.throwOnError) {
+        throw new ServiceUnavailableError(
+          `AI extraction failed: ${err?.message || 'External service error'}. No AI credits were deducted. Please retry or select Standard extraction.`
+        );
+      }
       console.warn('Gemini zero-shot resume extraction failed; falling back to deterministic parser:', err?.message || err);
       return {
         profile: fallbackDraft.profile,
