@@ -12,6 +12,7 @@ import {
   Check,
 } from 'lucide-react';
 import { applicationApi } from '../api/application-api';
+import { toErrorMessage } from '@/lib/api-client';
 import { STATUS_CONFIG, StageRing } from './application-status-badge';
 import { useApplicationStatuses } from '@/features/settings/hooks/use-application-statuses';
 import { Select } from '@/components/ui/select';
@@ -328,7 +329,7 @@ export function ApplicationForm({
 
       onSuccess?.(result);
     } catch (err: any) {
-      setFormError(err?.response?.data?.message || err.message || 'Failed to save application');
+      setFormError(toErrorMessage(err, 'Failed to save application'));
     } finally {
       setIsSubmitting(false);
     }

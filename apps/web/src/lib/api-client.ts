@@ -14,6 +14,25 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Build a user-facing message from any thrown value.
+ *
+ * The API returns field-level validation failures in `error.details`, but the
+ * generic top-level message ("Invalid request data") hides which field failed.
+ * Surface the detail lines so the user can act on them.
+ */
+export function toErrorMessage(err: unknown, fallback: string): string {
+  const details = err instanceof ApiError ? err.details : undefined;
+  // A detail with no message carries no information; a bare field name is noise.
+  const lines = (details || [])
+    .map((d) => (d?.message ? [d?.field, d.message].filter(Boolean).join(': ') : ''))
+    .filter(Boolean);
+
+  const headline = (err instanceof Error ? err.message : '').trim() || fallback;
+
+  return [headline, ...lines].filter(Boolean).join('\n');
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
 
