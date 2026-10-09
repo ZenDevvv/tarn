@@ -15,6 +15,25 @@ import {
   PlansRequiredError,
 } from '../../middleware/error-handler';
 
+export function determineOptimalSectionOrder(profile: MasterProfileDTO): string[] {
+  const workExp = profile.workExperience || [];
+  const projExp = profile.projectExperience || [];
+  const totalWorkBullets = workExp.reduce((acc, w) => acc + (w.bullets?.length || 0), 0);
+
+  // 1. Experienced Professional: >= 2 work experiences or >= 4 work bullets
+  if (workExp.length >= 2 || totalWorkBullets >= 4) {
+    return ['experience', 'projects', 'skills', 'education', 'certifications'];
+  }
+
+  // 2. Portfolio / Project-First: 0 formal work roles or 0 work bullets, but >= 2 projects
+  if ((workExp.length === 0 || totalWorkBullets === 0) && projExp.length >= 2) {
+    return ['projects', 'skills', 'education', 'certifications', 'experience'];
+  }
+
+  // 3. Early Career / Student / Sparse Experience
+  return ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
+}
+
 export const tailoringService = {
   getDailyLimit(): number {
     return Number(process.env.FREE_DAILY_GENERATIONS) || 5;
@@ -145,19 +164,11 @@ export const tailoringService = {
       resumePayload.certifications = verifiedCerts;
     }
 
-    // Determine sectionOrder: user provided -> preset -> experience-based default
-    const totalWorkBullets = (profile.workExperience || []).reduce(
-      (acc, w) => acc + (w.bullets?.length || 0),
-      0
-    );
-    const isExperienced = (profile.workExperience || []).length >= 2 || totalWorkBullets >= 4;
-
+    // Determine sectionOrder: caller-provided override -> automatic profile heuristic
     if (Array.isArray(input.sectionOrder) && input.sectionOrder.length > 0) {
       resumePayload.sectionOrder = input.sectionOrder;
-    } else if (input.preset === 'experienced' || (!input.preset && isExperienced)) {
-      resumePayload.sectionOrder = ['experience', 'projects', 'skills', 'education', 'certifications'];
     } else {
-      resumePayload.sectionOrder = ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
+      resumePayload.sectionOrder = determineOptimalSectionOrder(profile);
     }
 
     // 4. Automated validation & Multi-factor ATS Score Lift

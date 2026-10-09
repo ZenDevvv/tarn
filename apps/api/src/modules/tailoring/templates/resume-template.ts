@@ -390,6 +390,7 @@ export function buildResumeHtml(payload: any): string {
     0
   );
   const isExperienced = experience.length >= 2 || totalWorkBullets >= 4;
+  const isProjectFirst = (experience.length === 0 || totalWorkBullets === 0) && projects.length >= 2;
 
   let activeOrder: string[];
   if (Array.isArray(payload.sectionOrder) && payload.sectionOrder.length > 0) {
@@ -397,6 +398,9 @@ export function buildResumeHtml(payload: any): string {
   } else if (isExperienced) {
     // Experienced: Work Experience top, Education towards bottom, no summary unless explicitly supplied
     activeOrder = ['summary', 'experience', 'projects', 'skills', 'education', 'certifications'];
+  } else if (isProjectFirst) {
+    // Portfolio / Project-First: Projects top, Education / Skills next, Experience bottom
+    activeOrder = ['summary', 'projects', 'skills', 'education', 'certifications', 'experience'];
   } else {
     // Early Career / Student: Summary (if sparse) -> Education -> Skills -> Projects -> Experience -> Certifications
     activeOrder = ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
