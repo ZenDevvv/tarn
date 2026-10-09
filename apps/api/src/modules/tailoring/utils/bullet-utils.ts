@@ -12,6 +12,12 @@ const LIST_NUMBER_REGEX = /^\d+[\.\)]\s+/;
 const DANGLING_END_REGEX =
   /([,\/:\(;]|\b(and|or|in|to|for|with|by|on|at|of|from|the|a|an|as|via|across|into|through|including|such as))\s*$/i;
 
+/** True when a raw resume line is an explicit bullet/list item rather than a header fragment. */
+export function isBulletLine(line: string): boolean {
+  const trimmed = line.trim();
+  return BULLET_SYMBOL_REGEX.test(trimmed) || LIST_NUMBER_REGEX.test(trimmed);
+}
+
 export function consolidateBullets(rawLines: string[] | string | null | undefined): string[] {
   if (!rawLines) return [];
 

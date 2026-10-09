@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { MasterProfileDTO, MasterProfileDraftDTO } from '@tracker/types';
-import { consolidateBullets } from '../tailoring/utils/bullet-utils';
+import { consolidateBullets, isBulletLine } from '../tailoring/utils/bullet-utils';
 
 const ACRONYM_GUARD = /\b(IoT|LMS|AWS|API|SQL|CSS|PHP|HTML|HRIS|ERP|SaaS|LLM|AI|PMS)\b/i;
 
@@ -258,7 +258,9 @@ export class ProfileExtractorService {
           pushJob(curJob);
         }
 
-        const headerWithoutDate = trimmed.replace(dateMatch[0], '').replace(/\s+/g, ' ').trim();
+        // Removing the date leaves a dangling separator ("Software Engineer |"), which
+        // would fake a single-part pipe header — strip it before choosing a branch.
+        const headerWithoutDate = trimmed.replace(dateMatch[0], '').replace(/[|•·]+\s*$/, '').replace(/\s+/g, ' ').trim();
         let role = '';
         let company = '';
         let jobLocation = '';
@@ -266,8 +268,8 @@ export class ProfileExtractorService {
         if (headerWithoutDate.includes('|')) {
           const parts = headerWithoutDate.split('|').map((p) => p.trim()).filter(Boolean);
           if (parts.length >= 2) {
-            const titleIdx = parts.findIndex((p) => looksLikeTitle(p));
-            const employerIdx = parts.findIndex((p) => looksLikeEmployer(p));
+            const titleIdx = parts.findIndex(looksLikeTitle);
+            const employerIdx = parts.findIndex(looksLikeEmployer);
             if (titleIdx >= 0 && employerIdx >= 0 && titleIdx !== employerIdx) {
               role = parts[titleIdx];
               company = parts[employerIdx];
@@ -284,8 +286,21 @@ export class ProfileExtractorService {
             company = parts[0];
           }
         } else if (pendingTitle) {
-          role = pendingTitle;
-          company = headerWithoutDate;
+          // Stacked header — the date sat on its own line, so `pendingTitle` holds the
+          // preceding header segment. Classify both with the same two signals the pipe
+          // branch uses. Exactly one title settles the split; the other segment is the
+          // employer. Neither or both means we cannot tell: keep the earlier segment on
+          // the role and warn, never silently swap.
+          const stacked = [pendingTitle, headerWithoutDate];
+          const titleCount = stacked.filter(looksLikeTitle).length;
+          if (titleCount === 1) {
+            role = stacked.find(looksLikeTitle)!;
+            company = stacked.find((s) => s !== role)!;
+          } else {
+            role = stacked[0];
+            company = stacked[1];
+            warnings.push(`Verify role/employer for "${stacked[0]} | ${stacked[1]}"`);
+          }
         } else if (headerWithoutDate) {
           if (looksLikeTitle(headerWithoutDate)) {
             role = headerWithoutDate;
@@ -310,6 +325,10 @@ export class ProfileExtractorService {
           rawLines: [],
         };
         pendingTitle = '';
+      } else if (curJob && !curJob.rawLines.length && !isBulletLine(trimmed) && !curJob.company && !looksLikeTitle(trimmed) && trimmed.length < 50) {
+        // Layout D: the employer is stacked under a dated header that carried only a
+        // title. The line is the job's company, not an achievement bullet.
+        curJob.company = trimmed;
       } else if (!curJob || curJob.rawLines.length === 0) {
         if (looksLikeTitle(trimmed) && trimmed.length < 50) {
           pendingTitle = trimmed;

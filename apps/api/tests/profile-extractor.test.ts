@@ -353,4 +353,75 @@ WORK EXPERIENCE
     expect(profile.workExperience).toEqual([]);
     expect(warnings).toContain('Work experience not found — please verify');
   });
+
+  // D2: a stacked header is two segments split across lines. Today the parser
+  // assigns the earlier line to `role` and the dated line to `company`, which
+  // silently swaps them whenever the earlier line is actually the employer.
+  describe('stacked-header disambiguation', () => {
+    it('assigns the company segment to company and the title segment to role', () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Acme Corp Ltd
+Software Engineer | Jan 2020 - Present
+• Built things that shipped.
+      `.trim());
+
+      expect(profile.workExperience[0].company).toBe('Acme Corp Ltd');
+      expect(profile.workExperience[0].role).toBe('Software Engineer');
+      expect(warnings.some((w) => w.includes('Missing'))).toBe(false);
+    });
+
+    it('keeps positional order and warns once when neither stacked segment disambiguates', () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Nightingale Health
+Care Delivery Unit | Jan 2020 - Present
+• Coordinated care across units.
+      `.trim());
+
+      // Ambiguous: first segment is the role, never a silent swap.
+      expect(profile.workExperience[0].role).toBe('Nightingale Health');
+      expect(profile.workExperience[0].company).toBe('Care Delivery Unit');
+      expect(warnings.filter((w) => w.includes('Verify role/employer'))).toHaveLength(1);
+    });
+
+    it('keeps positional order and warns once when both stacked segments look like titles', () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Senior Project Manager
+Operations Lead | Jan 2020 - Present
+• Ran the operations portfolio.
+      `.trim());
+
+      expect(profile.workExperience[0].role).toBe('Senior Project Manager');
+      expect(profile.workExperience[0].company).toBe('Operations Lead');
+      expect(warnings.filter((w) => w.includes('Verify role/employer'))).toHaveLength(1);
+    });
+
+    it('lifts the employer line below a title-only dated header', () => {
+      const { profile, warnings } = ProfileExtractorService.parseResumeText(`
+Jane Doe
+jane@x.io
+
+WORK EXPERIENCE
+Registered Nurse | Jan 2020 - Present
+St Mary Hospital
+• Triaged patients.
+      `.trim());
+
+      expect(profile.workExperience[0].role).toBe('Registered Nurse');
+      expect(profile.workExperience[0].company).toBe('St Mary Hospital');
+      expect(profile.workExperience[0].bullets).toEqual(['Triaged patients.']);
+      expect(warnings.some((w) => w.includes('Missing'))).toBe(false);
+    });
+  });
 });
