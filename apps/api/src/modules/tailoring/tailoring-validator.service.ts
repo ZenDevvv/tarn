@@ -13,6 +13,9 @@ export class TailoringValidatorService {
       projects?: Array<{ name: string; subtitle?: string | null; bullets?: string[] }>;
       skills?: Record<string, string[]>;
       education?: Array<{ school?: string | null; graduation?: string | null }>;
+      certifications?: any[];
+      summary?: string | null;
+      sectionOrder?: string[];
     },
     coverLetterMarkdown: string,
     jdKeywords: string[],
@@ -104,11 +107,21 @@ export class TailoringValidatorService {
 
     // 5b. Employers Grounding (Resume Experience)
     const masterCompanies = new Set(
-      (profile.workExperience || []).map((w) => w.company.toLowerCase().trim())
+      (profile.workExperience || []).flatMap((w) => {
+        const items: string[] = [];
+        if (w.company) items.push(w.company.toLowerCase().trim());
+        if (w.role) items.push(w.role.toLowerCase().trim());
+        return items;
+      })
     );
     (resumePayload.experience || []).forEach((e) => {
       const cLower = e.company.toLowerCase().trim();
-      if (!masterCompanies.has(cLower)) {
+      const isKnown =
+        masterCompanies.has(cLower) ||
+        Array.from(masterCompanies).some(
+          (mc) => mc.includes(cLower) || cLower.includes(mc)
+        );
+      if (!isKnown) {
         fidelityWarnings.push(`Ungrounded employer claim: "${e.company}"`);
       }
     });
@@ -121,6 +134,31 @@ export class TailoringValidatorService {
       const pLower = p.name.toLowerCase().trim();
       if (!masterProjects.has(pLower)) {
         fidelityWarnings.push(`Ungrounded project claim: "${p.name}" (not found in Master Profile)`);
+      }
+    });
+
+    // 5c2. Certifications Grounding
+    const masterCerts = new Set(
+      [
+        ...(Array.isArray(profile.factBank?.certifications) ? profile.factBank.certifications : []),
+        ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Certifications']))
+          ? profile.technicalSkills['Certifications']
+          : []),
+        ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Licenses & Certifications']))
+          ? profile.technicalSkills['Licenses & Certifications']
+          : []),
+      ].map((c: any) => (typeof c === 'string' ? c : c.name || '').toLowerCase().trim())
+    );
+
+    (resumePayload.certifications || []).forEach((cert: any) => {
+      const cName = (typeof cert === 'string' ? cert : cert.name || '').toLowerCase().trim();
+      const isKnown =
+        masterCerts.has(cName) ||
+        Array.from(masterCerts).some((mc) => mc.includes(cName) || cName.includes(mc));
+      if (!isKnown && cName) {
+        fidelityWarnings.push(
+          `Ungrounded certification claim: "${typeof cert === 'string' ? cert : cert.name}" (not found in Fact Bank)`
+        );
       }
     });
 
@@ -182,6 +220,15 @@ export class TailoringValidatorService {
     });
 
     // 5f. Cover Letter Entities Grounding (Employers)
+    const EXCLUDED_EMPLOYER_TOKENS = new Set([
+      'expertise', 'passion', 'focus', 'experience', 'proficiency',
+      'skills', 'years', 'track record', 'knowledge', 'specialization',
+      'competencies', 'background', 'fluency', 'dedication', 'enthusiasm',
+      'confidence', 'excellence', 'commitment', 'drive', 'precision',
+      'speed', 'agility', 'rigor', 'leadership', 'collaboration',
+      'high standards', 'proven ability', 'solid foundation',
+    ]);
+
     if (coverLetterMarkdown) {
       const employerClaimRegex =
         /(?:role|position|developer|engineer|lead|time|tenure|work(?:ed)?)\s+(?:at|with|for)\s+([A-Z][A-Za-z0-9&.,\s]{2,35}?)(?=[.,\n]|(?:\s+(?:as|where|I|handling|leading)))/gi;
@@ -189,6 +236,13 @@ export class TailoringValidatorService {
       while ((match = employerClaimRegex.exec(coverLetterMarkdown)) !== null) {
         const claimed = match[1].replace(/[.,;:]+$/, '').trim();
         const claimedLower = claimed.toLowerCase();
+
+        // Skip obvious descriptor nouns and skill/virtue phrases
+        const firstToken = claimedLower.split(/\s+/)[0];
+        if (EXCLUDED_EMPLOYER_TOKENS.has(claimedLower) || EXCLUDED_EMPLOYER_TOKENS.has(firstToken)) {
+          continue;
+        }
+
         const targetClean = (targetCompany || '').toLowerCase().trim();
         const isTarget =
           targetClean &&

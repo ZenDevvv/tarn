@@ -131,7 +131,36 @@ export const tailoringService = {
     const resumePayload = aiResult.resume;
     const coverLetterMd = aiResult.coverLetterMarkdown;
 
-    // 4. Automated validation
+    // Attach verified certifications from Master Profile if available
+    const verifiedCerts = [
+      ...(Array.isArray(profile.factBank?.certifications) ? profile.factBank.certifications : []),
+      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Certifications']))
+        ? profile.technicalSkills['Certifications']
+        : []),
+      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Licenses & Certifications']))
+        ? profile.technicalSkills['Licenses & Certifications']
+        : []),
+    ];
+    if (verifiedCerts.length > 0 && (!resumePayload.certifications || resumePayload.certifications.length === 0)) {
+      resumePayload.certifications = verifiedCerts;
+    }
+
+    // Determine sectionOrder: user provided -> preset -> experience-based default
+    const totalWorkBullets = (profile.workExperience || []).reduce(
+      (acc, w) => acc + (w.bullets?.length || 0),
+      0
+    );
+    const isExperienced = (profile.workExperience || []).length >= 2 || totalWorkBullets >= 4;
+
+    if (Array.isArray(input.sectionOrder) && input.sectionOrder.length > 0) {
+      resumePayload.sectionOrder = input.sectionOrder;
+    } else if (input.preset === 'experienced' || (!input.preset && isExperienced)) {
+      resumePayload.sectionOrder = ['experience', 'projects', 'skills', 'education', 'certifications'];
+    } else {
+      resumePayload.sectionOrder = ['summary', 'education', 'skills', 'projects', 'experience', 'certifications'];
+    }
+
+    // 4. Automated validation & Multi-factor ATS Score Lift
     const validation = TailoringValidatorService.validate(
       resumePayload,
       coverLetterMd,
@@ -142,14 +171,33 @@ export const tailoringService = {
       analysis.matchScore
     );
 
-    if (validation.blocking && !input.overrideWarnings) {
-      throw new AppError(
-        `Tailoring produced ungrounded claims that violate candidate facts: ${validation.fidelityWarnings.join('; ')}`,
-        422,
-        'UNGROUNDED_CLAIMS_DETECTED',
-        validation.fidelityWarnings.map((w) => ({ message: w }))
-      );
-    }
+    // Evaluate tailored resume and compute score lift
+    const tailoredEval = JdAnalyzerService.evaluateResumePayload(
+      resumePayload,
+      role,
+      company,
+      analysis.highPriorityKeywords
+    );
+
+    const scoreLift = JdAnalyzerService.computeScoreLift(
+      analysis.scoreBreakdown || {
+        totalScore: analysis.matchScore,
+        skillsScore: analysis.matchScore,
+        roleScore: 50,
+        impactScore: 50,
+        metricsCount: 0,
+        verbsCount: 0,
+        matchedSkillsCount: analysis.matchedKeywords.length,
+        totalSkillsCount: analysis.highPriorityKeywords.length,
+      },
+      tailoredEval,
+      analysis.matchedKeywords,
+      tailoredEval.matchedKeywords
+    );
+
+    validation.scoreBreakdown = tailoredEval;
+    validation.scoreLift = scoreLift;
+    analysis.scoreLift = scoreLift;
 
     const uniqueId = `${Date.now()}_${crypto.randomUUID().slice(0, 6)}`;
     const targetArtifact = input.targetArtifact || 'package';
@@ -189,10 +237,10 @@ export const tailoringService = {
               filename: `resume_${role.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
               mimeType: 'application/pdf',
               isTailored: true,
-              matchScore: analysis.matchScore,
+              matchScore: scoreLift.tailored.totalScore,
               content: resumePayload,
               skills: Object.values(resumePayload.skills || {}).flat() as string[],
-              notes: `Tailored for ${role} at ${company}. Match score: ${analysis.matchScore}%.`,
+              notes: `Tailored for ${role} at ${company}. ATS Match score: ${scoreLift.tailored.totalScore}% (+${scoreLift.lift.totalLift}% lift).`,
             },
           });
 
@@ -215,7 +263,7 @@ export const tailoringService = {
               content: coverLetterMd,
               htmlContent: coverLetterRender.html,
               fileUrl: coverLetterRender.pdfUrl,
-              matchScore: analysis.matchScore,
+              matchScore: scoreLift.tailored.totalScore,
               echoedPhrases: validation.exactPhraseEchoes,
             },
           });
@@ -226,11 +274,13 @@ export const tailoringService = {
             applicationId: application.id,
             type: TimelineEventType.CUSTOM_EVENT,
             title: `Tailored ${targetArtifact === 'package' ? 'application package' : targetArtifact} generated`,
-            description: `Generated tailored deliverables (${analysis.matchScore}% match score) with AI synthesis.`,
+            description: `Generated tailored deliverables (${scoreLift.tailored.totalScore}% ATS score, +${scoreLift.lift.totalLift}% lift) with AI synthesis.`,
             metadata: {
               resumeId: createdResume?.id || null,
               coverLetterId: createdCoverLetter?.id || null,
-              matchScore: analysis.matchScore,
+              matchScore: scoreLift.tailored.totalScore,
+              baselineScore: scoreLift.baseline.totalScore,
+              scoreLift: scoreLift.lift.totalLift,
             },
           },
         });
@@ -262,6 +312,7 @@ export const tailoringService = {
           : undefined,
         analysis,
         validation,
+        scoreLift,
         quota: {
           limit: currentQuota.limit,
           usedToday: currentQuota.usedToday + 1,
@@ -293,6 +344,22 @@ export const tailoringService = {
     company: string,
     apiKey: string
   ): Promise<AiTailoringOutput> {
+    const totalWorkBullets = (profile.workExperience || []).reduce(
+      (acc, w) => acc + (w.bullets?.length || 0),
+      0
+    );
+    const isSparse = (profile.workExperience?.length || 0) <= 1 || totalWorkBullets < 4;
+
+    const verifiedCerts = [
+      ...(Array.isArray(profile.factBank?.certifications) ? profile.factBank.certifications : []),
+      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Certifications']))
+        ? profile.technicalSkills['Certifications']
+        : []),
+      ...((profile.technicalSkills && Array.isArray(profile.technicalSkills['Licenses & Certifications']))
+        ? profile.technicalSkills['Licenses & Certifications']
+        : []),
+    ];
+
     const prompt = `
 You are an expert ATS resume and cover letter tailoring engine.
 
@@ -302,8 +369,19 @@ NON-NEGOTIABLE FIDELITY RULES:
 1. Grounding: Stay 100% faithful to the candidate's Master Profile. NEVER invent employers, tools, projects, dates, or metrics.
 2. Verified Metrics: ONLY use metrics and quantities that exist in the candidate's profile (e.g. from factBank or experience bullets).
 3. Positioning: Follow the candidate's positioning rules: ${JSON.stringify(profile.positioningRules)}.
-4. No Summary: Do NOT include a Professional Summary section in the resume.
-5. Cover Letter Verbatim Echoes: Echo at least 3 exact phrases from the Job Description in the cover letter: ${JSON.stringify(analysis.exactPhrases)}.
+${
+  isSparse
+    ? `4. Sparse Profile Summary: The candidate's profile is early-career/sparse (<= 1 role). Include a concise 2-sentence "summary" field targeted directly to "${role}" using their verified factBank positioning: ${JSON.stringify(
+        profile.factBank?.core_positioning || []
+      )}. Do NOT invent claims.`
+    : `4. No Summary: Do NOT include a summary section in the resume. Focus strictly on concrete achievements in experience, projects, and skills.`
+}
+5. Certifications: If verified certifications exist in the profile: ${JSON.stringify(
+      verifiedCerts
+    )}, include them in the "certifications" array. NEVER invent certifications.
+6. Cover Letter Verbatim Echoes: Echo at least 3 exact phrases from the Job Description in the cover letter: ${JSON.stringify(
+      analysis.exactPhrases
+    )}.
 
 ADAPTATION & TAILORING DIRECTIVES:
 A. Resume Bullet Rewriting & Gap Closing:
@@ -336,10 +414,12 @@ Respond ONLY with valid JSON in this exact structure:
 {
   "resume": {
     "basics": ...,
+    ${isSparse ? '"summary": "2-sentence targeted summary...",' : ''}
     "education": ...,
     "experience": [...],
     "projects": [...],
-    "skills": { ... }
+    "skills": { ... },
+    "certifications": [...]
   },
   "coverLetterMarkdown": "Dear Hiring Team..."
 }

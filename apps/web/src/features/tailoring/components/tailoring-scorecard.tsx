@@ -9,6 +9,7 @@ interface TailoringScorecardProps {
   onOpenStudio: () => void;
   hasJobDescription: boolean;
   isTailored?: boolean;
+  tailoredScore?: number | null;
   coverageDelta?: number;
   className?: string;
 }
@@ -19,6 +20,7 @@ export function TailoringScorecard({
   onOpenStudio,
   hasJobDescription,
   isTailored,
+  tailoredScore,
   coverageDelta,
   className,
 }: TailoringScorecardProps) {
@@ -56,7 +58,11 @@ export function TailoringScorecard({
     );
   }
 
-  const score = analysis?.matchScore ?? 0;
+  const baselineScore = analysis?.matchScore ?? 0;
+  const displayScore =
+    isTailored && typeof tailoredScore === 'number' && tailoredScore > 0
+      ? tailoredScore
+      : baselineScore;
   const matched = analysis?.matchedKeywords ?? [];
   const missing = analysis?.missingKeywords ?? [];
   const echoPhrases = analysis?.exactPhrases ?? [];
@@ -69,7 +75,7 @@ export function TailoringScorecard({
           {/* Radial score gauge */}
           <div className="relative flex items-center justify-center w-12 h-12 rounded-full border-2 border-primary/30 bg-primary/5 shrink-0">
             <span className="font-display font-bold text-body text-foreground">
-              {score}%
+              {displayScore}%
             </span>
           </div>
 
@@ -88,7 +94,9 @@ export function TailoringScorecard({
               )}
             </div>
             <p className="text-micro text-muted-foreground mt-0.5">
-              Matched against your Career Fact Bank
+              {isTailored && typeof coverageDelta === 'number' && coverageDelta > 0
+                ? `Improved from baseline ${baselineScore}%`
+                : 'Matched against your Career Fact Bank'}
             </p>
           </div>
         </div>
@@ -104,6 +112,58 @@ export function TailoringScorecard({
         <span>{isTailored ? 'Re-Tailor Deliverables' : 'Tailor Application'}</span>
         <ArrowRight size={14} />
       </button>
+
+      {/* Multi-Factor ATS Score Breakdown */}
+      {analysis?.scoreBreakdown && (
+        <div className="p-3 rounded-xl bg-secondary/30 border border-border/80 space-y-2">
+          <div className="flex items-center justify-between text-micro font-semibold text-foreground uppercase tracking-wider">
+            <span>ATS Alignment Breakdown</span>
+            {typeof coverageDelta === 'number' && coverageDelta > 0 && (
+              <span className="text-primary font-bold">+{coverageDelta}% Lift</span>
+            )}
+          </div>
+          <div className="space-y-1.5 text-micro">
+            <div>
+              <div className="flex items-center justify-between text-muted-foreground mb-0.5">
+                <span>Skills Match (60%)</span>
+                <span className="font-medium text-foreground">{analysis.scoreBreakdown.skillsScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${analysis.scoreBreakdown.skillsScore}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-muted-foreground mb-0.5">
+                <span>Role & Title Fit (25%)</span>
+                <span className="font-medium text-foreground">{analysis.scoreBreakdown.roleScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary/80 rounded-full transition-all duration-300"
+                  style={{ width: `${analysis.scoreBreakdown.roleScore}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-muted-foreground mb-0.5">
+                <span>Impact & Action Verbs (15%)</span>
+                <span className="font-medium text-foreground">{analysis.scoreBreakdown.impactScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary/60 rounded-full transition-all duration-300"
+                  style={{ width: `${analysis.scoreBreakdown.impactScore}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Matched Qualifications */}
       <div className="space-y-2">

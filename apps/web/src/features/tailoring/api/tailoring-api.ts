@@ -5,6 +5,7 @@ import {
   CoverLetterDTO,
   GenerationQuotaDTO,
   ValidationReportDTO,
+  ScoreLiftReportDTO,
 } from '@tracker/types';
 import { GenerateTailoringInput } from '@tracker/validation';
 
@@ -14,6 +15,7 @@ export interface TailoredPackageResponse {
   analysis: JdAnalysisResultDTO;
   validation: ValidationReportDTO;
   quota?: GenerationQuotaDTO;
+  scoreLift?: ScoreLiftReportDTO;
 }
 
 export const tailoringApi = {

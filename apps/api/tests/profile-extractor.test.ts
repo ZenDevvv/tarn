@@ -155,4 +155,36 @@ Bachelor of Science in Electrical Engineering | 2021
     expect(warnings).not.toContain('Technical skills not found — please verify');
     expect(warnings).not.toContain('Location not found — please verify');
   });
+
+  it('extracts CERTIFICATIONS section into factBank.certifications', () => {
+    const resumeWithCerts = `
+David Cloud
+david@cloud.io | Seattle, WA
+
+WORK EXPERIENCE
+Cloud Native Co | Cloud Architect | 2021 - Present
+• Deployed Kubernetes clusters across multi-cloud regions.
+
+TECHNICAL SKILLS
+Cloud: AWS, GCP, Kubernetes
+
+EDUCATION
+University of Washington
+BS Computer Science | 2020
+
+CERTIFICATIONS
+• AWS Certified Solutions Architect - Associate
+• Certified Kubernetes Administrator (CKA)
+• HashiCorp Certified: Terraform Associate
+    `.trim();
+
+    const { profile } = ProfileExtractorService.parseResumeText(resumeWithCerts);
+
+    expect(profile.factBank.certifications).toBeDefined();
+    expect(profile.factBank.certifications).toEqual([
+      'AWS Certified Solutions Architect - Associate',
+      'Certified Kubernetes Administrator (CKA)',
+      'HashiCorp Certified: Terraform Associate',
+    ]);
+  });
 });

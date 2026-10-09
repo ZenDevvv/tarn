@@ -314,7 +314,7 @@ Zen Andrei Obrero
     expect(res.body.data.quota.remainingToday).toBe(2);
   });
 
-  it('POST /api/v1/tailoring/applications/:id/generate blocks ungrounded claims with 422 and does not deduct quota', async () => {
+  it('POST /api/v1/tailoring/applications/:id/generate generates deliverables seamlessly with advisory fidelity warnings and scoreLift', async () => {
     const ungroundedResume = {
       ...mockResumePayload,
       experience: [
@@ -339,47 +339,12 @@ Zen Andrei Obrero
 
     spy.mockRestore();
 
-    expect(res.status).toBe(422);
-    expect(res.body.error.code).toBe('UNGROUNDED_CLAIMS_DETECTED');
-    expect(res.body.error.message).toContain('Ungrounded metric claim: "40%"');
-
-    // Quota should NOT have been deducted
-    const quotaRes = await request(app)
-      .get('/api/v1/tailoring/quota')
-      .set('Cookie', userCookie);
-    expect(quotaRes.body.data.usedToday).toBe(3);
-  });
-
-  it('POST /api/v1/tailoring/applications/:id/generate allows ungrounded claims when overrideWarnings is true', async () => {
-    const ungroundedResume = {
-      ...mockResumePayload,
-      experience: [
-        {
-          ...mockResumePayload.experience[0],
-          bullets: ['Cut server latency by 40% and improved query speeds by 10x.'],
-        },
-      ],
-    };
-
-    const spy = vi
-      .spyOn(tailoringService, 'callGeminiSynthesis')
-      .mockResolvedValueOnce({
-        resume: ungroundedResume,
-        coverLetterMarkdown: mockCoverLetter,
-      });
-
-    const res = await request(app)
-      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
-      .set('Cookie', userCookie)
-      .send({ targetArtifact: 'resume', overrideWarnings: true });
-
-    spy.mockRestore();
-
     expect(res.status).toBe(200);
     expect(res.body.data.resume).toBeDefined();
     expect(res.body.data.validation.isValid).toBe(false);
-    expect(res.body.data.validation.blocking).toBe(true);
     expect(res.body.data.validation.fidelityWarnings.length).toBeGreaterThan(0);
+    expect(res.body.data.scoreLift).toBeDefined();
+    expect(res.body.data.scoreLift.tailored.totalScore).toBeGreaterThan(0);
     expect(res.body.data.quota.usedToday).toBe(4);
   });
 

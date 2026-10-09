@@ -586,6 +586,7 @@ export function ApplicationDetailPage() {
             isLoading={isAnalysisLoading}
             hasJobDescription={Boolean(jobDesc.trim())}
             isTailored={Boolean(application.resume?.isTailored || currentCoverLetter)}
+            tailoredScore={application.resume?.matchScore ?? currentCoverLetter?.matchScore}
             coverageDelta={
               application.resume?.isTailored &&
               application.resume.matchScore &&

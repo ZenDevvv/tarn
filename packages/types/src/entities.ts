@@ -493,6 +493,29 @@ export interface CoverLetterWithDetailsDTO extends CoverLetterDTO {
   } | null;
 }
 
+export interface AtsScoreBreakdownDTO {
+  totalScore: number;
+  skillsScore: number;
+  roleScore: number;
+  impactScore: number;
+  metricsCount: number;
+  verbsCount: number;
+  matchedSkillsCount: number;
+  totalSkillsCount: number;
+}
+
+export interface ScoreLiftReportDTO {
+  baseline: AtsScoreBreakdownDTO;
+  tailored: AtsScoreBreakdownDTO;
+  lift: {
+    totalLift: number;
+    skillsLift: number;
+    roleLift: number;
+    impactLift: number;
+  };
+  bridgedKeywords: string[];
+}
+
 export interface JdAnalysisResultDTO {
   matchScore: number;
   highPriorityKeywords: string[];
@@ -503,6 +526,8 @@ export interface JdAnalysisResultDTO {
   role?: string;
   company?: string;
   fidelityWarnings?: string[];
+  scoreBreakdown?: AtsScoreBreakdownDTO;
+  scoreLift?: ScoreLiftReportDTO;
 }
 
 export interface GenerationQuotaDTO {
@@ -524,6 +549,32 @@ export interface ValidationReportDTO {
   isValid: boolean;
   blocking: boolean;
   checkedDimensions: string[];
+  scoreBreakdown?: AtsScoreBreakdownDTO;
+  scoreLift?: ScoreLiftReportDTO;
+}
+
+export interface TailoredResumePayloadDTO {
+  basics: MasterProfileBasics;
+  summary?: string | null;
+  experience: Array<{
+    company: string;
+    location?: string | null;
+    role: string;
+    date_range: string;
+    bullets: string[];
+  }>;
+  projects: Array<{
+    name: string;
+    subtitle?: string | null;
+    stack?: string[];
+    bullets: string[];
+  }>;
+  skills: Record<string, string[]>;
+  education: MasterProfileEducationItem[];
+  certifications?: Array<string | { name: string; issuer?: string; date?: string; url?: string }>;
+  shared_stack?: string | string[];
+  professional_development?: string | string[];
+  sectionOrder?: string[];
 }
 
 

@@ -7,6 +7,8 @@ export const generateTailoringSchema = z.object({
   company: z.string().trim().optional(),
   additionalInstructions: z.string().trim().optional(),
   overrideWarnings: z.boolean().optional().default(false),
+  sectionOrder: z.array(z.string()).optional(),
+  preset: z.enum(['experienced', 'early_career', 'custom']).optional(),
 });
 
 
@@ -107,6 +109,9 @@ export const aiResumePayloadSchema = z.object({
     bullets: z.array(z.string().trim()).default([]),
   })).optional().default([]),
   skills: z.record(z.array(z.string().trim())).default({}),
+  summary: z.string().trim().optional().nullable(),
+  certifications: z.array(z.any()).optional().default([]),
+  sectionOrder: z.array(z.string()).optional(),
 });
 
 export const aiTailoringOutputSchema = z.object({
