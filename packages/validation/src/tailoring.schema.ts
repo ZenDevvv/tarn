@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
 export const generateTailoringSchema = z.object({
-  mode: z.enum(['ai', 'deterministic']).optional().default('deterministic'),
+  targetArtifact: z.enum(['package', 'resume', 'cover_letter']).optional().default('package'),
+  mode: z.string().optional(), // Wire compatibility; AI is the only engine
   role: z.string().trim().optional(),
   company: z.string().trim().optional(),
   additionalInstructions: z.string().trim().optional(),
 });
+
 
 export const updateMasterProfileSchema = z.object({
   basics: z.object({
@@ -69,7 +71,8 @@ export const updateCoverLetterSchema = z.object({
 
 export const confirmImportMasterProfileSchema = updateMasterProfileSchema;
 
-export type GenerateTailoringInput = z.infer<typeof generateTailoringSchema>;
+export type GenerateTailoringInput = z.input<typeof generateTailoringSchema>;
+export type GenerateTailoringOutput = z.output<typeof generateTailoringSchema>;
 export type UpdateMasterProfileInput = z.infer<typeof updateMasterProfileSchema>;
 export type ConfirmImportMasterProfileInput = UpdateMasterProfileInput;
 export type UploadProfileResumeInput = z.infer<typeof uploadProfileResumeSchema>;

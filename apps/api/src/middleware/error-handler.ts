@@ -65,6 +65,13 @@ export class ServiceUnavailableError extends AppError {
   }
 }
 
+export class PlansRequiredError extends AppError {
+  constructor(message = 'Payment or plan required for this feature') {
+    super(message, 402, 'PLANS_REQUIRED');
+  }
+}
+
+
 
 export function errorHandler(
   err: Error,

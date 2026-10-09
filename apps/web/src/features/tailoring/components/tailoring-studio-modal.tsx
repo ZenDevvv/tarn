@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Sparkles,
-  Cpu,
-  Copy,
-  Check,
-  AlertTriangle,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   FileCheck2,
   ArrowRight,
   ExternalLink,
+  Layers,
+  FileText,
+  Mail,
+  Lock,
 } from 'lucide-react';
-import { JdAnalysisResultDTO } from '@tracker/types';
+import { JdAnalysisResultDTO, GenerationQuotaDTO } from '@tracker/types';
 import { tailoringApi, TailoredPackageResponse } from '../api/tailoring-api';
 import { Link } from 'react-router-dom';
 
@@ -33,16 +34,29 @@ export function TailoringStudioModal({
   onClose,
   applicationId,
   analysis,
-  jobDescription,
-  roleTitle,
-  companyName,
+  jobDescription: _jobDescription,
+  roleTitle: _roleTitle,
+  companyName: _companyName,
   onGenerated,
 }: TailoringStudioModalProps) {
-  const [mode, setMode] = useState<'deterministic' | 'ai' | 'prompt'>('deterministic');
+  const [targetArtifact, setTargetArtifact] = useState<'package' | 'resume' | 'cover_letter'>('package');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generationResult, setGenerationResult] = useState<TailoredPackageResponse | null>(null);
-  const [promptCopied, setPromptCopied] = useState(false);
+  const [quota, setQuota] = useState<GenerationQuotaDTO | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setError(null);
+      setGenerationResult(null);
+      tailoringApi
+        .getQuota()
+        .then((q) => setQuota(q))
+        .catch((err) => {
+          console.error('Failed to load tailoring quota:', err);
+        });
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -55,41 +69,27 @@ export function TailoringStudioModal({
     setError(null);
     try {
       const res = await tailoringApi.generatePackage(applicationId, {
-        mode: mode === 'ai' ? 'ai' : 'deterministic',
+        targetArtifact,
       });
       setGenerationResult(res);
+      if (res.quota) {
+        setQuota(res.quota);
+      } else {
+        const updatedQuota = await tailoringApi.getQuota().catch(() => null);
+        if (updatedQuota) setQuota(updatedQuota);
+      }
       onGenerated?.();
     } catch (err: any) {
-      const msg = err.response?.data?.error || err.message || 'Failed to generate tailored package';
+      const msg = err.response?.data?.error || err.message || 'Failed to generate tailored deliverable';
       setError(msg);
+      if (err.response?.status === 402 || err.response?.data?.code === 'PLANS_REQUIRED') {
+        tailoringApi.getQuota().then((q) => setQuota(q)).catch(() => {});
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCopyPrompt = async () => {
-    const prompt = `# ATS Resume & Cover Letter Tailoring Task
-
-Target Role: ${roleTitle || 'Target Position'}
-Target Company: ${companyName || 'Target Company'}
-
-## Job Description
-${jobDescription || 'N/A'}
-
-## Analysis & Match Highlights
-- Target Keywords: ${analysis?.highPriorityKeywords?.join(', ') || 'N/A'}
-- Key Echo Phrases: ${echoPhrases.join(' | ') || 'N/A'}
-
-## Instructions
-1. Tailor the applicant's experience bullets to rank the highest-relevance achievements first.
-2. Incorporate exact echo phrases naturally into the cover letter without buzzword stuffing.
-3. Strict 0-hallucination rule: Only use verifiable achievements, metrics, and tools from applicant history.
-4. Output professional, clean markdown.`;
-
-    await navigator.clipboard.writeText(prompt);
-    setPromptCopied(true);
-    setTimeout(() => setPromptCopied(false), 2500);
-  };
 
   return (
     <div
@@ -140,10 +140,18 @@ ${jobDescription || 'N/A'}
                 <FileCheck2 size={22} className="text-primary shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <h3 className="font-semibold text-small text-foreground">
-                    Tailored Deliverables Generated Successfully!
+                    {generationResult.resume && generationResult.coverLetter
+                      ? 'Tailored Package Generated Successfully!'
+                      : generationResult.resume
+                      ? 'Tailored Resume Generated Successfully!'
+                      : 'Tailored Cover Letter Generated Successfully!'}
                   </h3>
                   <p className="text-caption text-muted-foreground">
-                    Created tailored resume version and targeted cover letter with 0 factual drift.
+                    {generationResult.resume && generationResult.coverLetter
+                      ? 'Created tailored resume version and targeted cover letter with 0 factual drift.'
+                      : generationResult.resume
+                      ? 'Created ATS-optimized resume version with 0 factual drift.'
+                      : 'Created targeted cover letter with verified JD echo phrases.'}
                   </p>
                 </div>
               </div>
@@ -295,95 +303,125 @@ ${jobDescription || 'N/A'}
                 )}
               </div>
 
-              {/* Mode Selection */}
+              {/* Deliverable Target Selection */}
               <div className="space-y-3 pt-2 border-t border-border">
-                <h4 className="font-display font-semibold text-small text-foreground">
-                  Choose Tailoring Engine
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-display font-semibold text-small text-foreground">
+                    Select Deliverable to Generate
+                  </h4>
+                  {quota && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-micro font-medium ${
+                        quota.remainingToday > 0 && quota.isEntitled
+                          ? 'bg-primary/10 text-primary border border-primary/20'
+                          : 'bg-destructive/10 text-destructive border border-destructive/20 font-semibold'
+                      }`}
+                    >
+                      {quota.remainingToday} of {quota.limit} free left today
+                    </span>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Option 1: Deterministic */}
+                  {/* Option 1: Full Package */}
                   <label
                     className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
-                      mode === 'deterministic'
+                      targetArtifact === 'package'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                         : 'border-border bg-secondary/20 hover:border-foreground/20'
                     }`}
                   >
                     <input
                       type="radio"
-                      name="tailoring-mode"
-                      value="deterministic"
-                      checked={mode === 'deterministic'}
-                      onChange={() => setMode('deterministic')}
+                      name="target-artifact"
+                      value="package"
+                      checked={targetArtifact === 'package'}
+                      onChange={() => setTargetArtifact('package')}
                       className="sr-only"
                     />
                     <div className="flex items-center justify-between gap-1 mb-1.5">
                       <span className="font-semibold text-small text-foreground flex items-center gap-1.5">
-                        <Cpu size={14} className="text-primary" />
-                        <span>Deterministic</span>
+                        <Layers size={14} className="text-primary" />
+                        <span>Full Package</span>
                       </span>
                     </div>
                     <p className="text-micro text-muted-foreground leading-relaxed">
-                      100% offline rule-based n-gram ranker. Zero AI hallucinations.
+                      Tailored resume and targeted cover letter in one synthesis pass.
                     </p>
                   </label>
 
-                  {/* Option 2: Gemini Flash AI */}
+                  {/* Option 2: Resume Only */}
                   <label
                     className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
-                      mode === 'ai'
+                      targetArtifact === 'resume'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                         : 'border-border bg-secondary/20 hover:border-foreground/20'
                     }`}
                   >
                     <input
                       type="radio"
-                      name="tailoring-mode"
-                      value="ai"
-                      checked={mode === 'ai'}
-                      onChange={() => setMode('ai')}
+                      name="target-artifact"
+                      value="resume"
+                      checked={targetArtifact === 'resume'}
+                      onChange={() => setTargetArtifact('resume')}
                       className="sr-only"
                     />
                     <div className="flex items-center justify-between gap-1 mb-1.5">
                       <span className="font-semibold text-small text-foreground flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-primary" />
-                        <span>Gemini Flash</span>
+                        <FileText size={14} className="text-primary" />
+                        <span>Resume Only</span>
                       </span>
                     </div>
                     <p className="text-micro text-muted-foreground leading-relaxed">
-                      Semantic synthesis with strict fact-bank grounding.
+                      ATS-optimized resume reordered for highest relevance.
                     </p>
                   </label>
 
-                  {/* Option 3: Copy Prompt */}
+                  {/* Option 3: Cover Letter Only */}
                   <label
                     className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
-                      mode === 'prompt'
+                      targetArtifact === 'cover_letter'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                         : 'border-border bg-secondary/20 hover:border-foreground/20'
                     }`}
                   >
                     <input
                       type="radio"
-                      name="tailoring-mode"
-                      value="prompt"
-                      checked={mode === 'prompt'}
-                      onChange={() => setMode('prompt')}
+                      name="target-artifact"
+                      value="cover_letter"
+                      checked={targetArtifact === 'cover_letter'}
+                      onChange={() => setTargetArtifact('cover_letter')}
                       className="sr-only"
                     />
                     <div className="flex items-center justify-between gap-1 mb-1.5">
                       <span className="font-semibold text-small text-foreground flex items-center gap-1.5">
-                        <Copy size={14} />
-                        <span>External Prompt</span>
+                        <Mail size={14} className="text-primary" />
+                        <span>Cover Letter Only</span>
                       </span>
                     </div>
                     <p className="text-micro text-muted-foreground leading-relaxed">
-                      Copy context-rich prompt to use in Claude, ChatGPT, or your own LLM.
+                      Targeted cover letter with verbatim echoed JD phrases.
                     </p>
                   </label>
                 </div>
               </div>
+
+              {/* Quota Limit Notice */}
+              {quota && (!quota.isEntitled || quota.remainingToday <= 0) && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 text-amber-500">
+                  <Lock size={18} className="shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-small">
+                    <p className="font-semibold text-foreground">
+                      {!quota.isEntitled
+                        ? 'A paid plan is required to generate tailored deliverables.'
+                        : 'Daily free generation limit reached (5/5).'}
+                    </p>
+                    <p className="text-caption text-muted-foreground">
+                      Free accounts receive 5 AI generations per day. Upgrade to a Pro plan for unlimited tailoring or check back tomorrow.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="pt-4 border-t border-border flex items-center justify-between gap-3">
@@ -395,36 +433,27 @@ ${jobDescription || 'N/A'}
                   Cancel
                 </button>
 
-                {mode === 'prompt' ? (
-                  <button
-                    type="button"
-                    onClick={handleCopyPrompt}
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-small font-semibold transition-colors cursor-pointer"
-                  >
-                    {promptCopied ? <Check size={16} /> : <Copy size={16} />}
-                    <span>{promptCopied ? 'Prompt Copied to Clipboard!' : 'Copy Tailoring Prompt'}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-small font-semibold transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>Tailoring Deliverables...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={16} />
-                        <span>Generate Tailored Deliverables</span>
-                        <ArrowRight size={14} />
-                      </>
-                    )}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={isGenerating || (quota !== null && (!quota.isEntitled || quota.remainingToday <= 0))}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-small font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Synthesizing Deliverable...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      <span>
+                        Generate {targetArtifact === 'package' ? 'Deliverables' : targetArtifact === 'resume' ? 'Resume' : 'Cover Letter'}
+                      </span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
               </div>
             </>
           )}

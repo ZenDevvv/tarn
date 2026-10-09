@@ -67,3 +67,19 @@ export const apiLimiter = rateLimit({
     },
   },
 });
+
+export const tailoringLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10,
+  keyGenerator: (req) => req.user?.id || req.ip || 'anonymous',
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  message: {
+    error: {
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Tailoring rate limit exceeded. Please wait a few minutes before trying again.',
+    },
+  },
+});
+

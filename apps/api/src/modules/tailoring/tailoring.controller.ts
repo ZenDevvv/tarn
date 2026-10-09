@@ -6,6 +6,15 @@ import { buildCoverLetterHtml } from './templates/cover-letter-template';
 import { NotFoundError } from '../../middleware/error-handler';
 
 export const tailoringController = {
+  async getQuota(req: Request, res: Response, next: NextFunction) {
+    try {
+      const quota = await tailoringService.getQuota(req.user!.id);
+      res.json({ data: quota });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getAnalysis(req: Request, res: Response, next: NextFunction) {
     try {
       const analysis = await tailoringService.getAnalysis(req.user!.id, req.params.id);

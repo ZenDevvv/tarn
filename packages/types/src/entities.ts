@@ -505,6 +505,14 @@ export interface JdAnalysisResultDTO {
   fidelityWarnings?: string[];
 }
 
+export interface GenerationQuotaDTO {
+  limit: number;
+  usedToday: number;
+  remainingToday: number;
+  isEntitled: boolean;
+}
+
+
 export interface ResumeWithDetailsDTO extends ResumeDTO {
   applicationsCount: number;
   applications: Array<{
