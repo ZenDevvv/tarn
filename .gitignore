@@ -7,8 +7,6 @@ env/
 venv/
 
 # Environment & Secrets
-.env
-.env.local
 .env.*.local
 *.pem
 *.key
@@ -37,3 +35,4 @@ Thumbs.db
 # Agent Skill Platform Binaries & Executables
 *.exe
 **/scripts/bin/
+config.bat
