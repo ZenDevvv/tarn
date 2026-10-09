@@ -67,8 +67,12 @@ export const updateCoverLetterSchema = z.object({
   content: z.string().min(1, 'Content is required'),
 });
 
+export const confirmImportMasterProfileSchema = updateMasterProfileSchema;
+
 export type GenerateTailoringInput = z.infer<typeof generateTailoringSchema>;
 export type UpdateMasterProfileInput = z.infer<typeof updateMasterProfileSchema>;
+export type ConfirmImportMasterProfileInput = UpdateMasterProfileInput;
 export type UploadProfileResumeInput = z.infer<typeof uploadProfileResumeSchema>;
 export type CreateCoverLetterInput = z.infer<typeof createCoverLetterSchema>;
 export type UpdateCoverLetterInput = z.infer<typeof updateCoverLetterSchema>;
+

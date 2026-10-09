@@ -454,6 +454,12 @@ export interface MasterProfileDTO {
   updatedAt: string;
 }
 
+export interface MasterProfileDraftDTO {
+  profile: Omit<MasterProfileDTO, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
+  warnings: string[];
+}
+
+
 export interface CoverLetterDTO {
   id: string;
   userId: string;
