@@ -285,6 +285,73 @@ Now I look forward to bringing that experience to Acme Software.
     ).toBe(true);
   });
 
+  it('does not flag "engineer with expertise" or descriptor nouns as ungrounded employer claims', () => {
+    const resumePayload = {
+      experience: sampleProfile.workExperience,
+      projects: sampleProfile.projectExperience,
+      skills: sampleProfile.technicalSkills,
+    };
+
+    const coverLetter = `
+Dear Acme Software Team,
+
+As a software engineer with expertise in React and TypeScript, I am passionate about web engineering.
+My tenure at Uzaro Solutions Technology Inc. focused on building enterprise applications.
+    `.trim();
+
+    const report = TailoringValidatorService.validate(
+      resumePayload,
+      coverLetter,
+      sampleKeywords,
+      samplePhrases,
+      sampleProfile,
+      'Acme Software'
+    );
+
+    expect(
+      report.fidelityWarnings.some((w) => w.toLowerCase().includes('expertise'))
+    ).toBe(false);
+  });
+
+  it('recognizes past company when stored in role field of transposed profile', () => {
+    const transposedProfile: MasterProfileDTO = {
+      ...sampleProfile,
+      workExperience: [
+        {
+          company: 'Technology Developer',
+          role: 'IPSolutions Inc. Pasig City',
+          date_range: 'Nov 2024 - Present',
+          bullets: ['Built apps.'],
+        },
+      ],
+    };
+
+    const resumePayload = {
+      experience: transposedProfile.workExperience,
+      projects: transposedProfile.projectExperience,
+      skills: transposedProfile.technicalSkills,
+    };
+
+    const coverLetter = `
+Dear Acme Software Team,
+
+During my work at IPSolutions, I developed production React applications.
+    `.trim();
+
+    const report = TailoringValidatorService.validate(
+      resumePayload,
+      coverLetter,
+      sampleKeywords,
+      samplePhrases,
+      transposedProfile,
+      'Acme Software'
+    );
+
+    expect(
+      report.fidelityWarnings.some((w) => w.includes('IPSolutions'))
+    ).toBe(false);
+  });
+
   it('allows mentioning target company without false positive in cover letter', () => {
     const resumePayload = {
       experience: [
@@ -354,5 +421,65 @@ In my work at Uzaro Solutions Technology Inc., I delivered reliable solutions.
     expect(report.coverageBefore).toBe(50);
     expect(report.coverageAfter).toBe(100);
     expect(report.coverageDelta).toBe(50); // 100 - 50 = +50% lift
+  });
+
+  it('validates certifications: flags ungrounded credentials and accepts verified ones', () => {
+    const profileWithCerts = {
+      ...sampleProfile,
+      factBank: {
+        ...sampleProfile.factBank,
+        certifications: ['AWS Certified Solutions Architect - Associate'],
+      },
+    };
+
+    // 1. Valid certification present in factBank
+    const validPayload = {
+      experience: [
+        {
+          company: 'Uzaro Solutions Technology Inc.',
+          role: 'Technology Developer',
+          bullets: ['Worked with React.'],
+        },
+      ],
+      skills: { Frontend: ['React'] },
+      certifications: ['AWS Certified Solutions Architect - Associate'],
+    };
+
+    const validReport = TailoringValidatorService.validate(
+      validPayload,
+      '',
+      ['React'],
+      [],
+      profileWithCerts,
+      'Acme Software'
+    );
+    expect(validReport.fidelityWarnings.filter((w) => w.includes('certification'))).toHaveLength(0);
+
+    // 2. Ungrounded certification NOT in factBank
+    const ungroundedPayload = {
+      experience: [
+        {
+          company: 'Uzaro Solutions Technology Inc.',
+          role: 'Technology Developer',
+          bullets: ['Worked with React.'],
+        },
+      ],
+      skills: { Frontend: ['React'] },
+      certifications: ['Google Cloud Professional Cloud Architect'],
+    };
+
+    const ungroundedReport = TailoringValidatorService.validate(
+      ungroundedPayload,
+      '',
+      ['React'],
+      [],
+      profileWithCerts,
+      'Acme Software'
+    );
+    expect(
+      ungroundedReport.fidelityWarnings.some((w) =>
+        w.includes('Ungrounded certification claim: "Google Cloud Professional Cloud Architect"')
+      )
+    ).toBe(true);
   });
 });

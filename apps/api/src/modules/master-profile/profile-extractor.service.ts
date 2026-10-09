@@ -164,6 +164,8 @@ export class ProfileExtractorService {
         sectionIndices.push({ name: 'SKILLS', lineIndex: idx });
       } else if (/^(EDUCATION|ACADEMIC BACKGROUND|ACADEMIC HISTORY)\b/i.test(clean)) {
         sectionIndices.push({ name: 'EDUCATION', lineIndex: idx });
+      } else if (/^(CERTIFICATIONS|CERTIFICATES|LICENSES|LICENSES & CERTIFICATIONS|CREDENTIALS)\b/i.test(clean)) {
+        sectionIndices.push({ name: 'CERTIFICATIONS', lineIndex: idx });
       }
     });
 
@@ -372,6 +374,20 @@ export class ProfileExtractorService {
       warnings.push('Education not found — please verify');
     }
 
+    // 7. Parse Certifications
+    const certLines = getSectionText('CERTIFICATIONS');
+    const certifications: string[] = [];
+    certLines.forEach((l) => {
+      const trimmed = l.trim();
+      if (!trimmed) return;
+      const cleaned = trimmed
+        .replace(/^[•·*–—▪▫◦►✓○\u2022\u25E6\u25AA\u25CF\u25CB\u2043\u2219\u25B6\-]\s*/, '')
+        .trim();
+      if (cleaned && !certifications.includes(cleaned)) {
+        certifications.push(cleaned);
+      }
+    });
+
     const allSkills = Object.values(technicalSkills).flat();
 
     return {
@@ -391,6 +407,7 @@ export class ProfileExtractorService {
           core_positioning: allSkills.length > 0 ? [`Full-stack engineer with expertise in ${allSkills.slice(0, 4).join(', ')}`] : [],
           priority_themes: Object.keys(technicalSkills),
           quantified_highlights: workExperience.flatMap((w) => w.bullets).filter((b) => /\d+/.test(b)).slice(0, 5),
+          certifications,
         },
         summaryCandidates: [],
         workExperience,
