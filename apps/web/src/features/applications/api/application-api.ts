@@ -52,11 +52,11 @@ export const applicationApi = {
   },
 
   /**
-   * Freeze the resume that was actually sent. Omitting resumeId marks the application's current
-   * resume. Never moves on subsequent regeneration.
+   * Freeze what was actually sent. Each pointer is set only when supplied, so marking one
+   * document never re-freezes the other. Never moves on subsequent regeneration.
    */
-  async submitResume(id: string, resumeId?: string) {
-    return apiClient.post<ApplicationDTO>(`/applications/${id}/submitted-resume`, { resumeId });
+  async submitPackage(id: string, input: { resumeId?: string; coverLetterId?: string }) {
+    return apiClient.post<ApplicationDTO>(`/applications/${id}/submitted`, input);
   },
 
   async deleteApplication(id: string) {

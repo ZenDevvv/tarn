@@ -519,7 +519,11 @@ Zen Andrei Obrero
       .get(`/api/v1/cover-letters/application/${applicationId}`)
       .set('Cookie', userCookie);
     expect(listRes.status).toBe(200);
-    expect(listRes.body.data).toHaveLength(2);
+    // Editing forks a revision, so this application now holds the generated letter plus its
+    // edited fork rather than a single updated row.
+    expect(listRes.body.data.length).toBeGreaterThanOrEqual(2);
+    const revisions = listRes.body.data.map((l: any) => l.revision).sort((a: number, b: number) => a - b);
+    expect(revisions[0]).toBe(1);
 
     const deleteRes = await request(app)
       .delete(`/api/v1/cover-letters/${generatedCoverLetterId}`)
@@ -1023,7 +1027,7 @@ Zen Andrei Obrero
     const submittedId = first.body.data.resume.id;
 
     const submitRes = await request(app)
-      .post(`/api/v1/applications/${snapAppId}/submitted-resume`)
+      .post(`/api/v1/applications/${snapAppId}/submitted`)
       .set('Cookie', userCookie)
       .send({ resumeId: submittedId });
     expect(submitRes.status).toBe(200);
@@ -1047,6 +1051,145 @@ Zen Andrei Obrero
     expect(snapRow?.resumeId).toBe(regeneratedId);
     // ...while the submitted snapshot stayed exactly where the user put it.
     expect(snapRow?.submittedResumeId).toBe(submittedId);
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
+  it('records cover letter lineage across repeated generations for one application', async () => {
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({
+        companyName: 'Letter Lineage Co',
+        position: 'Backend Developer',
+        description: 'Need a backend engineer with TypeScript and PostgreSQL experience.',
+      });
+    const lineageAppId = appRes.body.data.id;
+
+    const ids: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+        resume: { ...mockResumePayload, certifications: [] },
+        coverLetterMarkdown: mockCoverLetter,
+      });
+      const res = await request(app)
+        .post(`/api/v1/tailoring/applications/${lineageAppId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ targetArtifact: 'cover_letter', overrideWarnings: true });
+      aiSpy.mockRestore();
+      expect(res.status).toBe(200);
+      ids.push(res.body.data.coverLetter.id);
+    }
+
+    const l1 = await prisma.coverLetter.findUnique({ where: { id: ids[0] } });
+    const l2 = await prisma.coverLetter.findUnique({ where: { id: ids[1] } });
+
+    expect(l1?.revision).toBe(1);
+    expect(l1?.parentCoverLetterId).toBeNull();
+    expect(l2?.revision).toBe(2);
+    expect(l2?.parentCoverLetterId).toBe(ids[0]);
+    [l1, l2].forEach((l) => {
+      expect(l?.applicationId).toBe(lineageAppId);
+      expect(l?.isCanonical).toBe(false);
+    });
+
+    // Provenance is carried on every generated letter; the edit path's job is to inherit it,
+    // which is covered by the cover-letter edit test.
+    expect(Array.isArray(l1?.echoedPhrases)).toBe(true);
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
+  it('forks a revision when a cover letter is edited, leaving the original intact', async () => {
+    // Load-bearing for the submission snapshot: if editing mutated in place, a letter already
+    // marked submitted would silently change its content after the fact.
+    const { prisma } = await import('@tracker/database');
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({
+        companyName: 'Edit Fork Co',
+        position: 'Backend Developer',
+        description: 'TypeScript and PostgreSQL role.',
+      });
+    const forkAppId = appRes.body.data.id;
+
+    const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: 'ORIGINAL GENERATED LETTER',
+    });
+    const gen = await request(app)
+      .post(`/api/v1/tailoring/applications/${forkAppId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'cover_letter', overrideWarnings: true });
+    aiSpy.mockRestore();
+    expect(gen.status).toBe(200);
+    const originalId = gen.body.data.coverLetter.id;
+
+    const originalBefore = await prisma.coverLetter.findUnique({ where: { id: originalId } });
+
+    const edited = await request(app)
+      .patch(`/api/v1/cover-letters/${originalId}`)
+      .set('Cookie', userCookie)
+      .send({ content: 'HAND EDITED LETTER' });
+    expect(edited.status).toBe(200);
+
+    // The response carries the NEW row so the caller tracks the new id.
+    expect(edited.body.data.id).not.toBe(originalId);
+    expect(edited.body.data.revision).toBe(2);
+    expect(edited.body.data.parentCoverLetterId).toBe(originalId);
+    expect(edited.body.data.content).toBe('HAND EDITED LETTER');
+
+    // The original is untouched.
+    const originalAfter = await prisma.coverLetter.findUnique({ where: { id: originalId } });
+    expect(originalAfter?.content).toBe(originalBefore?.content);
+    expect(originalAfter?.content).toBe('ORIGINAL GENERATED LETTER');
+    expect(originalAfter?.revision).toBe(1);
+
+    // Provenance is inherited, not recomputed: the edited letter is still the one built from
+    // those echoed phrases.
+    expect(edited.body.data.matchScore).toBe(originalBefore?.matchScore);
+    expect(edited.body.data.echoedPhrases).toEqual(originalBefore?.echoedPhrases);
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
+
+  it('keeps a submitted cover letter immutable when the edited fork changes', async () => {
+    const { prisma } = await import('@tracker/database');
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({ companyName: 'Immutable Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const immAppId = appRes.body.data.id;
+
+    const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: 'THE SENT LETTER',
+    });
+    const gen = await request(app)
+      .post(`/api/v1/tailoring/applications/${immAppId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'cover_letter', overrideWarnings: true });
+    aiSpy.mockRestore();
+    const sentId = gen.body.data.coverLetter.id;
+
+    const submitRes = await request(app)
+      .post(`/api/v1/applications/${immAppId}/submitted`)
+      .set('Cookie', userCookie)
+      .send({ coverLetterId: sentId });
+    expect(submitRes.status).toBe(200);
+    expect(submitRes.body.data.submittedCoverLetterId).toBe(sentId);
+
+    // Edit after submitting: the fork is created and the sent letter is unchanged.
+    const edit = await request(app)
+      .patch(`/api/v1/cover-letters/${sentId}`)
+      .set('Cookie', userCookie)
+      .send({ content: 'A COMPLETELY DIFFERENT LETTER' });
+    expect(edit.status).toBe(200);
+
+    const sentAfter = await prisma.coverLetter.findUnique({ where: { id: sentId } });
+    expect(sentAfter?.content).toBe('THE SENT LETTER');
+
+    const appRow = await prisma.application.findUnique({ where: { id: immAppId } });
+    expect(appRow?.submittedCoverLetterId).toBe(sentId);
 
     await prisma.generationUsage.deleteMany({ where: { userId } });
   });

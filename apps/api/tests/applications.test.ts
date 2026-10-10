@@ -29,7 +29,7 @@ describe('Applications API Integration Tests', () => {
     userBCookie = resB.headers['set-cookie'];
   });
 
-  it('POST /api/v1/applications/:id/submitted-resume snapshots what was sent', async () => {
+  it('POST /api/v1/applications/:id/submitted snapshots what was sent', async () => {
     const { prisma } = await import('@tracker/database');
     const me = await request(app).get('/api/v1/auth/me').set('Cookie', userACookie);
     const userId = me.body.data.user.id;
@@ -53,13 +53,13 @@ describe('Applications API Integration Tests', () => {
 
     // A resume belonging to a different application cannot be submitted here.
     const bad = await request(app)
-      .post(`/api/v1/applications/${targetId}/submitted-resume`)
+      .post(`/api/v1/applications/${targetId}/submitted`)
       .set('Cookie', userACookie)
       .send({ resumeId: foreign.id });
     expect(bad.status).toBe(400);
 
     const ok = await request(app)
-      .post(`/api/v1/applications/${targetId}/submitted-resume`)
+      .post(`/api/v1/applications/${targetId}/submitted`)
       .set('Cookie', userACookie)
       .send({ resumeId: mine.id });
     expect(ok.status).toBe(200);
@@ -68,24 +68,54 @@ describe('Applications API Integration Tests', () => {
     expect(ok.body.data.submittedResume).toBeDefined();
     expect(ok.body.data.submittedResume.id).toBe(mine.id);
 
-    // Omitting resumeId falls back to the application's current resume.
-    const fallbackApp = await request(app)
+    // An empty body names no document, so it is rejected rather than guessing.
+    const noDocApp = await request(app)
       .post('/api/v1/applications')
       .set('Cookie', userACookie)
-      .send({ companyName: 'Fallback Co', position: 'Backend Developer', description: 'TypeScript role.' });
-    const fallback = await prisma.resume.create({
-      data: { userId, name: 'Fallback r1', applicationId: fallbackApp.body.data.id, revision: 1 },
-    });
-    await prisma.application.update({
-      where: { id: fallbackApp.body.data.id },
-      data: { resumeId: fallback.id },
-    });
-    const fb = await request(app)
-      .post(`/api/v1/applications/${fallbackApp.body.data.id}/submitted-resume`)
+      .send({ companyName: 'No Doc Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const empty = await request(app)
+      .post(`/api/v1/applications/${noDocApp.body.data.id}/submitted`)
       .set('Cookie', userACookie)
       .send({});
-    expect(fb.status).toBe(200);
-    expect(fb.body.data.submittedResumeId).toBe(fallback.id);
+    expect(empty.status).toBe(400);
+
+    // Marking only a cover letter must leave an existing resume pointer untouched.
+    const bothApp = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userACookie)
+      .send({ companyName: 'Both Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const r = await prisma.resume.create({
+      data: { userId, name: 'Resume r1', applicationId: bothApp.body.data.id, revision: 1 },
+    });
+    const letter = await prisma.coverLetter.create({
+      data: {
+        userId,
+        name: 'Letter r1',
+        applicationId: bothApp.body.data.id,
+        content: 'Dear team.',
+      },
+    });
+
+    const bothRes = await request(app)
+      .post(`/api/v1/applications/${bothApp.body.data.id}/submitted`)
+      .set('Cookie', userACookie)
+      .send({ resumeId: r.id, coverLetterId: letter.id });
+    expect(bothRes.status).toBe(200);
+    expect(bothRes.body.data.submittedResumeId).toBe(r.id);
+    expect(bothRes.body.data.submittedCoverLetterId).toBe(letter.id);
+    expect(bothRes.body.data.submittedAt).toBeTruthy();
+    const firstSubmittedAt = bothRes.body.data.submittedAt;
+
+    // Marking the letter again does not re-freeze the resume.
+    const letterOnly = await request(app)
+      .post(`/api/v1/applications/${bothApp.body.data.id}/submitted`)
+      .set('Cookie', userACookie)
+      .send({ coverLetterId: letter.id });
+    expect(letterOnly.status).toBe(200);
+    expect(letterOnly.body.data.submittedResumeId).toBe(r.id);
+    expect(letterOnly.body.data.submittedCoverLetterId).toBe(letter.id);
+    expect(letterOnly.body.data.submittedAt).toBeTruthy();
+    expect(typeof firstSubmittedAt).toBe('string');
   });
 
   it('POST /api/v1/applications creates an application with company, job, and timeline event', async () => {

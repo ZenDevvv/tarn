@@ -111,8 +111,8 @@ export function ApplicationDetailPage() {
     },
   });
 
-  const submitResumeMutation = useMutation({
-    mutationFn: () => applicationApi.submitResume(id!),
+  const submitPackageMutation = useMutation({
+    mutationFn: () => applicationApi.submitPackage(id!, { resumeId: undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['application', id] });
     },
@@ -471,8 +471,8 @@ export function ApplicationDetailPage() {
             onPreviewResume={handleOpenResumePreview}
             onPreviewCoverLetter={handleOpenCoverLetterPreview}
             onOpenStudio={() => setIsStudioOpen(true)}
-            onSubmitResume={() => submitResumeMutation.mutate()}
-            isSubmittingResume={submitResumeMutation.isPending}
+            onSubmitResume={() => submitPackageMutation.mutate()}
+            isSubmittingResume={submitPackageMutation.isPending}
             className="pb-8 border-b border-border/70"
           />
 

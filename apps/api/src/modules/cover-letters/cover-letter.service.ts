@@ -46,6 +46,9 @@ export const coverLetterService = {
       fileUrl: cl.fileUrl,
       matchScore: cl.matchScore,
       echoedPhrases: cl.echoedPhrases,
+      revision: cl.revision,
+      parentCoverLetterId: cl.parentCoverLetterId,
+      isCanonical: cl.isCanonical,
       createdAt: cl.createdAt.toISOString(),
       updatedAt: cl.updatedAt.toISOString(),
       application: cl.application
@@ -79,6 +82,9 @@ export const coverLetterService = {
       fileUrl: cl.fileUrl,
       matchScore: cl.matchScore,
       echoedPhrases: cl.echoedPhrases,
+      revision: cl.revision,
+      parentCoverLetterId: cl.parentCoverLetterId,
+      isCanonical: cl.isCanonical,
       createdAt: cl.createdAt.toISOString(),
       updatedAt: cl.updatedAt.toISOString(),
     };
@@ -101,6 +107,9 @@ export const coverLetterService = {
       fileUrl: cl.fileUrl,
       matchScore: cl.matchScore,
       echoedPhrases: cl.echoedPhrases,
+      revision: cl.revision,
+      parentCoverLetterId: cl.parentCoverLetterId,
+      isCanonical: cl.isCanonical,
       createdAt: cl.createdAt.toISOString(),
       updatedAt: cl.updatedAt.toISOString(),
     }));
@@ -128,15 +137,26 @@ export const coverLetterService = {
       uniqueId
     );
 
-    const updated = await prisma.coverLetter.update({
-      where: { id },
+    // Editing forks a revision rather than mutating in place. This is what makes a submitted
+    // letter immutable: once a letter is marked as sent, no later edit can change its content.
+    // See spec-cover-letter-revisions.md C3.
+    const updated = await prisma.coverLetter.create({
       data: {
+        userId,
+        applicationId: existing.applicationId,
         name: input.name || existing.name,
         role,
         company,
         content: input.content,
         htmlContent: render.html,
         fileUrl: render.pdfUrl,
+        // Provenance is inherited, not recomputed: an edited letter is still the one the
+        // tailoring engine built from those echoed JD phrases.
+        matchScore: existing.matchScore,
+        echoedPhrases: existing.echoedPhrases,
+        revision: existing.revision + 1,
+        parentCoverLetterId: existing.id,
+        isCanonical: false,
       },
     });
 
@@ -152,6 +172,9 @@ export const coverLetterService = {
       fileUrl: updated.fileUrl,
       matchScore: updated.matchScore,
       echoedPhrases: updated.echoedPhrases,
+      revision: updated.revision,
+      parentCoverLetterId: updated.parentCoverLetterId,
+      isCanonical: updated.isCanonical,
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
     };
