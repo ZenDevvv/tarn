@@ -122,7 +122,8 @@ describe('buildResumeHtml Dynamic Section Ordering & Certifications Tests', () =
 
     const html = buildResumeHtml(payload);
 
-    expect(html).toContain('Certifications & Licenses');
+    // Kick titles now resolve through resolveKicker and are escaped consistently.
+    expect(html).toContain('Certifications &amp; Licenses');
     expect(html).toContain('AWS Certified Solutions Architect - Associate');
     expect(html).toContain('Certified Kubernetes Administrator');
     expect(html).toContain('CKA');
@@ -555,5 +556,65 @@ describe('Federal attributes & credential detail (spec-resume-fidelity.md C5)', 
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
+  });
+});
+
+describe('Data-driven section titles (spec-resume-fidelity.md C6)', () => {
+  const base = {
+    basics: { name: 'Maria Santos', email: 'maria@rn.org' },
+    experience: [
+      { company: 'Mercy General Hospital', role: 'Registered Nurse', date_range: '2020 - Present', bullets: ['Triaged 30+ patients.'] },
+    ],
+    education: [{ school: 'University of Minnesota', degree: 'BSN', graduation: '2016' }],
+    projects: [{ name: 'Quality Improvement Project', bullets: ['Reduced falls by 30%.'] }],
+    skills: { 'Clinical Competencies': ['Triage'] },
+    certifications: [{ name: 'RN', issuer: 'MN Board of Nursing' }],
+    summary: 'Experienced ICU nurse.',
+  };
+
+  it('uses a profile-supplied title in place of the default kicker', () => {
+    const html = buildResumeHtml({
+      ...base,
+      sectionTitles: { experience: 'Clinical Experience' },
+    });
+
+    expect(html).toContain('Clinical Experience');
+    expect(html).not.toContain('>Work Experience<');
+  });
+
+  it('supports renaming every fixed section', () => {
+    const html = buildResumeHtml({
+      ...base,
+      sectionTitles: {
+        summary: 'Professional Profile',
+        experience: 'Clinical Experience',
+        projects: 'Practice Initiatives',
+        skills: 'Core Competencies',
+        education: 'Academic Background',
+        certifications: 'Active Licenses',
+      },
+    });
+
+    ['Professional Profile', 'Clinical Experience', 'Practice Initiatives', 'Core Competencies', 'Academic Background', 'Active Licenses'].forEach(
+      (title) => expect(html).toContain(title)
+    );
+    expect(html).not.toContain('>Work Experience<');
+    expect(html).not.toContain('>Project Experience<');
+  });
+
+  it('falls back to defaults when sectionTitles is absent', () => {
+    const html = buildResumeHtml({ ...base });
+
+    expect(html).toContain('Work Experience');
+    expect(html).toContain('Project Experience');
+    expect(html).toContain('Education');
+    // Kick titles resolve through resolveKicker and are escaped consistently.
+    expect(html).toContain('Certifications &amp; Licenses');
+  });
+
+  it('escapes a hostile section title', () => {
+    const html = buildResumeHtml({ ...base, sectionTitles: { experience: '<script>x</script>' } });
+
+    expect(html).not.toContain('<script>x</script>');
   });
 });

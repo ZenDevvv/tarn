@@ -510,10 +510,15 @@ Respond ONLY with valid JSON in this exact structure:
     "experience": [...],
     "projects": [...],
     "skills": { ... },
-    "certifications": [...]
+    "certifications": [...],
+    "sectionTitles": { "summary": "...", "experience": "...", "projects": "...", "skills": "...", "education": "...", "certifications": "..." }
   },
   "coverLetterMarkdown": "Dear Hiring Team..."
 }
+For "sectionTitles", use the candidate's own naming for each section as it appears in their Master
+Profile or their uploaded resume (e.g. a nurse's experience section may be "Clinical Experience", an
+academician's may be "Research Experience"). Omit any section that has no entry. Only supply titles
+that genuinely describe the content; never invent a title for a section the candidate does not have.
     `.trim();
 
     const response = await fetch(
