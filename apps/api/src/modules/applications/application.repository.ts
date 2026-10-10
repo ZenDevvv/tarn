@@ -289,35 +289,52 @@ export const applicationRepository = {
   },
 
   /**
-   * Freeze the resume that was actually sent. Unlike resumeId (which advances on every
-   * regeneration), submittedResumeId is never written again, so interview preparation keeps
-   * pointing at the document the employer really received.
+   * Freeze what was actually sent. Unlike resumeId (which advances on every regeneration), the
+   * submitted pointers are never written again, so interview preparation keeps pointing at the
+   * documents the employer really received.
+   *
+   * Each pointer is set only when explicitly supplied. Omitting one leaves it untouched, so
+   * marking only a cover letter never silently re-freezes the resume.
    */
-  async submitResume(userId: string, id: string, resumeId?: string) {
+  async submitPackage(userId: string, id: string, resumeId?: string, coverLetterId?: string) {
     const existing = await prisma.application.findFirst({
       where: { id, userId, archivedAt: null },
     });
     if (!existing) return { error: 'NOT_FOUND' as const };
 
-    const targetId = resumeId ?? existing.resumeId;
-    if (!targetId) return { error: 'NO_RESUME' as const };
+    if (!resumeId && !coverLetterId) return { error: 'NO_DOCUMENT' as const };
 
-    // The resume must belong to this user AND have been generated for this application,
-    // so a submission can never point at an unrelated document.
-    const resume = await prisma.resume.findFirst({
-      where: { id: targetId, userId, applicationId: id },
-    });
-    if (!resume) return { error: 'MISMATCH' as const };
+    const data: Prisma.ApplicationUpdateInput = { submittedAt: new Date() };
+
+    // Each supplied document must belong to this user AND have been generated for this
+    // application, so a submission can never point at an unrelated document. Omitting a
+    // document leaves that pointer untouched.
+    if (resumeId) {
+      const resume = await prisma.resume.findFirst({
+        where: { id: resumeId, userId, applicationId: id },
+      });
+      if (!resume) return { error: 'MISMATCH' as const };
+      data.submittedResume = { connect: { id: resume.id } };
+    }
+
+    if (coverLetterId) {
+      const letter = await prisma.coverLetter.findFirst({
+        where: { id: coverLetterId, userId, applicationId: id },
+      });
+      if (!letter) return { error: 'MISMATCH' as const };
+      data.submittedCoverLetter = { connect: { id: letter.id } };
+    }
 
     return prisma.application.update({
       where: { id },
-      data: { submittedResumeId: resume.id, submittedAt: new Date() },
+      data,
       include: {
         company: true,
         job: true,
         status: true,
         resume: true,
         submittedResume: true,
+        submittedCoverLetter: true,
       },
     });
   },

@@ -27,15 +27,15 @@ export const applicationService = {
     return updated;
   },
 
-  async submitResume(userId: string, id: string, resumeId?: string) {
-    const result = await applicationRepository.submitResume(userId, id, resumeId);
+  async submitPackage(userId: string, id: string, resumeId?: string, coverLetterId?: string) {
+    const result = await applicationRepository.submitPackage(userId, id, resumeId, coverLetterId);
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') throw new NotFoundError('Application not found');
-      if (result.error === 'NO_RESUME') {
-        throw new BadRequestError('Generate or upload a resume for this application first.');
+      if (result.error === 'NO_DOCUMENT') {
+        throw new BadRequestError('Provide a resume or a cover letter to mark as submitted.');
       }
       throw new BadRequestError(
-        'That resume was not generated for this application and cannot be marked as submitted.'
+        'That document was not generated for this application and cannot be marked as submitted.'
       );
     }
     return result;

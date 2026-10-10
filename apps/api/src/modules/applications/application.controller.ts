@@ -61,12 +61,13 @@ export const applicationController = {
     }
   },
 
-  async submitResume(req: Request, res: Response, next: NextFunction) {
+  async submitPackage(req: Request, res: Response, next: NextFunction) {
     try {
-      const updated = await applicationService.submitResume(
+      const updated = await applicationService.submitPackage(
         req.user!.id,
         req.params.id,
-        req.body?.resumeId
+        req.body?.resumeId,
+        req.body?.coverLetterId
       );
       return res.status(200).json({ data: updated });
     } catch (error) {

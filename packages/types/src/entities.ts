@@ -201,6 +201,9 @@ export interface ApplicationDTO {
   resumeId?: string | null;
   /** The resume actually sent to this employer. Unlike resumeId, never moves on regeneration. */
   submittedResumeId?: string | null;
+  /** The cover letter sent, when the submission included one. */
+  submittedCoverLetterId?: string | null;
+  /** Shared by both documents: one submission event carries a package. */
   submittedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -211,6 +214,7 @@ export interface ApplicationDTO {
   resume?: ResumeDTO | null;
   /** The submitted snapshot, for interview preparation. */
   submittedResume?: ResumeDTO | null;
+  submittedCoverLetter?: CoverLetterDTO | null;
   coverLetters?: CoverLetterDTO[];
 }
 
@@ -540,6 +544,11 @@ export interface CoverLetterDTO {
   fileUrl?: string | null;
   matchScore?: number | null;
   echoedPhrases: string[];
+  /** Attempt number within an application. Editing forks a revision rather than overwriting. */
+  revision: number;
+  parentCoverLetterId?: string | null;
+  /** The attempt the user chose to keep. At most one per application. */
+  isCanonical: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -3,7 +3,7 @@ import {
   createApplicationSchema,
   updateApplicationSchema,
   updateApplicationStatusSchema,
-  submitResumeSchema,
+  submitPackageSchema,
   applicationFiltersSchema,
   parseJobUrlSchema,
   parseJobTextSchema,
@@ -28,7 +28,7 @@ applicationRouter.get('/', validateQuery(applicationFiltersSchema), applicationC
 applicationRouter.get('/:id', applicationController.getById);
 applicationRouter.patch('/:id', validateBody(updateApplicationSchema), applicationController.update);
 applicationRouter.patch('/:id/status', validateBody(updateApplicationStatusSchema), applicationController.updateStatus);
-applicationRouter.post('/:id/submitted-resume', validateBody(submitResumeSchema), applicationController.submitResume);
+applicationRouter.post('/:id/submitted', validateBody(submitPackageSchema), applicationController.submitPackage);
 applicationRouter.delete('/:id', applicationController.archive);
 applicationRouter.get('/:id/interviews', interviewController.listByApplication);
 

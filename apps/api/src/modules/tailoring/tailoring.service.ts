@@ -345,7 +345,14 @@ export const tailoringService = {
           });
         }
 
-        if (coverLetterRender) {
+if (coverLetterRender) {
+          // Same lineage contract as the resume. Read inside the transaction so concurrent
+          // generations cannot claim the same number.
+          const prevLetter = await tx.coverLetter.findFirst({
+            where: { userId, applicationId: application.id },
+            orderBy: { revision: 'desc' },
+          });
+
           createdCoverLetter = await tx.coverLetter.create({
             data: {
               userId,
@@ -358,6 +365,9 @@ export const tailoringService = {
               fileUrl: coverLetterRender.pdfUrl,
               matchScore: scoreLift.tailored.totalScore,
               echoedPhrases: validation.exactPhraseEchoes,
+              revision: (prevLetter?.revision ?? 0) + 1,
+              parentCoverLetterId: prevLetter?.id ?? null,
+              isCanonical: false,
             },
           });
         }
