@@ -461,7 +461,7 @@ export function ResumesPage() {
             <p className="text-small text-muted-foreground max-w-sm mt-1">
               {search || selectedRole
                 ? 'Try adjusting your filters or search keywords.'
-                : 'Upload or link tailored resumes to track which version you submitted to each employer.'}
+                : 'Upload or link tailored resumes to track what you sent each employer.'}
             </p>
           </div>
           <button

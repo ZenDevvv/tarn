@@ -213,7 +213,7 @@ export function PreferencesSection({ settings, onSave, isSaving }: PreferencesSe
         {/* Default Resume */}
         <div className="flex flex-col gap-1.5 md:col-span-2">
           <label htmlFor="defaultResumeId" className="text-small font-medium text-foreground">
-            Default resume version
+            Default resume
           </label>
           <Select<string>
             id="defaultResumeId"
@@ -226,7 +226,7 @@ export function PreferencesSection({ settings, onSave, isSaving }: PreferencesSe
             }
             options={resumeOptions}
             placeholder="None (choose manually per application)"
-            aria-label="Default resume version"
+            aria-label="Default resume"
           />
           <span className="text-caption text-muted-foreground">
             Linked automatically to newly created job applications.

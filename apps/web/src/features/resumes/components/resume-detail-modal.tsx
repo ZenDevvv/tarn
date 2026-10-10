@@ -369,7 +369,7 @@ export function ResumeDetailModal({
                   No applications currently linked
                 </p>
                 <p className="text-micro text-muted-foreground">
-                  When creating or updating an application, select this resume version to track where it was submitted.
+                  When creating or updating an application, select this resume to track where it was submitted.
                 </p>
               </div>
             )}
