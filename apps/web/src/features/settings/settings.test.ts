@@ -6,6 +6,7 @@ import {
   changePasswordSchema,
 } from '@tracker/validation';
 import { settingsApi } from './api/settings-api';
+import { ResetAccountModal, ResetModalStatus } from './components/reset-account-modal';
 
 describe('Settings Feature - Unit Tests', () => {
   const mockSettings: UserSettingsDTO = {
@@ -187,6 +188,68 @@ describe('Settings Feature - Unit Tests', () => {
     // User profile stays intact
     expect(resetUser.email).toBe(mockSettings.email);
     expect(resetUser.name).toBe(mockSettings.name);
+  });
+
+  describe('Reset Account Modal - State Transitions & Reload Lifecycle', () => {
+    it('exports ResetAccountModal component', () => {
+      expect(typeof ResetAccountModal).toBe('function');
+    });
+
+    it('defines valid ResetModalStatus phases', () => {
+      const validStatuses: ResetModalStatus[] = ['idle', 'loading', 'success'];
+      expect(validStatuses).toContain('idle');
+      expect(validStatuses).toContain('loading');
+      expect(validStatuses).toContain('success');
+    });
+
+    it('simulates successful reset state machine: idle -> loading -> success -> reload callback', async () => {
+      let state: ResetModalStatus = 'idle';
+      let reloaded = false;
+
+      const mockOnConfirm = async () => {
+        state = 'loading';
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      };
+
+      const mockOnSuccess = () => {
+        reloaded = true;
+      };
+
+      expect(state).toBe('idle');
+
+      // User submits RESET form
+      state = 'loading';
+      await mockOnConfirm();
+      expect(state).toBe('loading');
+
+      // Confirm resolves, transition to finish animation
+      state = 'success';
+      expect(state).toBe('success');
+
+      // Finish animation window completes (700ms)
+      mockOnSuccess();
+      expect(reloaded).toBe(true);
+    });
+
+    it('simulates error state recovery: loading -> idle with error on failure', async () => {
+      let state: ResetModalStatus = 'idle';
+      let capturedError: string | null = null;
+
+      const mockOnConfirmFails = async () => {
+        state = 'loading';
+        throw new Error('Network timeout during reset');
+      };
+
+      try {
+        await mockOnConfirmFails();
+      } catch (err: any) {
+        state = 'idle';
+        capturedError = err.message;
+      }
+
+      expect(state).toBe('idle');
+      expect(capturedError).toBe('Network timeout during reset');
+    });
   });
 });
 

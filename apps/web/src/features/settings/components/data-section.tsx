@@ -30,14 +30,23 @@ export function DataSection({ settings, onExport, onReset, isResetting }: DataSe
       } else {
         await settingsApi.resetAccountData();
       }
-      setIsResetModalOpen(false);
-      setResetSuccess(true);
-      setTimeout(() => setResetSuccess(false), 5000);
     } catch (err: any) {
       setResetError(err?.message || 'Could not reset account data. Try again later.');
       throw err;
     } finally {
       setLocalResetting(false);
+    }
+  };
+
+  const handleResetSuccess = () => {
+    setIsResetModalOpen(false);
+    setResetSuccess(true);
+    if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+      try {
+        window.location.reload();
+      } catch {
+        // Fallback for test/jsdom environments
+      }
     }
   };
 
@@ -249,6 +258,7 @@ export function DataSection({ settings, onExport, onReset, isResetting }: DataSe
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
         onConfirm={handleResetConfirm}
+        onSuccess={handleResetSuccess}
         isPending={isResetting || localResetting}
       />
     </div>
