@@ -79,3 +79,31 @@
 - [x] **Task 12: Corpora** — certifications + summary counted in validator coverage and score-lift evaluation
 - [x] **Tasks 13–14: Presentation** — data-driven skills kicker ("Skills & Competencies"); UI relabels
 - [x] **Task 15: Verification** — Persona A/B/C regression suite + repo grep gates + full suite/lint/typecheck
+
+## Resume Rendering Fidelity & Document Agnosticism (2026-10-10)
+
+> **Objective:** Close three empirically-reproduced rendering defects and open the document-type axis
+> **Specification:** [spec-resume-fidelity.md](spec-resume-fidelity.md)
+> **Detailed Task Plan:** [tasks/plan-resume-fidelity.md](tasks/plan-resume-fidelity.md)
+> **Branch:** `fix/resume-rendering-fidelity`
+> **Source:** E2E run — ICU nurse profile → CNS application → generated PDF. 2 custom sections stored,
+> `content.customSections === null` on output, `isValid: true`; page 2 orphan; skills kicker `LEADERSHIP`.
+
+**Phase 1 — reproduced defects (independently shippable):**
+- [ ] **Task 1: Pagination CSS** — `break-inside: avoid` / `avoid-page` on `.entry`, `.section`, `.cert-row`
+- [ ] **Task 2: Skills kicker generic list** — stop labelling a multi-category section `LEADERSHIP`
+- [ ] **Task 3: Deterministic customSections merge** — profile sections are authoritative, never rewritten by the model
+- [ ] **Task 4: Completeness dimension** — `custom_section_coverage`; dropped sections become fidelity warnings
+- [ ] **Task 5: `overrideWarnings` gates** — make the existing "Save Anyway" button truthful
+- [ ] **Exit gate:** E2E replay — 4 previously-missing tokens present, kicker neutral, no orphan page
+
+**Phase 2 — cheap wins:**
+- [ ] **Task 6: `justify` → `left`** — readability, zero ATS cost
+
+**Phase 3 — document-type axis:**
+- [ ] **Tasks 7–8:** `documentType` contract + render `attributes` (salary/hours/supervisor/clearance) and credential license/jurisdiction
+- [ ] **Tasks 9–10:** data-driven section kickers for all fixed sections; web UI selector
+- [ ] *(Rejected: profession classifier, second visual template, dynamic auto-fit loop — see spec §6)*
+
+**Phase 4 — verification:**
+- [ ] **Task 11:** Promote E2E replay to Persona D regression fixture; full suite + build + grep gates
