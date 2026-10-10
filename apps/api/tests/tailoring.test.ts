@@ -996,4 +996,58 @@ Zen Andrei Obrero
 
     await prisma.generationUsage.deleteMany({ where: { userId } });
   });
+  it('never moves submittedResumeId when the application is regenerated', async () => {
+    // This is the guarantee that makes the snapshot worth having: the submitted document and
+    // the working copy are independent. It should pass against production code as written —
+    // generation only writes resumeId. If it ever fails, something has coupled the two.
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({
+        companyName: 'Snapshot Co',
+        position: 'Backend Developer',
+        description: 'TypeScript and PostgreSQL role.',
+      });
+    const snapAppId = appRes.body.data.id;
+
+    const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: mockCoverLetter,
+    });
+    const first = await request(app)
+      .post(`/api/v1/tailoring/applications/${snapAppId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume', overrideWarnings: true });
+    aiSpy.mockRestore();
+    expect(first.status).toBe(200);
+    const submittedId = first.body.data.resume.id;
+
+    const submitRes = await request(app)
+      .post(`/api/v1/applications/${snapAppId}/submitted-resume`)
+      .set('Cookie', userCookie)
+      .send({ resumeId: submittedId });
+    expect(submitRes.status).toBe(200);
+
+    // Regenerate: a brand new attempt becomes the working copy.
+    const aiSpy2 = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: mockCoverLetter,
+    });
+    const second = await request(app)
+      .post(`/api/v1/tailoring/applications/${snapAppId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume', overrideWarnings: true });
+    aiSpy2.mockRestore();
+    expect(second.status).toBe(200);
+    const regeneratedId = second.body.data.resume.id;
+    expect(regeneratedId).not.toBe(submittedId);
+
+    const snapRow = await prisma.application.findUnique({ where: { id: snapAppId } });
+    // The working copy advanced...
+    expect(snapRow?.resumeId).toBe(regeneratedId);
+    // ...while the submitted snapshot stayed exactly where the user put it.
+    expect(snapRow?.submittedResumeId).toBe(submittedId);
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
 });
