@@ -2,6 +2,61 @@ import { prisma, Prisma } from '@tracker/database';
 import { CreateResumeInput, UpdateResumeInput, ResumeFiltersInput } from '@tracker/validation';
 import { ResumeWithDetailsDTO } from '@tracker/types';
 
+/**
+ * Sentinel returned by setCanonical when the resume is a manual upload. Canonical means "the attempt
+ * the user chose to keep within an application"; a manual upload belongs to no application and so
+ * has no siblings to be canonical against.
+ */
+export const CANONICAL_REQUIRES_APPLICATION = Symbol('CANONICAL_REQUIRES_APPLICATION');
+
+type ResumeRow = Prisma.ResumeGetPayload<{
+  include: {
+    applications: {
+      select: {
+        id: true;
+        status: true;
+        priority: true;
+        appliedAt: true;
+        company: { select: { id: true; name: true } };
+        job: { select: { id: true; title: true } };
+      };
+    };
+  };
+}>;
+
+function mapResume(r: ResumeRow): ResumeWithDetailsDTO {
+  return {
+    id: r.id,
+    userId: r.userId,
+    name: r.name,
+    applicationId: r.applicationId,
+    revision: r.revision,
+    parentResumeId: r.parentResumeId,
+    isCanonical: r.isCanonical,
+    targetRole: r.targetRole,
+    fileUrl: r.fileUrl,
+    filename: r.filename,
+    fileSize: r.fileSize,
+    mimeType: r.mimeType,
+    isDefault: r.isDefault,
+    isTailored: r.isTailored,
+    matchScore: r.matchScore,
+    skills: r.skills,
+    notes: r.notes,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+    applicationsCount: r.applications.length,
+    applications: r.applications.map((app) => ({
+      id: app.id,
+      status: app.status?.name || 'Saved',
+      priority: app.priority,
+      appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
+      company: app.company ? { id: app.company.id, name: app.company.name } : null,
+      job: app.job ? { id: app.job.id, title: app.job.title } : null,
+    })),
+  };
+}
+
 export const resumeRepository = {
   async findMany(userId: string, filters: Partial<ResumeFiltersInput> = {}): Promise<ResumeWithDetailsDTO[]> {
     const where: Prisma.ResumeWhereInput = {
@@ -198,33 +253,20 @@ export const resumeRepository = {
           notes: data.notes,
         },
         include: {
-          applications: true,
+          applications: {
+            select: {
+              id: true,
+              status: true,
+              priority: true,
+              appliedAt: true,
+              company: { select: { id: true, name: true } },
+              job: { select: { id: true, title: true } },
+            },
+          },
         },
       });
 
-      return {
-        id: r.id,
-        userId: r.userId,
-        name: r.name,
-        applicationId: r.applicationId,
-      revision: r.revision,
-      parentResumeId: r.parentResumeId,
-      isCanonical: r.isCanonical,
-        targetRole: r.targetRole,
-        fileUrl: r.fileUrl,
-        filename: r.filename,
-        fileSize: r.fileSize,
-        mimeType: r.mimeType,
-        isDefault: r.isDefault,
-        isTailored: (r as any).isTailored ?? false,
-        matchScore: (r as any).matchScore ?? null,
-        skills: r.skills,
-        notes: r.notes,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-        applicationsCount: 0,
-        applications: [],
-      };
+      return mapResume(r);
     });
   },
 
@@ -270,36 +312,49 @@ export const resumeRepository = {
         },
       });
 
-      return {
-        id: r.id,
-        userId: r.userId,
-        name: r.name,
-        applicationId: r.applicationId,
-      revision: r.revision,
-      parentResumeId: r.parentResumeId,
-      isCanonical: r.isCanonical,
-        targetRole: r.targetRole,
-        fileUrl: r.fileUrl,
-        filename: r.filename,
-        fileSize: r.fileSize,
-        mimeType: r.mimeType,
-        isDefault: r.isDefault,
-        isTailored: (r as any).isTailored ?? false,
-        matchScore: (r as any).matchScore ?? null,
-        skills: r.skills,
-        notes: r.notes,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-        applicationsCount: r.applications.length,
-        applications: r.applications.map((app) => ({
-          id: app.id,
-          status: app.status?.name || 'Saved',
-          priority: app.priority,
-          appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
-          company: app.company ? { id: app.company.id, name: app.company.name } : null,
-          job: app.job ? { id: app.job.id, title: app.job.title } : null,
-        })),
-      };
+      return mapResume(r);
+    });
+  },
+
+  async setCanonical(
+    userId: string,
+    id: string
+  ): Promise<ResumeWithDetailsDTO | typeof CANONICAL_REQUIRES_APPLICATION | null> {
+    const existing = await prisma.resume.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) return null;
+
+    // Canonical means "the attempt the user chose to keep" and is scoped to one application.
+    // It is deliberately not isDefault, which is a user-level primary-resume concept used
+    // elsewhere in the app.
+    if (!existing.applicationId) return CANONICAL_REQUIRES_APPLICATION;
+
+    return prisma.$transaction(async (tx) => {
+      await tx.resume.updateMany({
+        where: { userId, applicationId: existing.applicationId, isCanonical: true },
+        data: { isCanonical: false },
+      });
+
+      const r = await tx.resume.update({
+        where: { id },
+        data: { isCanonical: true },
+        include: {
+          applications: {
+            select: {
+              id: true,
+              status: true,
+              priority: true,
+              appliedAt: true,
+              company: { select: { id: true, name: true } },
+              job: { select: { id: true, title: true } },
+            },
+          },
+        },
+      });
+
+      return mapResume(r);
     });
   },
 
@@ -333,36 +388,7 @@ export const resumeRepository = {
         },
       });
 
-      return {
-        id: r.id,
-        userId: r.userId,
-        name: r.name,
-        applicationId: r.applicationId,
-      revision: r.revision,
-      parentResumeId: r.parentResumeId,
-      isCanonical: r.isCanonical,
-        targetRole: r.targetRole,
-        fileUrl: r.fileUrl,
-        filename: r.filename,
-        fileSize: r.fileSize,
-        mimeType: r.mimeType,
-        isDefault: r.isDefault,
-        isTailored: (r as any).isTailored ?? false,
-        matchScore: (r as any).matchScore ?? null,
-        skills: r.skills,
-        notes: r.notes,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-        applicationsCount: r.applications.length,
-        applications: r.applications.map((app) => ({
-          id: app.id,
-          status: app.status?.name || 'Saved',
-          priority: app.priority,
-          appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
-          company: app.company ? { id: app.company.id, name: app.company.name } : null,
-          job: app.job ? { id: app.job.id, title: app.job.title } : null,
-        })),
-      };
+      return mapResume(r);
     });
   },
 

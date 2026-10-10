@@ -38,6 +38,15 @@ export const resumeController = {
     }
   },
 
+  async setCanonical(req: Request, res: Response, next: NextFunction) {
+    try {
+      const resume = await resumeService.setCanonicalResume(req.user!.id, req.params.id);
+      return res.status(200).json({ data: resume });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
   async setDefault(req: Request, res: Response, next: NextFunction) {
     try {
       const resume = await resumeService.setDefaultResume(req.user!.id, req.params.id);

@@ -166,6 +166,58 @@ describe('Resumes API Integration Tests', () => {
     await prisma.resume.deleteMany({ where: { id: { in: created } } });
   });
 
+  it('POST /api/v1/resumes/:id/canonical promotes one attempt and clears its siblings', async () => {
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userACookie)
+      .send({ companyName: 'Canon Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const canonAppId = appRes.body.data.id;
+
+    const ids: string[] = [];
+    for (let i = 1; i <= 3; i++) {
+      const row = await prisma.resume.create({
+        data: {
+          userId: userAId,
+          name: `Canon r${i}`,
+          applicationId: canonAppId,
+          revision: i,
+          parentResumeId: ids[i - 2] ?? null,
+        },
+      });
+      ids.push(row.id);
+    }
+
+    // Promote the middle attempt, which is not the newest and not the highest scoring.
+    const res = await request(app)
+      .post(`/api/v1/resumes/${ids[1]}/canonical`)
+      .set('Cookie', userACookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.isCanonical).toBe(true);
+
+    const siblings = await prisma.resume.findMany({ where: { applicationId: canonAppId } });
+    const canonical = siblings.filter((s) => s.isCanonical);
+    expect(canonical).toHaveLength(1);
+    expect(canonical[0].id).toBe(ids[1]);
+
+    // Switching canonical clears the previous one.
+    const second = await request(app)
+      .post(`/api/v1/resumes/${ids[2]}/canonical`)
+      .set('Cookie', userACookie);
+    expect(second.status).toBe(200);
+    const after = await prisma.resume.findMany({ where: { applicationId: canonAppId } });
+    expect(after.filter((s) => s.isCanonical)).toHaveLength(1);
+    expect(after.find((s) => s.id === ids[2])?.isCanonical).toBe(true);
+
+    // A manual resume cannot be made canonical, and isDefault is a separate concern.
+    const manual = await prisma.resume.create({ data: { userId: userAId, name: 'Manual' } });
+    const manualRes = await request(app)
+      .post(`/api/v1/resumes/${manual.id}/canonical`)
+      .set('Cookie', userACookie);
+    expect(manualRes.status).toBe(400);
+
+    await prisma.resume.deleteMany({ where: { id: { in: [...ids, manual.id] } } });
+  });
+
   it('GET /api/v1/resumes supports search and targetRole filters', async () => {
     const resSearch = await request(app)
       .get('/api/v1/resumes?search=Generalist')
