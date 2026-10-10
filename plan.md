@@ -127,22 +127,27 @@
 > Local data confirmed pre-final.
 
 **Phase 1 — provenance (ships alone; makes existing history legible):**
-- [ ] **Task 1:** Schema — `applicationId`, `revision`, `parentResumeId`, `isCanonical` on `Resume`; `submittedResumeId`, `submittedAt` on `Application`; drop `version`; reset DB
-- [ ] **Task 2:** DTO + validation contracts (`version` removed, new fields, `groupByApplication` filter)
-- [ ] **Task 3:** Generation records `revision` / `parentResumeId` inside the existing transaction
-- [ ] **Task 4:** Repository ordering and filters — `r1 → r2 → r3` reads in sequence
+- [x] **Task 1:** Schema — `applicationId`, `revision`, `parentResumeId`, `isCanonical` on `Resume`; `submittedResumeId`, `submittedAt` on `Application`; drop `version`; reset DB
+- [x] **Task 2:** DTO + validation contracts (`version` removed, new fields, `groupByApplication` filter)
+- [x] **Task 3:** Generation records `revision` / `parentResumeId` inside the existing transaction
+- [x] **Task 4:** Repository ordering and filters — `r1 → r2 → r3` reads in sequence
 
 **Phase 2 — selection:**
-- [ ] **Tasks 5–6:** Canonical endpoint (one per application, single transaction) + grouped listing
+- [x] **Tasks 5–6:** Canonical endpoint (one per application, single transaction) + grouped listing
 
 **Phase 3 — submission (the interview-prep payoff):**
-- [ ] **Tasks 7–8:** `submitted-resume` endpoint + immutability under regeneration
+- [x] **Tasks 7–8:** `submitted-resume` endpoint + immutability under regeneration
 
 **Phase 4 — UI:**
-- [ ] **Tasks 9–11:** Revision pill and canonical marker, revision grouping on the Resumes page, mark-as-submitted on application detail
+- [x] **Tasks 9–11:** Revision pill and canonical marker, revision grouping on the Resumes page, mark-as-submitted on application detail
 
 **Phase 5 — verification:**
-- [ ] **Task 12:** Drop `version` everywhere; full suite + build + grep gates + live E2E
+- [x] **Task 12:** Drop `version` everywhere; full suite + build + grep gates + live E2E
+
+**Exit gate — live E2E:** four generations for one application yielded `r1..r4` with a correct
+`parentResumeId` chain; `r2` marked canonical (one only); `r2` marked submitted; regenerating to
+`r4` left `submittedResumeId` and `submittedAt` untouched while `resumeId` advanced. 389 tests green,
+build clean, grep gates 0.
 
 > **Rejected:** restoring user-typed `version` labels (rots, unorderable, duplicates the database);
 > overwriting resumes in place (destroys a better unreproducible prior attempt); reusing `isDefault`
