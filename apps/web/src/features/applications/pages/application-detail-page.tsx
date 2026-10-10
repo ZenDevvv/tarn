@@ -111,6 +111,13 @@ export function ApplicationDetailPage() {
     },
   });
 
+  const submitResumeMutation = useMutation({
+    mutationFn: () => applicationApi.submitResume(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['application', id] });
+    },
+  });
+
   const archiveMutation = useMutation({
     mutationFn: () => applicationApi.deleteApplication(id!),
     onSuccess: () => {
@@ -459,9 +466,13 @@ export function ApplicationDetailPage() {
           <ApplicationDeliverables
             resume={application.resume}
             coverLetter={currentCoverLetter}
+            submittedResume={application.submittedResume}
+            submittedAt={application.submittedAt}
             onPreviewResume={handleOpenResumePreview}
             onPreviewCoverLetter={handleOpenCoverLetterPreview}
             onOpenStudio={() => setIsStudioOpen(true)}
+            onSubmitResume={() => submitResumeMutation.mutate()}
+            isSubmittingResume={submitResumeMutation.isPending}
             className="pb-8 border-b border-border/70"
           />
 

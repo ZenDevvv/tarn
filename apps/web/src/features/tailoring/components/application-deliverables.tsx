@@ -5,6 +5,8 @@ import {
   Eye,
   Sparkles,
   Plus,
+  CheckCircle2,
+  Send,
 } from 'lucide-react';
 import { ResumeDTO, CoverLetterDTO } from '@tracker/types';
 import { resolveDocumentUrl } from '@/features/resumes/api/resume-api';
@@ -13,18 +15,27 @@ import { cn } from '@/lib/cn';
 interface ApplicationDeliverablesProps {
   resume?: ResumeDTO | null;
   coverLetter?: CoverLetterDTO | null;
+  /** Frozen snapshot of the resume actually sent, distinct from the working copy above. */
+  submittedResume?: ResumeDTO | null;
+  submittedAt?: string | null;
   onPreviewResume: () => void;
   onPreviewCoverLetter: () => void;
   onOpenStudio: () => void;
+  onSubmitResume?: () => void;
+  isSubmittingResume?: boolean;
   className?: string;
 }
 
 export function ApplicationDeliverables({
   resume,
   coverLetter,
+  submittedResume,
+  submittedAt,
   onPreviewResume,
   onPreviewCoverLetter,
   onOpenStudio,
+  onSubmitResume,
+  isSubmittingResume,
   className,
 }: ApplicationDeliverablesProps) {
   const resumeDownloadUrl = resume?.fileUrl ? resolveDocumentUrl(resume.fileUrl) : null;
@@ -70,6 +81,11 @@ export function ApplicationDeliverables({
                     {resume.matchScore ? `${resume.matchScore}% Match` : 'Tailored'}
                   </span>
                 )}
+                {resume?.applicationId && resume.revision > 0 && (
+                  <span className="px-2 py-0.2 rounded-full text-micro font-mono font-medium bg-muted text-muted-foreground border border-border">
+                    r{resume.revision}
+                  </span>
+                )}
               </div>
 
               {resume ? (
@@ -84,6 +100,28 @@ export function ApplicationDeliverables({
                   No tailored resume generated yet for this application.
                 </p>
               )}
+
+              {/* The submission snapshot is read separately from the working copy, so
+                  regenerating never changes what the employer is recorded as having received. */}
+              {submittedResume ? (
+                <p className="text-micro text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 pt-0.5">
+                  <CheckCircle2 size={12} className="shrink-0" />
+                  <span className="truncate">
+                    Submitted{submittedResume.revision > 0 && submittedResume.applicationId ? ` as r${submittedResume.revision}` : ''}
+                    {submittedAt ? ` on ${new Date(submittedAt).toLocaleDateString()}` : ''}
+                  </span>
+                </p>
+              ) : onSubmitResume && resume ? (
+                <button
+                  type="button"
+                  onClick={onSubmitResume}
+                  disabled={isSubmittingResume}
+                  className="text-micro text-muted-foreground hover:text-foreground flex items-center gap-1.5 pt-0.5 transition-colors disabled:opacity-50"
+                >
+                  <Send size={12} className="shrink-0" />
+                  <span>{isSubmittingResume ? 'Marking…' : 'Mark this as submitted'}</span>
+                </button>
+              ) : null}
             </div>
           </div>
 

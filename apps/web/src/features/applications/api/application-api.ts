@@ -51,6 +51,14 @@ export const applicationApi = {
     return apiClient.patch<ApplicationDTO>(`/applications/${id}/status`, { status });
   },
 
+  /**
+   * Freeze the resume that was actually sent. Omitting resumeId marks the application's current
+   * resume. Never moves on subsequent regeneration.
+   */
+  async submitResume(id: string, resumeId?: string) {
+    return apiClient.post<ApplicationDTO>(`/applications/${id}/submitted-resume`, { resumeId });
+  },
+
   async deleteApplication(id: string) {
     return apiClient.delete<{ id: string; archived: boolean }>(`/applications/${id}`);
   },
