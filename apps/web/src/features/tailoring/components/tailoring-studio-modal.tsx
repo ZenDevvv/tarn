@@ -16,6 +16,11 @@ import {
 } from 'lucide-react';
 import { JdAnalysisResultDTO, GenerationQuotaDTO } from '@tracker/types';
 import { tailoringApi, TailoredPackageResponse } from '../api/tailoring-api';
+import {
+  DOCUMENT_TYPE_OPTIONS,
+  DocumentType,
+  buildGenerateInput,
+} from '../document-type';
 import { Link } from 'react-router-dom';
 
 export interface TailoringStudioModalProps {
@@ -40,6 +45,7 @@ export function TailoringStudioModal({
   onGenerated,
 }: TailoringStudioModalProps) {
   const [targetArtifact, setTargetArtifact] = useState<'package' | 'resume' | 'cover_letter'>('package');
+  const [documentType, setDocumentType] = useState<DocumentType>('resume');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blockingWarnings, setBlockingWarnings] = useState<string[]>([]);
@@ -71,10 +77,10 @@ export function TailoringStudioModal({
     setError(null);
     setBlockingWarnings([]);
     try {
-      const res = await tailoringApi.generatePackage(applicationId, {
-        targetArtifact,
-        overrideWarnings,
-      });
+      const res = await tailoringApi.generatePackage(
+        applicationId,
+        buildGenerateInput(documentType, targetArtifact, overrideWarnings)
+      );
       setGenerationResult(res);
       if (res.quota) {
         setQuota(res.quota);
@@ -600,6 +606,44 @@ export function TailoringStudioModal({
                     </p>
                   </label>
                 </div>
+
+                {/* Document type — a federal resume and an academic CV are different documents,
+                    not different templates. Shown for resume-bearing artifacts only. */}
+                {targetArtifact !== 'cover_letter' && (
+                  <div className="space-y-2">
+                    <p className="text-small font-semibold text-foreground">Document type</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {DOCUMENT_TYPE_OPTIONS.map((option) => (
+                        <label
+                          key={option.value}
+                          className={`flex flex-col p-3.5 rounded-xl border transition-all cursor-pointer ${
+                            documentType === option.value
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                              : 'border-border bg-secondary/20 hover:border-foreground/20'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="document-type"
+                            value={option.value}
+                            checked={documentType === option.value}
+                            onChange={() => setDocumentType(option.value)}
+                            className="sr-only"
+                          />
+                          <div className="flex items-center justify-between gap-1 mb-1.5">
+                            <span className="font-semibold text-small text-foreground flex items-center gap-1.5">
+                              <FileCheck2 size={14} className="text-primary" />
+                              <span>{option.label}</span>
+                            </span>
+                          </div>
+                          <p className="text-micro text-muted-foreground leading-relaxed">
+                            {option.description}
+                          </p>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Quota Limit Notice */}
