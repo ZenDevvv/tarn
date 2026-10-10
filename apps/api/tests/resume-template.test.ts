@@ -462,3 +462,98 @@ describe('Left-aligned body text (spec-resume-fidelity.md C7)', () => {
     expect(html).toContain('text-align: left');
   });
 });
+
+describe('Federal attributes & credential detail (spec-resume-fidelity.md C5)', () => {
+  const baseBasics = { basics: { name: 'Maria Santos', email: 'maria@rn.org' }, education: [] };
+
+  it('renders salary, hours, supervisor, and clearance from entry attributes', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      experience: [
+        {
+          company: 'Mayo Clinic',
+          role: 'Critical Care Registered Nurse',
+          date_range: '2019 - Present',
+          bullets: ['Managed 12 high-acuity ICU patients per shift.'],
+          attributes: {
+            salary: '$92,000',
+            hoursPerWeek: '40',
+            supervisor: 'Dr. A. Osei',
+            supervisorPhone: '(507) 555-0100',
+            securityClearance: 'Secret',
+          },
+        },
+      ],
+    });
+
+    expect(html).toContain('$92,000');
+    expect(html).toContain('40 hrs/wk');
+    expect(html).toContain('Dr. A. Osei');
+    expect(html).toContain('(507) 555-0100');
+    expect(html).toContain('Secret');
+  });
+
+  it('renders nothing extra when attributes are absent', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      experience: [
+        {
+          company: 'Mayo Clinic',
+          role: 'Critical Care Registered Nurse',
+          date_range: '2019 - Present',
+          bullets: ['Managed 12 high-acuity ICU patients per shift.'],
+        },
+      ],
+    });
+
+    expect(html).not.toContain('hrs/wk');
+    expect(html).not.toContain('Clearance');
+    expect(html).not.toContain('Supervisor:');
+    // The attribute block itself must be absent (entry-meta-row is a distinct pre-existing class).
+    expect(html).not.toContain('class="entry-meta"');
+  });
+
+  it('renders license number and jurisdiction for credential custom sections', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      customSections: [
+        {
+          id: 'licensure',
+          title: 'Licensure',
+          type: 'credentials',
+          items: [
+            {
+              name: 'Registered Nurse',
+              issuer: 'Minnesota Board of Nursing',
+              licenseNumber: 'RN-441782',
+              jurisdiction: 'MN',
+              date: '2016',
+            },
+          ],
+        },
+      ],
+      sectionOrder: ['licensure'],
+    });
+
+    expect(html).toContain('RN-441782');
+    expect(html).toContain('MN');
+  });
+
+  it('escapes attribute values', () => {
+    const html = buildResumeHtml({
+      ...baseBasics,
+      experience: [
+        {
+          company: 'X',
+          role: 'Y',
+          date_range: '2020',
+          bullets: ['b'],
+          attributes: { supervisor: '<script>alert(1)</script>' },
+        },
+      ],
+    });
+
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+});
