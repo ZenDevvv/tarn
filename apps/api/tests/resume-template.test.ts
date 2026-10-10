@@ -308,6 +308,22 @@ describe('buildResumeHtml Skills Kicker & Shared Stack Tests', () => {
     expect(html).not.toContain('Technical Skills');
   });
 
+  it('does not label a multi-category section with a bucket-style first category', () => {
+    // Reproduced 2026-10-10: `{ Leadership, 'Clinical Competencies' }` rendered the kicker
+    // "LEADERSHIP" above content that was mostly clinical. A first category that names a bucket
+    // rather than the whole section must not become the heading.
+    const html = buildResumeHtml({
+      ...baseBasics,
+      skills: {
+        Leadership: ['Precepting', 'Charge Assignment'],
+        'Clinical Competencies': ['Critical Care', 'Triage'],
+      },
+    });
+
+    expect(html).toContain('Skills &amp; Competencies');
+    expect(html).not.toContain('>Leadership</div>');
+  });
+
   it('omits the Shared Stack line when there are no projects', () => {
     const html = buildResumeHtml({
       ...baseBasics,
@@ -387,5 +403,41 @@ describe('buildResumeHtml Skills Kicker & Shared Stack Tests', () => {
       expect(expIndex).toBeGreaterThan(-1);
       expect(rotIndex).toBeLessThan(expIndex);
     });
+  });
+});
+
+describe('Pagination CSS (spec-resume-fidelity.md C3)', () => {
+  const longPayload = {
+    basics: { name: 'Maria Santos', email: 'maria@rn.org' },
+    experience: Array.from({ length: 6 }, (_, i) => ({
+      company: `Hospital ${i + 1}`,
+      role: 'Registered Nurse',
+      date_range: '2020 - Present',
+      bullets: [
+        'Managed care for 12 high-acuity ICU patients per shift across two units.',
+        'Designed protocol reducing sepsis mortality by 18%.',
+        'Precepted 14 new nurses through onboarding and competency validation.',
+        'Triaged incoming referrals and coordinated interdisciplinary rounds.',
+      ],
+    })),
+    education: [
+      { school: 'University of Minnesota', degree: 'BSN', graduation: '2016' },
+    ],
+    skills: { General: ['Triage'] },
+  };
+
+  it('declares break-inside protection so entries never split mid-bullet across pages', () => {
+    const html = buildResumeHtml(longPayload);
+
+    expect(html).toContain('break-inside: avoid');
+    expect(html).toContain('page-break-inside: avoid');
+    expect(html).toContain('break-inside: avoid-page');
+  });
+
+  it('applies orphan and widow control to bullet list items', () => {
+    const html = buildResumeHtml(longPayload);
+
+    expect(html).toContain('orphans: 2');
+    expect(html).toContain('widows: 2');
   });
 });
