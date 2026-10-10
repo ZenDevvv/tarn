@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../src/app';
+import { prisma } from '@tracker/database';
 
 describe('Resumes API Integration Tests', () => {
   let userACookie: string[];
@@ -8,6 +9,7 @@ describe('Resumes API Integration Tests', () => {
   let userAResumeId: string;
   let userASecondResumeId: string;
   let userAApplicationId: string;
+  let userAId: string;
 
   beforeAll(async () => {
     // Register User A
@@ -19,6 +21,7 @@ describe('Resumes API Integration Tests', () => {
         name: 'Resume User A',
       });
     userACookie = resA.headers['set-cookie'];
+    userAId = resA.body.data.user.id;
 
     // Register User B
     const resB = await request(app)
@@ -112,6 +115,55 @@ describe('Resumes API Integration Tests', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('GET /api/v1/resumes filters by applicationId and groups attempts in lineage order', async () => {
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userACookie)
+      .send({
+        companyName: 'Lineage Co',
+        position: 'Backend Developer',
+        description: 'TypeScript and PostgreSQL role.',
+      });
+    const lineageAppId = appRes.body.data.id;
+
+    // Create r1..r3 directly; generation coverage lives in tailoring.test.ts.
+    const created: string[] = [];
+    for (let i = 1; i <= 3; i++) {
+      const row = await prisma.resume.create({
+        data: {
+          userId: userAId,
+          name: `Backend Developer r${i}`,
+          targetRole: 'Backend Developer',
+          applicationId: lineageAppId,
+          revision: i,
+          parentResumeId: created[i - 2] ?? null,
+        },
+      });
+      created.push(row.id);
+    }
+
+    const filtered = await request(app)
+      .get(`/api/v1/resumes?applicationId=${lineageAppId}`)
+      .set('Cookie', userACookie);
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.data).toHaveLength(3);
+
+    // groupByApplication reads the chain in sequence: r1 -> r2 -> r3.
+    const grouped = await request(app)
+      .get('/api/v1/resumes?groupByApplication=true')
+      .set('Cookie', userACookie);
+    expect(grouped.status).toBe(200);
+
+    const lineage = grouped.body.data.filter((r: any) => r.applicationId === lineageAppId);
+    expect(lineage.map((r: any) => r.revision)).toEqual([1, 2, 3]);
+
+    // Manual uploads (null applicationId) are still returned by the ungrouped list.
+    const manual = await request(app).get('/api/v1/resumes').set('Cookie', userACookie);
+    expect(manual.body.data.some((r: any) => r.applicationId === null)).toBe(true);
+
+    await prisma.resume.deleteMany({ where: { id: { in: created } } });
   });
 
   it('GET /api/v1/resumes supports search and targetRole filters', async () => {
