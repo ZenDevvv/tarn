@@ -190,7 +190,8 @@ export const tailoringService = {
         role,
         company,
         apiKey,
-        input.documentType
+        input.documentType,
+        input.additionalInstructions
       );
     } catch (err: any) {
       console.error('Gemini AI synthesis error:', err);
@@ -422,7 +423,8 @@ export const tailoringService = {
     role: string,
     company: string,
     apiKey: string,
-    documentType: string = 'resume'
+    documentType: string = 'resume',
+    additionalInstructions: string = ''
   ): Promise<AiTailoringOutput> {
     const totalWorkBullets = (profile.workExperience || []).reduce(
       (acc, w) => acc + (w.bullets?.length || 0),
@@ -430,6 +432,20 @@ export const tailoringService = {
     );
     const isSparse = (profile.workExperience || []).length <= 1 || totalWorkBullets < 4;
     const verifiedCerts = collectVerifiedCerts(profile);
+
+    // Candidate-supplied steering. This is the escape hatch for what a document type cannot
+    // express ("mention visa sponsorship", "lead with my publications"). It is placed BEFORE the
+    // fidelity rules and explicitly subordinated to them, so a user instruction cannot license
+    // inventing employers, dates, metrics, or certifications. Content that must not be invented
+    // stays merged from the Master Profile regardless (spec-resume-fidelity.md C1).
+    const candidateInstructions = additionalInstructions.trim()
+      ? `CANDIDATE INSTRUCTIONS: ${additionalInstructions.trim()}
+These guide emphasis, ordering, and framing only. They never override the NON-NEGOTIABLE FIDELITY
+RULES below: do not invent employers, tools, projects, dates, metrics, or certifications, and do not
+omit verified content because an instruction suggests it.
+
+`
+      : '';
 
     // A federal resume, an academic CV, and a private-sector resume are different DOCUMENTS, not
     // different templates. Length is a content-selection directive, never a typography directive.
@@ -461,7 +477,7 @@ Your task is to adapt the candidate's Master Profile specifically for the target
 
 ${documentPolicy}
 
-NON-NEGOTIABLE FIDELITY RULES:
+${candidateInstructions}NON-NEGOTIABLE FIDELITY RULES:
 1. Grounding: Stay 100% faithful to the candidate's Master Profile. NEVER invent employers, tools, projects, dates, or metrics.
 2. Verified Metrics: ONLY use metrics and quantities that exist in the candidate's profile (e.g. from factBank or experience bullets).
 3. Positioning: Follow the candidate's positioning rules: ${JSON.stringify(profile.positioningRules)}.
