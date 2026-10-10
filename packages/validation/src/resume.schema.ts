@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const createResumeSchema = z.object({
   name: z.string().trim().min(1, 'Resume name is required').max(120, 'Name cannot exceed 120 characters'),
-  version: z.string().trim().optional().nullable(),
   targetRole: z.string().trim().optional().nullable(),
   fileUrl: z.string().trim().optional().nullable(),
   filename: z.string().trim().optional().nullable(),
@@ -22,7 +21,11 @@ export const resumeFiltersSchema = z.object({
   search: z.string().optional(),
   targetRole: z.string().optional(),
   isDefault: z.enum(['true', 'false']).optional(),
-  sortBy: z.enum(['createdAt', 'updatedAt', 'name']).optional().default('createdAt'),
+  /** Restrict to attempts generated for one application. */
+  applicationId: z.string().optional(),
+  /** Order attempts by (applicationId, revision) so lineage reads r1 -> r2 -> r3. */
+  groupByApplication: z.coerce.boolean().optional().default(false),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name', 'revision']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
