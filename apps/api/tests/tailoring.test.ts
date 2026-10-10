@@ -332,10 +332,11 @@ Zen Andrei Obrero
         coverLetterMarkdown: mockCoverLetter,
       });
 
+    // overrideWarnings is required now that blocking warnings actually gate (C4).
     const res = await request(app)
       .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
       .set('Cookie', userCookie)
-      .send({ targetArtifact: 'resume' });
+      .send({ targetArtifact: 'resume', overrideWarnings: true });
 
     spy.mockRestore();
 
@@ -346,6 +347,44 @@ Zen Andrei Obrero
     expect(res.body.data.scoreLift).toBeDefined();
     expect(res.body.data.scoreLift.tailored.totalScore).toBeGreaterThan(0);
     expect(res.body.data.quota.usedToday).toBe(4);
+  });
+
+  it('rejects generation with 400 when fidelity warnings are blocking and not overridden', async () => {
+    const ungroundedResume = {
+      ...mockResumePayload,
+      experience: [
+        {
+          ...mockResumePayload.experience[0],
+          company: 'Totally Unrelated Employer Ltd',
+          bullets: ['Cut server latency by 40% and improved query speeds by 10x.'],
+        },
+      ],
+    };
+
+    const spy = vi
+      .spyOn(tailoringService, 'callGeminiSynthesis')
+      .mockResolvedValueOnce({ resume: ungroundedResume, coverLetterMarkdown: mockCoverLetter });
+
+    const usageBefore = await prisma.generationUsage.findUnique({
+      where: { userId_date: { userId, date: new Date().toISOString().slice(0, 10) } },
+    });
+    const resumesBefore = await prisma.resume.count({ where: { userId } });
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume', overrideWarnings: false });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toMatch(/fidelity/i);
+    // No quota consumed and nothing persisted on a blocked generation.
+    const usageAfter = await prisma.generationUsage.findUnique({
+      where: { userId_date: { userId, date: new Date().toISOString().slice(0, 10) } },
+    });
+    expect(usageAfter?.count || 0).toBe(usageBefore?.count || 0);
+    expect(await prisma.resume.count({ where: { userId } })).toBe(resumesBefore);
   });
 
   it('POST /api/v1/tailoring/applications/:id/generate fails loudly with 503 and rolls back DB writes when Chromium is missing', async () => {
