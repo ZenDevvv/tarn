@@ -389,7 +389,7 @@ export function ResumeFormModal({
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="What makes this version distinct? (e.g. Highlights leadership & architecture experience for Series B+ companies)"
+              placeholder="What makes this resume distinct? (e.g. Highlights leadership & architecture experience for Series B+ companies)"
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-small text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring resize-none"
             />
           </div>
