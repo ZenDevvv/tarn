@@ -31,6 +31,11 @@ export const resumeApi = {
     return apiClient.post<ResumeWithDetailsDTO>(`/resumes/${id}/default`);
   },
 
+  /** Mark the attempt the user chose to keep for this application. */
+  async setCanonicalResume(id: string) {
+    return apiClient.post<ResumeWithDetailsDTO>(`/resumes/${id}/canonical`);
+  },
+
   async deleteResume(id: string) {
     return apiClient.delete<boolean>(`/resumes/${id}`);
   },

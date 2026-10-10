@@ -206,6 +206,16 @@ export function ResumesPage() {
     },
   });
 
+  const setCanonicalMutation = useMutation({
+    mutationFn: (id: string) => resumeApi.setCanonicalResume(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+      if (selectedResume && selectedResume.id === data.id) {
+        setSelectedResume(data);
+      }
+    },
+  });
+
   const deleteResumeMutation = useMutation({
     mutationFn: (id: string) => resumeApi.deleteResume(id),
     onSuccess: () => {
@@ -242,6 +252,10 @@ export function ResumesPage() {
 
   const handleSetDefault = async (resume: ResumeWithDetailsDTO) => {
     await setDefaultMutation.mutateAsync(resume.id);
+  };
+
+  const handleSetCanonical = async (resume: ResumeWithDetailsDTO) => {
+    await setCanonicalMutation.mutateAsync(resume.id);
   };
 
   const handleDeleteResumeConfirm = async () => {
@@ -553,6 +567,7 @@ export function ResumesPage() {
           setDeletingResume(r);
         }}
         onSetDefault={handleSetDefault}
+        onSetCanonical={handleSetCanonical}
         onPreviewFullscreen={(r) => {
           setPreviewingResume(r);
         }}
