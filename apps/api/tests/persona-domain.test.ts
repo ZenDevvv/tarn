@@ -518,3 +518,116 @@ Requirements:
     expect(Math.abs(tech.matchScore - nurse.matchScore)).toBeLessThanOrEqual(5);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Persona D — ICU RN carrying custom sections (regression: spec-resume-fidelity C1-C3)
+// ---------------------------------------------------------------------------
+describe('Persona D: custom sections survive generation and render', () => {
+  const profileWithCustomSections = {
+    basics: { name: 'Maria Elena Santos', email: 'msantos@example.org', links: [] },
+    positioningRules: [],
+    factBank: { core_positioning: ['ICU Registered Nurse'], quantified_highlights: [] },
+    workExperience: [
+      {
+        company: 'Mayo Clinic',
+        role: 'Critical Care Registered Nurse',
+        date_range: '2019 - Present',
+        bullets: ['Managed 12 high-acuity ICU patients per shift across two units.'],
+      },
+    ],
+    projectExperience: [],
+    skills: { Leadership: ['Precepting'], 'Clinical Competencies': ['Critical Care'] },
+    education: [],
+    customSections: [
+      {
+        id: 'clinical_rotations',
+        title: 'Clinical Rotations',
+        type: 'timeline',
+        items: [
+          {
+            organization: 'Mayo Clinic',
+            role: 'Critical Care Rotation',
+            location: 'Rochester, MN',
+            date_range: '2023',
+            bullets: ['Completed 800 hours in tertiary ICU.'],
+          },
+        ],
+      },
+      {
+        id: 'licensure',
+        title: 'Licensure & Board Certifications',
+        type: 'credentials',
+        items: [
+          { name: 'Registered Nurse', issuer: 'Minnesota Board of Nursing', licenseNumber: 'RN-441782', jurisdiction: 'MN', date: '2016' },
+        ],
+      },
+    ],
+  } as unknown as MasterProfileDTO;
+
+  // A model response that omits customSections entirely, as the real prompt produced.
+  const modelOutputWithoutCustomSections = {
+    basics: { name: 'Maria Elena Santos' },
+    summary: 'ICU nurse seeking a CNS role.',
+    education: [],
+    experience: [
+      {
+        company: 'Mayo Clinic',
+        role: 'Critical Care Registered Nurse',
+        date_range: '2019 - Present',
+        bullets: ['Managed 12 high-acuity ICU patients per shift across two units.'],
+      },
+    ],
+    projects: [],
+    skills: { Leadership: ['Precepting'], 'Clinical Competencies': ['Critical Care'] },
+    certifications: [],
+  };
+
+  it('renders custom sections from a profile that the model ignored', () => {
+    // The service merges profile customSections before rendering; this asserts the end state.
+    const payload = {
+      ...modelOutputWithoutCustomSections,
+      customSections: profileWithCustomSections.customSections,
+      sectionOrder: [...determineOptimalSectionOrder(profileWithCustomSections), 'clinical_rotations', 'licensure'],
+    };
+
+    const html = buildResumeHtml(payload);
+
+    expect(html).toContain('Clinical Rotations');
+    expect(html).toContain('Licensure &amp; Board Certifications');
+    expect(html).toContain('Completed 800 hours in tertiary ICU.');
+    expect(html).toContain('Minnesota Board of Nursing');
+  });
+
+  it('reports custom_section_coverage as clean when sections are merged', () => {
+    const report = TailoringValidatorService.validate(
+      {
+        ...modelOutputWithoutCustomSections,
+        customSections: profileWithCustomSections.customSections,
+      } as any,
+      'Dear Hiring Team.',
+      [],
+      [],
+      profileWithCustomSections
+    );
+
+    expect(report.checkedDimensions).toContain('custom_section_coverage');
+    expect(report.fidelityWarnings.filter((w) => w.includes('dropped'))).toHaveLength(0);
+    expect(report.isValid).toBe(true);
+  });
+
+  it('uses a neutral kicker for a bucket-style first category', () => {
+    const html = buildResumeHtml({ ...modelOutputWithoutCustomSections });
+
+    expect(html).toContain('Skills &amp; Competencies');
+    expect(html).not.toContain('>Leadership</div>');
+  });
+
+  it('declares pagination CSS so entries never split across pages', () => {
+    const html = buildResumeHtml({ ...modelOutputWithoutCustomSections });
+
+    expect(html).toContain('break-inside: avoid');
+    expect(html).toContain('break-inside: avoid-page');
+    expect(html).toContain('orphans: 2');
+    expect(html).toContain('widows: 2');
+  });
+});
