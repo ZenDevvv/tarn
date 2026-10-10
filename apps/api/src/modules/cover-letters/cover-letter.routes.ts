@@ -12,4 +12,5 @@ coverLetterRouter.get('/', coverLetterController.listAll);
 coverLetterRouter.get('/:id', coverLetterController.getById);
 coverLetterRouter.patch('/:id', validateBody(updateCoverLetterSchema), coverLetterController.update);
 coverLetterRouter.delete('/:id', coverLetterController.delete);
+coverLetterRouter.post('/:id/canonical', coverLetterController.setCanonical);
 coverLetterRouter.get('/application/:applicationId', coverLetterController.listForApplication);
