@@ -1193,4 +1193,55 @@ Zen Andrei Obrero
 
     await prisma.generationUsage.deleteMany({ where: { userId } });
   });
+  it('keeps exactly one canonical cover letter per application', async () => {
+    const { prisma } = await import('@tracker/database');
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({ companyName: 'Canon Letter Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const canonAppId = appRes.body.data.id;
+
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+        resume: { ...mockResumePayload, certifications: [] },
+        coverLetterMarkdown: mockCoverLetter,
+      });
+      const res = await request(app)
+        .post(`/api/v1/tailoring/applications/${canonAppId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ targetArtifact: 'cover_letter', overrideWarnings: true });
+      aiSpy.mockRestore();
+      ids.push(res.body.data.coverLetter.id);
+    }
+
+    const promote = await request(app)
+      .post(`/api/v1/cover-letters/${ids[1]}/canonical`)
+      .set('Cookie', userCookie);
+    expect(promote.status).toBe(200);
+    expect(promote.body.data.isCanonical).toBe(true);
+
+    const siblings = await prisma.coverLetter.findMany({ where: { applicationId: canonAppId } });
+    expect(siblings.filter((l) => l.isCanonical)).toHaveLength(1);
+    expect(siblings.find((l) => l.id === ids[1])?.isCanonical).toBe(true);
+
+    const second = await request(app)
+      .post(`/api/v1/cover-letters/${ids[2]}/canonical`)
+      .set('Cookie', userCookie);
+    expect(second.status).toBe(200);
+    const after = await prisma.coverLetter.findMany({ where: { applicationId: canonAppId } });
+    expect(after.filter((l) => l.isCanonical)).toHaveLength(1);
+    expect(after.find((l) => l.id === ids[2])?.isCanonical).toBe(true);
+
+    // A letter with no application has no siblings and cannot be canonical.
+    const orphan = await prisma.coverLetter.create({
+      data: { userId, name: 'Standalone', content: 'Dear team.' },
+    });
+    const orphanRes = await request(app)
+      .post(`/api/v1/cover-letters/${orphan.id}/canonical`)
+      .set('Cookie', userCookie);
+    expect(orphanRes.status).toBe(400);
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
 });

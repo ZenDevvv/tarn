@@ -1,7 +1,7 @@
 import { prisma } from '@tracker/database';
 import { CoverLetterDTO, CoverLetterWithDetailsDTO } from '@tracker/types';
 import { UpdateCoverLetterInput } from '@tracker/validation';
-import { NotFoundError } from '../../middleware/error-handler';
+import { NotFoundError, BadRequestError } from '../../middleware/error-handler';
 import { PdfRendererService } from '../tailoring/pdf-renderer.service';
 import crypto from 'crypto';
 
@@ -158,6 +158,47 @@ export const coverLetterService = {
         parentCoverLetterId: existing.id,
         isCanonical: false,
       },
+    });
+
+    return {
+      id: updated.id,
+      userId: updated.userId,
+      applicationId: updated.applicationId,
+      name: updated.name,
+      role: updated.role,
+      company: updated.company,
+      content: updated.content,
+      htmlContent: updated.htmlContent,
+      fileUrl: updated.fileUrl,
+      matchScore: updated.matchScore,
+      echoedPhrases: updated.echoedPhrases,
+      revision: updated.revision,
+      parentCoverLetterId: updated.parentCoverLetterId,
+      isCanonical: updated.isCanonical,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  },
+
+  /**
+   * Mark the letter the user chose to keep for this application. Canonical is defined relative
+   * to an application, so a standalone letter has no siblings and is rejected.
+   */
+  async setCanonical(userId: string, id: string): Promise<CoverLetterDTO | 'NO_APPLICATION'> {
+    const existing = await prisma.coverLetter.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new NotFoundError('Cover letter not found');
+    }
+    if (!existing.applicationId) {
+      return 'NO_APPLICATION';
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.coverLetter.updateMany({
+        where: { userId, applicationId: existing.applicationId, isCanonical: true },
+        data: { isCanonical: false },
+      });
+      return tx.coverLetter.update({ where: { id }, data: { isCanonical: true } });
     });
 
     return {
