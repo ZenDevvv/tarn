@@ -308,6 +308,14 @@ export const tailoringService = {
         let createdCoverLetter: any = null;
 
         if (resumeRender) {
+          // Provenance: this attempt's place in the application's revision chain. Read inside the
+          // transaction so concurrent generations cannot claim the same number, and so a failed
+          // generation does not consume a revision.
+          const prev = await tx.resume.findFirst({
+            where: { userId, applicationId: application.id },
+            orderBy: { revision: 'desc' },
+          });
+
           createdResume = await tx.resume.create({
             data: {
               userId,
@@ -321,6 +329,11 @@ export const tailoringService = {
               content: resumePayload,
               skills: Object.values(resumePayload.skills || {}).flat() as string[],
               notes: `Tailored for ${role} at ${company}. ATS Match score: ${scoreLift.tailored.totalScore}% (+${scoreLift.lift.totalLift}% lift).`,
+              applicationId: application.id,
+              revision: (prev?.revision ?? 0) + 1,
+              parentResumeId: prev?.id ?? null,
+              // A new attempt never promotes itself; the user picks a canonical one.
+              isCanonical: false,
             },
           });
 

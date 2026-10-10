@@ -932,4 +932,68 @@ Zen Andrei Obrero
 
     await prisma.generationUsage.deleteMany({ where: { userId } });
   });
+  it('records revision lineage across repeated generations for one application', async () => {
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({
+        companyName: 'Lineage Test Corp',
+        position: 'Backend Developer',
+        description: 'Need a backend engineer with TypeScript and PostgreSQL experience.',
+      });
+    const lineageAppId = appRes.body.data.id;
+
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+        resume: { ...mockResumePayload, certifications: [] },
+        coverLetterMarkdown: mockCoverLetter,
+      });
+      const res = await request(app)
+        .post(`/api/v1/tailoring/applications/${lineageAppId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ targetArtifact: 'resume', overrideWarnings: true });
+      aiSpy.mockRestore();
+      expect(res.status).toBe(200);
+      ids.push(res.body.data.resume.id);
+    }
+
+    const r1 = await prisma.resume.findUnique({ where: { id: ids[0] } });
+    const r2 = await prisma.resume.findUnique({ where: { id: ids[1] } });
+    const r3 = await prisma.resume.findUnique({ where: { id: ids[2] } });
+
+    // r1 has no parent; each later attempt points at the one before it.
+    expect(r1?.revision).toBe(1);
+    expect(r1?.parentResumeId).toBeNull();
+    expect(r2?.revision).toBe(2);
+    expect(r2?.parentResumeId).toBe(ids[0]);
+    expect(r3?.revision).toBe(3);
+    expect(r3?.parentResumeId).toBe(ids[1]);
+
+    // Every attempt is tied to the application that produced it, and none auto-promotes itself.
+    [r1, r2, r3].forEach((r) => {
+      expect(r?.applicationId).toBe(lineageAppId);
+      expect(r?.isCanonical).toBe(false);
+    });
+
+    // A different application starts its own lineage, even for the same role.
+    const otherApp = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({ companyName: 'Other Corp', position: 'Backend Developer', description: 'TypeScript role.' });
+    const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: mockCoverLetter,
+    });
+    const otherRes = await request(app)
+      .post(`/api/v1/tailoring/applications/${otherApp.body.data.id}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume', overrideWarnings: true });
+    aiSpy.mockRestore();
+    const otherResume = await prisma.resume.findUnique({ where: { id: otherRes.body.data.resume.id } });
+    expect(otherResume?.revision).toBe(1);
+    expect(otherResume?.parentResumeId).toBeNull();
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
 });
