@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Eye,
   Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -29,6 +30,7 @@ export interface ResumeDetailModalProps {
   onEdit: (resume: ResumeWithDetailsDTO) => void;
   onDelete: (resume: ResumeWithDetailsDTO) => void;
   onSetDefault: (resume: ResumeWithDetailsDTO) => void;
+  onSetCanonical?: (resume: ResumeWithDetailsDTO) => void;
   onPreviewFullscreen?: (resume: ResumeWithDetailsDTO) => void;
 }
 
@@ -47,6 +49,7 @@ export function ResumeDetailModal({
   onEdit,
   onDelete,
   onSetDefault,
+  onSetCanonical,
   onPreviewFullscreen,
 }: ResumeDetailModalProps) {
   if (!isOpen || !resume) return null;
@@ -132,6 +135,18 @@ export function ResumeDetailModal({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {onSetCanonical && resume.applicationId && !resume.isCanonical && (
+              <button
+                type="button"
+                onClick={() => onSetCanonical(resume)}
+                className="p-1.5 text-muted-foreground hover:text-emerald-600 hover:bg-secondary rounded-lg transition-colors"
+                title="Keep this attempt for this application"
+                aria-label="Keep this attempt for this application"
+              >
+                <CheckCircle2 size={16} />
+              </button>
+            )}
+
             {!resume.isDefault && (
               <button
                 type="button"
