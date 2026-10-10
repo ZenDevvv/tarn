@@ -47,31 +47,36 @@ export function determineOptimalSectionOrder(profile: MasterProfileDTO): string[
 /**
  * Append custom-section ids that sectionOrder does not already address, so the template can place
  * them. Matching is case-insensitive by id first, then by title, mirroring the template's own lookup.
+ *
+ * Only the id is appended. The template registers both the id and the title as lookup keys, so an id
+ * alone is sufficient to place a section, and keeping sectionOrder free of duplicates means a
+ * consumer can treat it as a plain ordered list of distinct sections.
  */
 function appendMissingSectionIds(order: string[], sections: any[]): string[] {
   const result = [...order];
-  const present = new Set(
-    result.flatMap((key) => {
-      const lower = key.toLowerCase().trim();
-      const match = sections.find(
-        (s: any) =>
-          (s.id || '').toLowerCase().trim() === lower ||
-          (s.title || '').toLowerCase().trim() === lower
-      );
-      return match
-        ? [(match.id || '').toLowerCase().trim(), (match.title || '').toLowerCase().trim()].filter(Boolean)
-        : [lower];
-    })
-  );
-  sections.forEach((s: any) => {
-    [s.id, s.title].filter(Boolean).forEach((key: string) => {
-      const lower = key.toLowerCase().trim();
-      if (lower && !present.has(lower)) {
-        result.push(key);
-        present.add(lower);
-      }
-    });
+  const normalize = (value: unknown) => String(value ?? '').toLowerCase().trim();
+
+  const present = new Set<string>();
+  result.forEach((key) => {
+    const lower = normalize(key);
+    present.add(lower);
+    // An id already present also satisfies a title that resolves to the same section.
+    const match = sections.find((s: any) => normalize(s.id) === lower);
+    if (match) present.add(normalize(match.title));
   });
+
+  sections.forEach((s: any) => {
+    const id = (s?.id || '').toString().trim();
+    const title = (s?.title || '').toString().trim();
+    const key = id || title;
+    const lower = normalize(key);
+    if (!lower) return;
+    if (present.has(lower)) return;
+    result.push(key);
+    present.add(lower);
+    if (title) present.add(normalize(title));
+  });
+
   return result;
 }
 
