@@ -70,7 +70,7 @@ export function PreferencesSection({ settings, onSave, isSaving }: PreferencesSe
     { value: '', label: 'None (choose manually per application)' },
     ...(resumes || []).map((resume) => ({
       value: resume.id,
-      label: `${resume.name} ${resume.version ? `(${resume.version})` : ''} — ${resume.targetRole || 'General'}`,
+      label: `${resume.name} ${resume.applicationId ? `(r${resume.revision})` : ''} — ${resume.targetRole || 'General'}`,
     })),
   ], [resumes]);
 

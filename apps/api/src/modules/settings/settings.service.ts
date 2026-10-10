@@ -49,11 +49,12 @@ export const settingsService = {
     if (user.defaultResumeId) {
       const defaultResume = await prisma.resume.findUnique({
         where: { id: user.defaultResumeId },
-        select: { name: true, version: true },
+        select: { name: true, revision: true, applicationId: true },
       });
       if (defaultResume) {
-        defaultResumeName = defaultResume.version
-          ? `${defaultResume.name} (${defaultResume.version})`
+        // Tailored attempts carry a lineage number worth showing; manual resumes do not.
+        defaultResumeName = defaultResume.applicationId
+          ? `${defaultResume.name} (r${defaultResume.revision})`
           : defaultResume.name;
       }
     }
@@ -218,7 +219,8 @@ export const settingsService = {
               select: {
                 id: true,
                 name: true,
-                version: true,
+                revision: true,
+                applicationId: true,
               },
             },
           },

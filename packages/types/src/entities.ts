@@ -199,12 +199,18 @@ export interface ApplicationDTO {
   notes?: string | null;
   archivedAt?: string | null;
   resumeId?: string | null;
+  /** The resume actually sent to this employer. Unlike resumeId, never moves on regeneration. */
+  submittedResumeId?: string | null;
+  submittedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   company?: CompanyDTO;
   job?: JobDTO;
   interviews?: InterviewDTO[];
+  /** Most recently generated resume — the working copy. */
   resume?: ResumeDTO | null;
+  /** The submitted snapshot, for interview preparation. */
+  submittedResume?: ResumeDTO | null;
   coverLetters?: CoverLetterDTO[];
 }
 
@@ -383,8 +389,6 @@ export interface ResumeDTO {
   id: string;
   userId: string;
   name: string;
-  /** @deprecated Versioning is deprecated and removed from UI */
-  version?: string | null;
   targetRole?: string | null;
   fileUrl?: string | null;
   filename?: string | null;
@@ -396,6 +400,14 @@ export interface ResumeDTO {
   content?: any | null;
   isTailored: boolean;
   matchScore?: number | null;
+  /** Which application's JD produced this attempt. Null for manual uploads. */
+  applicationId?: string | null;
+  /** Attempt number within an application: 1, 2, 3... Computed, never user-typed. */
+  revision: number;
+  /** Previous attempt in the lineage chain. Null for r1 and manual uploads. */
+  parentResumeId?: string | null;
+  /** The attempt the user chose to keep. At most one per application. */
+  isCanonical: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -43,13 +43,12 @@ describe('Resumes API Integration Tests', () => {
     userAApplicationId = appRes.body.data.id;
   });
 
-  it('POST /api/v1/resumes creates a resume version for authenticated user', async () => {
+  it('POST /api/v1/resumes creates a manual resume for authenticated user', async () => {
     const res = await request(app)
       .post('/api/v1/resumes')
       .set('Cookie', userACookie)
       .send({
         name: 'Frontend Specialist 2026',
-        version: 'v3.0',
         targetRole: 'Senior Frontend Engineer',
         fileUrl: 'https://example.com/resumes/frontend_v3.pdf',
         filename: 'Frontend_Specialist_2026.pdf',
@@ -63,8 +62,12 @@ describe('Resumes API Integration Tests', () => {
     expect(res.status).toBe(201);
     expect(res.body.data).toBeDefined();
     expect(res.body.data.name).toBe('Frontend Specialist 2026');
-    expect(res.body.data.version).toBe('v3.0');
     expect(res.body.data.targetRole).toBe('Senior Frontend Engineer');
+    // Manual uploads are unlinked from any application and default to revision 1.
+    expect(res.body.data.applicationId).toBeNull();
+    expect(res.body.data.revision).toBe(1);
+    expect(res.body.data.parentResumeId).toBeNull();
+    expect(res.body.data.isCanonical).toBe(false);
     expect(res.body.data.isDefault).toBe(true);
     expect(res.body.data.skills).toContain('React');
     userAResumeId = res.body.data.id;
@@ -76,7 +79,6 @@ describe('Resumes API Integration Tests', () => {
       .set('Cookie', userACookie)
       .send({
         name: 'Full Stack Generalist',
-        version: 'v1.5',
         targetRole: 'Full Stack Engineer',
         isDefault: true,
         skills: ['Node.js', 'PostgreSQL', 'React'],
