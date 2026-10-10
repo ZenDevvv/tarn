@@ -809,6 +809,13 @@ Zen Andrei Obrero
       // Both ids are addressable in sectionOrder so the template can place them.
       expect(content.sectionOrder).toContain('clinical_rotations');
       expect(content.sectionOrder).toContain('licensure');
+
+      // Each section appears exactly once. The template tolerates a section appearing under both
+      // its id and its title, but duplicated keys invite a future consumer to double-count.
+      expect(content.sectionOrder).toEqual([...new Set(content.sectionOrder)]);
+      expect(
+        content.sectionOrder.filter((k: string) => k.toLowerCase() === 'clinical rotations')
+      ).toHaveLength(0);
     } finally {
       await request(app)
         .put('/api/v1/master-profile')
