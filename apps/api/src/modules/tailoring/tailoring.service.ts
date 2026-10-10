@@ -178,7 +178,15 @@ export const tailoringService = {
     // 3. AI synthesis call (Hard error on failure or timeout)
     let aiResult: AiTailoringOutput;
     try {
-      aiResult = await this.callGeminiSynthesis(profile, analysis, jdText, role, company, apiKey);
+      aiResult = await this.callGeminiSynthesis(
+        profile,
+        analysis,
+        jdText,
+        role,
+        company,
+        apiKey,
+        input.documentType
+      );
     } catch (err: any) {
       console.error('Gemini AI synthesis error:', err);
       const rawMsg = err?.message || 'synthesis failed';
@@ -408,19 +416,45 @@ export const tailoringService = {
     jdText: string,
     role: string,
     company: string,
-    apiKey: string
+    apiKey: string,
+    documentType: string = 'resume'
   ): Promise<AiTailoringOutput> {
     const totalWorkBullets = (profile.workExperience || []).reduce(
       (acc, w) => acc + (w.bullets?.length || 0),
       0
     );
-    const isSparse = (profile.workExperience?.length || 0) <= 1 || totalWorkBullets < 4;
+    const isSparse = (profile.workExperience || []).length <= 1 || totalWorkBullets < 4;
     const verifiedCerts = collectVerifiedCerts(profile);
+
+    // A federal resume, an academic CV, and a private-sector resume are different DOCUMENTS, not
+    // different templates. Length is a content-selection directive, never a typography directive.
+    // See spec-resume-fidelity.md C5.
+    const documentPolicy =
+      documentType === 'federal'
+        ? `
+DOCUMENT TYPE: FEDERAL RESUME. This is a different document from a private-sector resume.
+- No page limit. Never truncate content to fit one or two pages.
+- Do NOT assume a Federal HR Specialist will infer anything. State everything explicitly.
+- For each role include, where the Master Profile supplies them: salary or hourly rate, hours per week,
+  supervisor name and contact, and security clearance.
+- Preserve the full history the candidate has provided, including part-time, volunteer, and academic roles.
+- Use plain section labels that map to USAJobs fields (Qualifications, Education, Work Experience, Certifications).`
+        : documentType === 'cv'
+        ? `
+DOCUMENT TYPE: ACADEMIC / RESEARCH CV. This is a different document from a one-page resume.
+- No page limit. Never truncate content.
+- Lead with Education, then Research/Publications, then Teaching, then Honors/Awards and Service.
+- Include full detail on scholarly output and academic appointments where the Master Profile supplies them.`
+        : `
+DOCUMENT TYPE: RESUME (private sector). Target one to two pages; prioritise the most relevant and most
+recent experience. Select detail to fit rather than shrinking type or margins.`;
 
     const prompt = `
 You are an expert ATS resume and cover letter tailoring engine.
 
 Your task is to adapt the candidate's Master Profile specifically for the target role: "${role}" at "${company}".
+
+${documentPolicy}
 
 NON-NEGOTIABLE FIDELITY RULES:
 1. Grounding: Stay 100% faithful to the candidate's Master Profile. NEVER invent employers, tools, projects, dates, or metrics.
