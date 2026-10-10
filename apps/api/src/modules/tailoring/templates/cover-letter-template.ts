@@ -55,7 +55,7 @@ body { padding: 0; }
 }
 .letter-body {
   font-size: 11pt;
-  text-align: justify;
+  text-align: left;
 }
 .letter-body p {
   margin: 0 0 14px;

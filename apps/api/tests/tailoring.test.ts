@@ -468,6 +468,16 @@ Zen Andrei Obrero
     expect(res.text).not.toContain('Professional Summary');
   });
 
+  it('never justifies the cover letter body (spec-resume-fidelity.md C7)', async () => {
+    const res = await request(app)
+      .get(`/api/v1/tailoring/cover-letters/${generatedCoverLetterId}/preview-html`)
+      .set('Cookie', userCookie);
+
+    expect(res.status).toBe(200);
+    expect(res.text).not.toContain('text-align: justify');
+    expect(res.text).toContain('text-align: left');
+  });
+
   it('GET /api/v1/tailoring/cover-letters/:id/preview-html renders cover letter HTML', async () => {
     const res = await request(app)
       .get(`/api/v1/tailoring/cover-letters/${generatedCoverLetterId}/preview-html`)
