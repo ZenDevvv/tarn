@@ -90,12 +90,12 @@
 > `content.customSections === null` on output, `isValid: true`; page 2 orphan; skills kicker `LEADERSHIP`.
 
 **Phase 1 — reproduced defects (independently shippable):**
-- [ ] **Task 1: Pagination CSS** — `break-inside: avoid` / `avoid-page` on `.entry`, `.section`, `.cert-row`
-- [ ] **Task 2: Skills kicker generic list** — stop labelling a multi-category section `LEADERSHIP`
-- [ ] **Task 3: Deterministic customSections merge** — profile sections are authoritative, never rewritten by the model
-- [ ] **Task 4: Completeness dimension** — `custom_section_coverage`; dropped sections become fidelity warnings
-- [ ] **Task 5: `overrideWarnings` gates** — make the existing "Save Anyway" button truthful
-- [ ] **Exit gate:** E2E replay — 4 previously-missing tokens present, kicker neutral, no orphan page
+- [x] **Task 1: Pagination CSS** — `break-inside: avoid` / `avoid-page` on `.entry`, `.section`, `.cert-row`
+- [x] **Task 2: Skills kicker generic list** — stop labelling a multi-category section `LEADERSHIP`
+- [x] **Task 3: Deterministic customSections merge** — profile sections are authoritative, never rewritten by the model
+- [x] **Task 4: Completeness dimension** — `custom_section_coverage`; dropped sections become fidelity warnings
+- [x] **Task 5: `overrideWarnings` gates** — make the existing "Save Anyway" button truthful
+- [x] **Exit gate:** E2E replay — `Clinical Rotations`, `Licensure & Board Certifications`, `800 hours` all present; kicker `SKILLS & COMPETENCIES`; page 2 holds two full sections instead of a 2-line orphan; `fidelityWarnings: []`
 
 **Phase 2 — cheap wins:**
 - [ ] **Task 6: `justify` → `left`** — readability, zero ATS cost
@@ -106,4 +106,4 @@
 - [ ] *(Rejected: profession classifier, second visual template, dynamic auto-fit loop — see spec §6)*
 
 **Phase 4 — verification:**
-- [ ] **Task 11:** Promote E2E replay to Persona D regression fixture; full suite + build + grep gates
+- [x] **Task 11:** Promote E2E replay to Persona D regression fixture; full suite + build + grep gates
