@@ -6,10 +6,11 @@ export const generateTailoringSchema = z.object({
   mode: z.string().optional(), // Wire compatibility; AI is the only engine
   role: z.string().trim().optional(),
   company: z.string().trim().optional(),
+  // Candidate steering for emphasis and ordering; scoped by the prompt so it cannot override
+  // the fidelity rules.
   additionalInstructions: z.string().trim().optional(),
   overrideWarnings: z.boolean().optional().default(false),
   sectionOrder: z.array(z.string()).optional(),
-  preset: z.enum(['experienced', 'early_career', 'custom']).optional(),
 });
 
 
