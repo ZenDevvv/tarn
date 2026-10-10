@@ -98,11 +98,13 @@
 - [x] **Exit gate:** E2E replay — `Clinical Rotations`, `Licensure & Board Certifications`, `800 hours` all present; kicker `SKILLS & COMPETENCIES`; page 2 holds two full sections instead of a 2-line orphan; `fidelityWarnings: []`
 
 **Phase 2 — cheap wins:**
-- [ ] **Task 6: `justify` → `left`** — readability, zero ATS cost
+- [x] **Task 6: `justify` → `left`** — readability, zero ATS cost. Also fixed the cover letter body; repo-wide grep gate now 0
 
 **Phase 3 — document-type axis:**
-- [ ] **Tasks 7–8:** `documentType` contract + render `attributes` (salary/hours/supervisor/clearance) and credential license/jurisdiction
-- [ ] **Tasks 9–10:** data-driven section kickers for all fixed sections; web UI selector
+- [x] **Tasks 7–8:** `documentType` contract (`resume`/`cv`/`federal`) + render `attributes` (salary/hours/supervisor/clearance) and credential license/jurisdiction. Recovers `RN-441782`
+- [x] **Tasks 9–10:** data-driven section kickers for all fixed sections (`sectionTitles`); web UI document-type selector
+
+**Phase 3 exit gate:** E2E federal replay — `Clinical Rotations`, `Licensure & Board Certifications`, `RN-441782`, `800 hours` all present; default `resume` output unchanged with no federal leakage; 369 tests green; build clean.
 - [ ] *(Rejected: profession classifier, second visual template, dynamic auto-fit loop — see spec §6)*
 
 **Phase 4 — verification:**
