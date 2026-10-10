@@ -17,6 +17,7 @@ export class TailoringValidatorService {
       certifications?: any[];
       summary?: string | null;
       sectionOrder?: string[];
+      customSections?: any[];
     },
     coverLetterMarkdown: string,
     jdKeywords: string[],
@@ -305,6 +306,26 @@ export class TailoringValidatorService {
       }
     }
 
+    // Completeness: every custom section in the Master Profile must survive into the tailored
+    // resume. The grounding checks above only prove that produced content is faithful; nothing
+    // downstream caught content that silently vanished. See spec-resume-fidelity.md C2.
+    (profile.customSections || []).forEach((sec: any) => {
+      const title = (sec?.title || sec?.id || '').trim();
+      if (!title) return;
+      const lowerTitle = title.toLowerCase();
+      const lowerId = (sec.id || '').toLowerCase().trim();
+      const survived = (resumePayload.customSections || []).some((out: any) => {
+        const outTitle = (out?.title || '').toLowerCase().trim();
+        const outId = (out?.id || '').toLowerCase().trim();
+        return (lowerId && outId === lowerId) || (outTitle && outTitle === lowerTitle);
+      });
+      if (!survived) {
+        fidelityWarnings.push(
+          `Custom section "${title}" was dropped from the tailored resume.`
+        );
+      }
+    });
+
     const coverageAfter = keywordCoveragePercent;
     const initialCoverage =
       typeof coverageBefore === 'number' ? coverageBefore : keywordCoveragePercent;
@@ -321,7 +342,7 @@ export class TailoringValidatorService {
       fidelityWarnings,
       isValid: fidelityWarnings.length === 0,
       blocking: fidelityWarnings.length > 0,
-      checkedDimensions: ['skills', 'employers', 'projects', 'metrics', 'dates', 'cover_letter'],
+      checkedDimensions: ['skills', 'employers', 'projects', 'metrics', 'dates', 'cover_letter', 'custom_section_coverage'],
     };
   }
 }

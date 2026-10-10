@@ -557,6 +557,10 @@ In my work at Uzaro Solutions Technology Inc., I delivered reliable solutions.
         },
       ],
       certifications: ['State Bar of New York'],
+      // Post spec-resume-fidelity C1 the service merges profile customSections into the payload
+      // verbatim, so a faithful payload carries them. Without this the coverage check correctly
+      // reports both sections as dropped.
+      customSections: profileWithPolymorphicSections.customSections,
     };
 
     const report = TailoringValidatorService.validate(
@@ -571,5 +575,69 @@ In my work at Uzaro Solutions Technology Inc., I delivered reliable solutions.
     expect(report.fidelityWarnings.filter((w) => w.includes('St. Jude'))).toHaveLength(0);
     expect(report.fidelityWarnings.filter((w) => w.includes('State Bar of New York'))).toHaveLength(0);
     expect(report.isValid).toBe(true);
+  });
+  describe('custom section coverage (spec-resume-fidelity.md C2)', () => {
+    const profileWithSections: MasterProfileDTO = {
+      ...sampleProfile,
+      customSections: [
+        {
+          id: 'clinical_rotations',
+          title: 'Clinical Rotations',
+          type: 'timeline',
+          items: [{ role: 'Pediatric Resident', organization: 'St. Jude', date_range: '2021', bullets: [] }],
+        },
+        {
+          id: 'state_bar',
+          title: 'Bar Admissions',
+          type: 'credentials',
+          items: [{ name: 'State Bar of New York', issuer: 'NY Appellate Division', date: '2020' }],
+        },
+      ],
+    };
+
+    it('flags a custom section that the tailored resume dropped', () => {
+      const report = TailoringValidatorService.validate(
+        { experience: [], skills: {}, customSections: [] },
+        'Dear Hiring Team.',
+        [],
+        [],
+        profileWithSections
+      );
+
+      expect(report.checkedDimensions).toContain('custom_section_coverage');
+      expect(report.fidelityWarnings.join(' ')).toContain('Clinical Rotations');
+      expect(report.fidelityWarnings.join(' ')).toContain('Bar Admissions');
+      expect(report.isValid).toBe(false);
+      expect(report.blocking).toBe(true);
+    });
+
+    it('matches a section by title when the id differs', () => {
+      const report = TailoringValidatorService.validate(
+        {
+          experience: [],
+          skills: {},
+          customSections: [{ id: 'rotations-renamed', title: 'Clinical Rotations', type: 'timeline', items: [] }],
+        },
+        'Dear Hiring Team.',
+        [],
+        [],
+        profileWithSections
+      );
+
+      expect(report.fidelityWarnings.join(' ')).not.toContain('Clinical Rotations');
+      expect(report.fidelityWarnings.join(' ')).toContain('Bar Admissions');
+    });
+
+    it('reports no warning when every section survived the merge', () => {
+      const report = TailoringValidatorService.validate(
+        { experience: [], skills: {}, customSections: profileWithSections.customSections },
+        'Dear Hiring Team.',
+        [],
+        [],
+        profileWithSections
+      );
+
+      expect(report.fidelityWarnings.filter((w) => w.includes('dropped'))).toHaveLength(0);
+    });
   });
 });
