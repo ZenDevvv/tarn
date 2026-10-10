@@ -149,7 +149,32 @@
 `r4` left `submittedResumeId` and `submittedAt` untouched while `resumeId` advanced. 389 tests green,
 build clean, grep gates 0.
 
-> **Rejected:** restoring user-typed `version` labels (rots, unorderable, duplicates the database);
+### Cover Letter Parity (2026-10-10, same branch)
+
+> **Objective:** Give cover letters the same lineage, canonical selection, and submission snapshot
+> **Specification:** [spec-cover-letter-revisions.md](spec-cover-letter-revisions.md)
+> **Task Plan:** [tasks/plan-cover-letter-revisions.md](tasks/plan-cover-letter-revisions.md)
+> **Evidence:** editing overwrote in place, destroying the generated original and making a
+> submitted-letter pointer unsafe — unlike resumes, whose bodies are immutable after creation.
+
+- [x] **Task 1:** `CoverLetter.revision` / `parentCoverLetterId` / `isCanonical`; `Application.submittedCoverLetterId` (shared `submittedAt`)
+- [x] **Task 2:** DTOs; `submitResumeSchema` → `submitPackageSchema` accepting `resumeId` + `coverLetterId`
+- [x] **Task 3:** Generation records lineage inside the transaction
+- [x] **Task 4:** Editing forks a revision; original's `content` byte-identical, `matchScore`/`echoedPhrases` inherited
+- [x] **Task 5:** `POST /cover-letters/:id/canonical`
+- [x] **Task 6:** `POST /applications/:id/submitted` covers both documents, one timestamp
+- [x] **Task 7:** UI — `r{n}` + `KEPT` on letter cards; mark-as-submitted for the letter
+- [x] **Task 8:** Full gates + live E2E
+
+**Live E2E:** r1 → r2 → r3 chain verified after editing a superseded letter; submitted letter's
+content confirmed unchanged after a later edit forks away from it. 397 tests green, build clean.
+
+> **Rejected:** keeping in-place edits (leaves the snapshot unsafe); freezing content onto
+> `Application` (duplicates the body); separate per-document endpoints and timestamps (one
+> submission is one event); recomputing `matchScore` on edit (overwrites provenance instead of
+> inheriting it)
+
+> **Rejected (resumes):** restoring user-typed `version` labels (rots, unorderable, duplicates the database);
 > overwriting resumes in place (destroys a better unreproducible prior attempt); reusing `isDefault`
 > as canonical (couples two unrelated UI meanings); auto-promoting the highest ATS score (a keyword
 > heuristic, not a quality judgement — see spec §6)
