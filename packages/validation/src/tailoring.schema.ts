@@ -179,6 +179,7 @@ export const aiResumePayloadSchema = z.object({
   certifications: z.array(z.any()).optional().default([]),
   customSections: z.array(polymorphicSectionSchema).optional(),
   sectionOrder: z.array(z.string()).optional(),
+  sectionTitles: z.record(z.string().trim().min(1)).optional(),
 });
 
 export const aiTailoringOutputSchema = z.object({

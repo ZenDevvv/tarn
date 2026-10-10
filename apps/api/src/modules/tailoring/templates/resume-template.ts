@@ -237,6 +237,19 @@ function credentialDetail(cert: any): string {
   return bits.length > 0 ? ` — ${bits.join(' · ')}` : '';
 }
 
+/**
+ * Resolve a section heading from the payload, falling back to the document default.
+ *
+ * This is how the document stays agnostic without a profession classifier: the headings come from
+ * the candidate's own naming (a nurse's timeline section can read "Clinical Experience") rather
+ * than from a lexicon that has to guess and can be wrong. See spec-resume-fidelity.md C6.
+ */
+function resolveKicker(payload: any, key: string, fallback: string): string {
+  const supplied = payload?.sectionTitles?.[key];
+  const title = typeof supplied === 'string' && supplied.trim() ? supplied.trim() : fallback;
+  return escapeHtml(title);
+}
+
 export function buildResumeHtml(payload: any): string {
   const basics = payload.basics || {};
   const education = payload.education || [];
@@ -252,7 +265,7 @@ export function buildResumeHtml(payload: any): string {
   const summaryText = typeof payload.summary === 'string' ? payload.summary.trim() : '';
   const summarySectionHtml = summaryText
     ? `<section class="section">
-      <div class="section-kicker">Professional Summary</div>
+      <div class="section-kicker">${resolveKicker(payload, 'summary', 'Professional Summary')}</div>
       <div class="section-body">
         <p class="summary-text">${escapeHtml(summaryText)}</p>
       </div>
@@ -284,7 +297,7 @@ export function buildResumeHtml(payload: any): string {
 
   const educationSectionHtml = educationEntriesHtml
     ? `<section class="section">
-      <div class="section-kicker">Education</div>
+      <div class="section-kicker">${resolveKicker(payload, 'education', 'Education')}</div>
       <div class="section-body">
         ${educationEntriesHtml}
       </div>
@@ -324,7 +337,7 @@ export function buildResumeHtml(payload: any): string {
 
   const experienceSectionHtml = experienceEntriesHtml
     ? `<section class="section">
-      <div class="section-kicker">Work Experience</div>
+      <div class="section-kicker">${resolveKicker(payload, 'experience', 'Work Experience')}</div>
       <div class="section-body">
         ${experienceEntriesHtml}
         ${profDev}
@@ -357,7 +370,7 @@ export function buildResumeHtml(payload: any): string {
 
   const projectsSectionHtml = projectsEntriesHtml
     ? `<section class="section">
-      <div class="section-kicker">Project Experience</div>
+      <div class="section-kicker">${resolveKicker(payload, 'projects', 'Project Experience')}</div>
       <div class="section-body">
         ${sharedStack}
         ${projectsEntriesHtml}
@@ -391,7 +404,7 @@ export function buildResumeHtml(payload: any): string {
 
   const skillsSectionHtml = skillsRowsHtml
     ? `<section class="section">
-      <div class="section-kicker">${escapeHtml(skillsKicker)}</div>
+      <div class="section-kicker">${resolveKicker(payload, 'skills', skillsKicker)}</div>
       <div class="section-body">
         <div class="skills-grid">
           ${skillsRowsHtml}
@@ -437,7 +450,7 @@ export function buildResumeHtml(payload: any): string {
 
   const certificationsSectionHtml = certRowsHtml
     ? `<section class="section">
-      <div class="section-kicker">Certifications & Licenses</div>
+      <div class="section-kicker">${resolveKicker(payload, 'certifications', 'Certifications & Licenses')}</div>
       <div class="section-body">
         ${certRowsHtml}
       </div>
