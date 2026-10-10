@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const generateTailoringSchema = z.object({
   targetArtifact: z.enum(['package', 'resume', 'cover_letter']).optional().default('package'),
+  documentType: z.enum(['resume', 'cv', 'federal']).optional().default('resume'),
   mode: z.string().optional(), // Wire compatibility; AI is the only engine
   role: z.string().trim().optional(),
   company: z.string().trim().optional(),

@@ -817,4 +817,53 @@ Zen Andrei Obrero
       await prisma.generationUsage.deleteMany({ where: { userId } });
     }
   });
+  it('applies the federal content directive only for documentType federal', async () => {
+    const originalProfileRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userCookie);
+    const originalProfile = originalProfileRes.body.data;
+
+    try {
+      const geminiJson = JSON.stringify({
+        resume: { ...mockResumePayload, certifications: [] },
+        coverLetterMarkdown: mockCoverLetter,
+      });
+
+      const capturePrompt = async (documentType?: string) => {
+        let captured = '';
+        const spy = vi.spyOn(global, 'fetch').mockImplementationOnce(async (_url: any, init: any) => {
+          captured = JSON.parse(init.body).contents[0].parts[0].text;
+          return {
+            ok: true,
+            json: async () => ({ candidates: [{ content: { parts: [{ text: geminiJson }] } }] }),
+          };
+        }) as any;
+        const body: any = { targetArtifact: 'resume', overrideWarnings: true };
+        if (documentType) body.documentType = documentType;
+        await request(app)
+          .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+          .set('Cookie', userCookie)
+          .send(body);
+        spy.mockRestore();
+        return captured;
+      };
+
+      const federalPrompt = await capturePrompt('federal');
+      const resumePrompt = await capturePrompt();
+
+      // Federal resumes are a different document, not a different template: no length cap and
+      // explicit instruction to include salary/hours/supervisor detail.
+      expect(federalPrompt).toMatch(/federal/i);
+      expect(federalPrompt).toMatch(/salary|hours per week|supervisor/i);
+      expect(resumePrompt).not.toMatch(/federal/i);
+
+      await prisma.generationUsage.deleteMany({ where: { userId } });
+    } finally {
+      await request(app)
+        .put('/api/v1/master-profile')
+        .set('Cookie', userCookie)
+        .send(originalProfile);
+      await prisma.generationUsage.deleteMany({ where: { userId } });
+    }
+  });
 });
