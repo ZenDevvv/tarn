@@ -44,6 +44,37 @@ export function determineOptimalSectionOrder(profile: MasterProfileDTO): string[
   return order;
 }
 
+/**
+ * Append custom-section ids that sectionOrder does not already address, so the template can place
+ * them. Matching is case-insensitive by id first, then by title, mirroring the template's own lookup.
+ */
+function appendMissingSectionIds(order: string[], sections: any[]): string[] {
+  const result = [...order];
+  const present = new Set(
+    result.flatMap((key) => {
+      const lower = key.toLowerCase().trim();
+      const match = sections.find(
+        (s: any) =>
+          (s.id || '').toLowerCase().trim() === lower ||
+          (s.title || '').toLowerCase().trim() === lower
+      );
+      return match
+        ? [(match.id || '').toLowerCase().trim(), (match.title || '').toLowerCase().trim()].filter(Boolean)
+        : [lower];
+    })
+  );
+  sections.forEach((s: any) => {
+    [s.id, s.title].filter(Boolean).forEach((key: string) => {
+      const lower = key.toLowerCase().trim();
+      if (lower && !present.has(lower)) {
+        result.push(key);
+        present.add(lower);
+      }
+    });
+  });
+  return result;
+}
+
 export const tailoringService = {
   getDailyLimit(): number {
     return Number(process.env.FREE_DAILY_GENERATIONS) || 5;
@@ -171,6 +202,19 @@ export const tailoringService = {
       resumePayload.sectionOrder = input.sectionOrder;
     } else {
       resumePayload.sectionOrder = determineOptimalSectionOrder(profile);
+    }
+
+    // Custom sections (clinical rotations, board licensure, publications, ...) are copied from the
+    // Master Profile rather than requested from the model. These hold licensure numbers and clinical
+    // history — exactly the content the fidelity validator exists to protect — so the model may
+    // reorder them but must never rewrite them. See spec-resume-fidelity.md C1.
+    const profileCustomSections = profile.customSections || [];
+    if (profileCustomSections.length > 0) {
+      resumePayload.customSections = profileCustomSections;
+      resumePayload.sectionOrder = appendMissingSectionIds(
+        resumePayload.sectionOrder || [],
+        profileCustomSections
+      );
     }
 
     // 4. Automated validation & Multi-factor ATS Score Lift

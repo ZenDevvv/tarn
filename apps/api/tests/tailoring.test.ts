@@ -679,5 +679,93 @@ Zen Andrei Obrero
       await prisma.generationUsage.deleteMany({ where: { userId } });
     }
   });
-});
+  it('merges Master Profile customSections into the tailored resume deterministically', async () => {
+    // Reproduced 2026-10-10: profile stored 2 customSections, generated content had null.
+    // The model has no instruction to emit them, so the service must merge them itself.
+    const originalProfileRes = await request(app)
+      .get('/api/v1/master-profile')
+      .set('Cookie', userCookie);
+    const originalProfile = originalProfileRes.body.data;
 
+    try {
+      await request(app)
+        .put('/api/v1/master-profile')
+        .set('Cookie', userCookie)
+        .send({
+          basics: { name: 'Maria Santos', links: [] },
+          positioningRules: [],
+          factBank: { core_positioning: ['ICU Registered Nurse'], quantified_highlights: [] },
+          workExperience: [
+            { company: 'Mayo Clinic', role: 'Critical Care Registered Nurse', date_range: '2019 - Present', bullets: ['Managed 12 high-acuity ICU patients per shift.'] },
+          ],
+          projectExperience: [],
+          skills: { Leadership: ['Precepting'], 'Clinical Competencies': ['Critical Care'] },
+          education: [],
+          customSections: [
+            {
+              id: 'clinical_rotations',
+              title: 'Clinical Rotations',
+              type: 'timeline',
+              items: [{ organization: 'Mayo Clinic', role: 'Critical Care Rotation', date_range: '2023', bullets: ['Completed 800 hours in tertiary ICU.'] }],
+            },
+            {
+              id: 'licensure',
+              title: 'Licensure & Board Certifications',
+              type: 'credentials',
+              items: [{ name: 'Registered Nurse', issuer: 'Minnesota Board of Nursing', licenseNumber: 'RN-441782', jurisdiction: 'MN', date: '2016' }],
+            },
+          ],
+        });
+
+      // Model deliberately returns NO customSections and NO sectionOrder.
+      const geminiJson = JSON.stringify({
+        resume: {
+          basics: { name: 'Maria Santos' },
+          summary: 'ICU nurse seeking a CNS role.',
+          education: [],
+          experience: [
+            { company: 'Mayo Clinic', role: 'Critical Care Registered Nurse', date_range: '2019 - Present', bullets: ['Managed 12 high-acuity ICU patients per shift.'] },
+          ],
+          projects: [],
+          skills: { Leadership: ['Precepting'], 'Clinical Competencies': ['Critical Care'] },
+          certifications: [],
+        },
+        coverLetterMarkdown: 'Dear Hiring Team, I am an ICU registered nurse.',
+      });
+
+      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementationOnce(async (_url: any, init: any) => ({
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: geminiJson }] } }] }),
+      }) as any);
+
+      const res = await request(app)
+        .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ role: 'Clinical Nurse Specialist', company: 'Mayo Clinic' });
+
+      fetchSpy.mockRestore();
+
+      expect(res.status).toBe(200);
+      const resumeId = res.body.data.resume.id;
+      const stored = await prisma.resume.findUnique({ where: { id: resumeId } });
+      const content = stored?.content as any;
+
+      // Both sections survive, with items intact.
+      expect(content.customSections).toHaveLength(2);
+      const licensure = content.customSections.find((s: any) => s.id === 'licensure');
+      expect(licensure.items[0].licenseNumber).toBe('RN-441782');
+      const rotations = content.customSections.find((s: any) => s.id === 'clinical_rotations');
+      expect(rotations.items[0].bullets[0]).toContain('800 hours');
+
+      // Both ids are addressable in sectionOrder so the template can place them.
+      expect(content.sectionOrder).toContain('clinical_rotations');
+      expect(content.sectionOrder).toContain('licensure');
+    } finally {
+      await request(app)
+        .put('/api/v1/master-profile')
+        .set('Cookie', userCookie)
+        .send(originalProfile);
+      await prisma.generationUsage.deleteMany({ where: { userId } });
+    }
+  });
+});
