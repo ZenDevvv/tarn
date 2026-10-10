@@ -111,6 +111,11 @@ body { padding: 0; }
   align-items: baseline;
   margin-bottom: 2px;
 }
+.entry-meta {
+  margin: 1px 0 2px;
+  font-size: 10pt;
+  color: #000000;
+}
 .entry-list {
   margin: 2px 0 0;
   padding-left: 18px;
@@ -192,6 +197,46 @@ body { padding: 0; }
 
 import { consolidateBullets } from '../utils/bullet-utils';
 
+/**
+ * Render the optional detail a federal resume carries beyond title and dates: pay, hours per week,
+ * supervisor and contact, and security clearance. Every field is optional and omitted silently when
+ * absent, so private-sector resumes are unaffected. See spec-resume-fidelity.md C5.
+ */
+function renderEntryAttributes(attributes: any): string {
+  if (!attributes || typeof attributes !== 'object') return '';
+  const parts: string[] = [];
+  if (attributes.salary) parts.push(escapeHtml(String(attributes.salary)));
+  if (attributes.hoursPerWeek) {
+    parts.push(`${escapeHtml(String(attributes.hoursPerWeek))} hrs/wk`);
+  }
+  const compensation = parts.join(' | ');
+  const supervisor = attributes.supervisor
+    ? `Supervisor: ${escapeHtml(String(attributes.supervisor))}${
+        attributes.supervisorPhone
+          ? ` (${escapeHtml(String(attributes.supervisorPhone))})`
+          : ''
+      }`
+    : '';
+  const clearance = attributes.securityClearance
+    ? `Clearance: ${escapeHtml(String(attributes.securityClearance))}`
+    : '';
+
+  const lines = [compensation, supervisor, clearance].filter(Boolean);
+  if (lines.length === 0) return '';
+  return `<div class="entry-meta">${lines.join('</div><div class="entry-meta">')}</div>`;
+}
+
+/**
+ * Credential detail line: issuer, licence number, and jurisdiction where present.
+ */
+function credentialDetail(cert: any): string {
+  const bits: string[] = [];
+  if (cert?.issuer) bits.push(escapeHtml(String(cert.issuer)));
+  if (cert?.licenseNumber) bits.push(`Lic. ${escapeHtml(String(cert.licenseNumber))}`);
+  if (cert?.jurisdiction) bits.push(escapeHtml(String(cert.jurisdiction)));
+  return bits.length > 0 ? ` — ${bits.join(' · ')}` : '';
+}
+
 export function buildResumeHtml(payload: any): string {
   const basics = payload.basics || {};
   const education = payload.education || [];
@@ -270,6 +315,7 @@ export function buildResumeHtml(payload: any): string {
             <div class="entry-subtitle">${escapeHtml(exp.role)}</div>
             <div class="entry-date">${escapeHtml(exp.date_range)}</div>
           </div>
+          ${renderEntryAttributes(exp.attributes)}
           <ul class="entry-list">${bullets}</ul>
         </article>
       `;
@@ -424,6 +470,7 @@ export function buildResumeHtml(payload: any): string {
                 <div class="entry-subtitle">${escapeHtml(item.role || item.title || '')}</div>
                 <div class="entry-date">${escapeHtml(item.date_range || item.date || '')}</div>
               </div>
+              ${renderEntryAttributes(item.attributes)}
               ${bullets ? `<ul class="entry-list">${bullets}</ul>` : ''}
             </article>
           `;
@@ -435,11 +482,12 @@ export function buildResumeHtml(payload: any): string {
           const name = typeof cert === 'string' ? cert : cert.name || '';
           const issuer = typeof cert === 'object' ? cert.issuer : undefined;
           const date = typeof cert === 'object' ? cert.date : undefined;
+          const detail = typeof cert === 'object' ? credentialDetail(cert) : '';
           return `
             <div class="cert-row">
               <div>
                 <span class="cert-label">${escapeHtml(name)}</span>
-                ${issuer ? `<span class="cert-issuer">— ${escapeHtml(issuer)}</span>` : ''}
+                ${issuer || detail ? `<span class="cert-issuer">${detail || `— ${escapeHtml(issuer)}`}</span>` : ''}
               </div>
               ${date ? `<div class="cert-date">${escapeHtml(date)}</div>` : ''}
             </div>
