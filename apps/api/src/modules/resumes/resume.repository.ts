@@ -28,13 +28,26 @@ export const resumeRepository = {
       where.isDefault = false;
     }
 
-    const sortOrder: Prisma.SortOrder = filters.sortOrder === 'asc' ? 'asc' : 'desc';
-    let orderBy: Prisma.ResumeOrderByWithRelationInput = { createdAt: 'desc' };
+    if (filters.applicationId) {
+      where.applicationId = filters.applicationId;
+    }
 
-    if (filters.sortBy === 'name') {
+    const sortOrder: Prisma.SortOrder = filters.sortOrder === 'asc' ? 'asc' : 'desc';
+    let orderBy: Prisma.ResumeOrderByWithRelationInput | Prisma.ResumeOrderByWithRelationInput[] = {
+      createdAt: 'desc',
+    };
+
+    if (filters.groupByApplication) {
+      // Lineage is inherently sequential, so revision always reads ascending within an
+      // application regardless of the general sortOrder. Manual uploads (null applicationId)
+      // sort first under Postgres default nulls ordering and stay visible as their own group.
+      orderBy = [{ applicationId: 'asc' }, { revision: 'asc' }];
+    } else if (filters.sortBy === 'name') {
       orderBy = { name: sortOrder };
     } else if (filters.sortBy === 'updatedAt') {
       orderBy = { updatedAt: sortOrder };
+    } else if (filters.sortBy === 'revision') {
+      orderBy = [{ applicationId: 'asc' }, { revision: sortOrder }];
     } else {
       orderBy = { createdAt: sortOrder };
     }
