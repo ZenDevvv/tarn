@@ -163,17 +163,23 @@ model Application {
   nextAction      String?
   nextActionDueAt DateTime?
   notes           String?           @db.Text
-  archivedAt      DateTime?
+  archivedAt DateTime?
   resumeId        String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  /// The resume actually sent to this employer, frozen at submission. Unlike resumeId (which
+  /// advances on every regeneration) this never moves, so interview prep stays accurate.
+  submittedResumeId String?
+  submittedAt       DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  job            Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  status         ApplicationStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  resume         Resume?           @relation(fields: [resumeId], references: [id], onDelete: SetNull)
-  timelineEvents TimelineEvent[]
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company          Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job              Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status           ApplicationStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  resume           Resume?           @relation("PrimaryResume", fields: [resumeId], references: [id], onDelete: SetNull)
+  submittedResume  Resume?           @relation("SubmittedResume", fields: [submittedResumeId], references: [id], onDelete: SetNull)
+  generatedResumes Resume[]         @relation("ResumeApplication")
+  timelineEvents   TimelineEvent[]
   followUps      FollowUp[]
   interviews     Interview[]
   contacts       Contact[]
@@ -324,29 +330,41 @@ model Contact {
 }
 
 model Resume {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   userId     String
   name       String
-  version    String?  /// @deprecated Versioning is deprecated and no longer used in UI
   targetRole String?
   fileUrl    String?
   filename   String?
   fileSize   Int?
   mimeType   String?
-  isDefault  Boolean  @default(false)
+  isDefault  Boolean @default(false)
   skills     String[] @default([])
   notes      String?  @db.Text
   content    Json?
-  isTailored Boolean  @default(false)
+  isTailored Boolean @default(false)
   matchScore Int?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  /// Which application's JD produced this attempt. Null for manually uploaded resumes.
+  applicationId String?
+  /// Attempt number within an application: r1, r2, r3... Computed, never user-typed.
+  revision Int       @default(1)
+  /// The previous attempt this one was generated from, forming the lineage chain.
+  parentResumeId String?
+  /// The attempt the user chose to keep. At most one per application.
+  isCanonical Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applications Application[]
+  applications Application[] @relation("PrimaryResume")
+  application  Application?  @relation("ResumeApplication", fields: [applicationId], references: [id], onDelete: SetNull)
+  parentResume Resume?       @relation("ResumeRevisions", fields: [parentResumeId], references: [id], onDelete: SetNull)
+  revisions    Resume[]      @relation("ResumeRevisions")
+  submittedBy  Application[] @relation("SubmittedResume")
 
   @@index([userId])
   @@index([userId, isDefault])
+  @@index([userId, applicationId, revision])
   @@map("resumes")
 }
 
