@@ -228,6 +228,15 @@ export const tailoringService = {
       analysis.matchScore
     );
 
+    // Blocking fidelity warnings halt generation unless the caller explicitly overrides, so the
+    // "Save Anyway" affordance in the UI is truthful. Rejected before any render or DB write, so a
+    // blocked generation consumes no quota and leaves no artifacts.
+    if (validation.blocking && !input.overrideWarnings) {
+      throw new BadRequestError(
+        `Tailored output failed fidelity checks and was not saved:\n- ${validation.fidelityWarnings.join('\n- ')}`
+      );
+    }
+
     // Evaluate tailored resume and compute score lift
     const tailoredEval = JdAnalyzerService.evaluateResumePayload(
       resumePayload,
