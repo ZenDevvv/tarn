@@ -1,6 +1,6 @@
 import { applicationRepository } from './application.repository';
 import { CreateApplicationInput, UpdateApplicationInput, ApplicationFiltersInput } from '@tracker/validation';
-import { NotFoundError } from '../../middleware/error-handler';
+import { NotFoundError, BadRequestError } from '../../middleware/error-handler';
 
 export const applicationService = {
   async createApplication(userId: string, input: CreateApplicationInput) {
@@ -25,6 +25,20 @@ export const applicationService = {
       throw new NotFoundError('Application not found');
     }
     return updated;
+  },
+
+  async submitResume(userId: string, id: string, resumeId?: string) {
+    const result = await applicationRepository.submitResume(userId, id, resumeId);
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') throw new NotFoundError('Application not found');
+      if (result.error === 'NO_RESUME') {
+        throw new BadRequestError('Generate or upload a resume for this application first.');
+      }
+      throw new BadRequestError(
+        'That resume was not generated for this application and cannot be marked as submitted.'
+      );
+    }
+    return result;
   },
 
   async updateStatus(userId: string, id: string, status: any) {

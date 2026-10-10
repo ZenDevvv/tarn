@@ -99,6 +99,7 @@ export const applicationRepository = {
           job: true,
           status: true,
           resume: true,
+          submittedResume: true,
         },
       });
 
@@ -175,6 +176,7 @@ export const applicationRepository = {
           job: true,
           status: true,
           resume: true,
+          submittedResume: true,
           interviews: {
             orderBy: { scheduledAt: 'desc' },
           },
@@ -206,6 +208,7 @@ export const applicationRepository = {
         job: true,
         status: true,
         resume: true,
+        submittedResume: true,
         timelineEvents: {
           orderBy: { occurredAt: 'desc' },
         },
@@ -279,8 +282,43 @@ export const applicationRepository = {
           job: true,
           status: true,
           resume: true,
+          submittedResume: true,
         },
       });
+    });
+  },
+
+  /**
+   * Freeze the resume that was actually sent. Unlike resumeId (which advances on every
+   * regeneration), submittedResumeId is never written again, so interview preparation keeps
+   * pointing at the document the employer really received.
+   */
+  async submitResume(userId: string, id: string, resumeId?: string) {
+    const existing = await prisma.application.findFirst({
+      where: { id, userId, archivedAt: null },
+    });
+    if (!existing) return { error: 'NOT_FOUND' as const };
+
+    const targetId = resumeId ?? existing.resumeId;
+    if (!targetId) return { error: 'NO_RESUME' as const };
+
+    // The resume must belong to this user AND have been generated for this application,
+    // so a submission can never point at an unrelated document.
+    const resume = await prisma.resume.findFirst({
+      where: { id: targetId, userId, applicationId: id },
+    });
+    if (!resume) return { error: 'MISMATCH' as const };
+
+    return prisma.application.update({
+      where: { id },
+      data: { submittedResumeId: resume.id, submittedAt: new Date() },
+      include: {
+        company: true,
+        job: true,
+        status: true,
+        resume: true,
+        submittedResume: true,
+      },
     });
   },
 

@@ -64,6 +64,11 @@ export const updateApplicationStatusSchema = z.object({
   message: 'Status ID is required',
 });
 
+export const submitResumeSchema = z.object({
+  // Optional: falls back to the application's current resume when omitted.
+  resumeId: z.string().trim().min(1).optional(),
+});
+
 export const applicationFiltersSchema = z.object({
   statusId: z.string().trim().optional(),
   status: z.string().trim().optional(),
@@ -79,6 +84,7 @@ export const applicationFiltersSchema = z.object({
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;
 export type UpdateApplicationStatusInput = z.infer<typeof updateApplicationStatusSchema>;
+export type SubmitResumeInput = z.infer<typeof submitResumeSchema>;
 export type ApplicationFiltersInput = z.infer<typeof applicationFiltersSchema>;
 
 export const parseJobUrlSchema = z.object({

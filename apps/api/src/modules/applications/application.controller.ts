@@ -61,6 +61,19 @@ export const applicationController = {
     }
   },
 
+  async submitResume(req: Request, res: Response, next: NextFunction) {
+    try {
+      const updated = await applicationService.submitResume(
+        req.user!.id,
+        req.params.id,
+        req.body?.resumeId
+      );
+      return res.status(200).json({ data: updated });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const statusParam = req.body.statusId || req.body.status;
