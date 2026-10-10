@@ -15,14 +15,17 @@ import { cn } from '@/lib/cn';
 interface ApplicationDeliverablesProps {
   resume?: ResumeDTO | null;
   coverLetter?: CoverLetterDTO | null;
-  /** Frozen snapshot of the resume actually sent, distinct from the working copy above. */
+  /** Frozen snapshots of the documents actually sent, distinct from the working copies above. */
   submittedResume?: ResumeDTO | null;
+  submittedCoverLetter?: CoverLetterDTO | null;
+  /** Shared by both documents: one submission is one event. */
   submittedAt?: string | null;
   onPreviewResume: () => void;
   onPreviewCoverLetter: () => void;
   onOpenStudio: () => void;
   onSubmitResume?: () => void;
-  isSubmittingResume?: boolean;
+  onSubmitCoverLetter?: () => void;
+  isSubmitting?: boolean;
   className?: string;
 }
 
@@ -30,12 +33,14 @@ export function ApplicationDeliverables({
   resume,
   coverLetter,
   submittedResume,
+  submittedCoverLetter,
   submittedAt,
   onPreviewResume,
   onPreviewCoverLetter,
   onOpenStudio,
   onSubmitResume,
-  isSubmittingResume,
+  onSubmitCoverLetter,
+  isSubmitting,
   className,
 }: ApplicationDeliverablesProps) {
   const resumeDownloadUrl = resume?.fileUrl ? resolveDocumentUrl(resume.fileUrl) : null;
@@ -107,7 +112,7 @@ export function ApplicationDeliverables({
                 <p className="text-micro text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 pt-0.5">
                   <CheckCircle2 size={12} className="shrink-0" />
                   <span className="truncate">
-                    Submitted{submittedResume.revision > 0 && submittedResume.applicationId ? ` as r${submittedResume.revision}` : ''}
+                    Resume submitted{submittedResume.revision > 0 && submittedResume.applicationId ? ` as r${submittedResume.revision}` : ''}
                     {submittedAt ? ` on ${new Date(submittedAt).toLocaleDateString()}` : ''}
                   </span>
                 </p>
@@ -115,11 +120,11 @@ export function ApplicationDeliverables({
                 <button
                   type="button"
                   onClick={onSubmitResume}
-                  disabled={isSubmittingResume}
+                  disabled={isSubmitting}
                   className="text-micro text-muted-foreground hover:text-foreground flex items-center gap-1.5 pt-0.5 transition-colors disabled:opacity-50"
                 >
                   <Send size={12} className="shrink-0" />
-                  <span>{isSubmittingResume ? 'Marking…' : 'Mark this as submitted'}</span>
+                  <span>{isSubmitting ? 'Marking…' : 'Mark resume as submitted'}</span>
                 </button>
               ) : null}
             </div>
@@ -179,6 +184,11 @@ export function ApplicationDeliverables({
                     {coverLetter.echoedPhrases?.length || 0} Echoes
                   </span>
                 )}
+                {coverLetter?.applicationId && coverLetter.revision > 0 && (
+                  <span className="px-2 py-0.2 rounded-full text-micro font-mono font-medium bg-muted text-muted-foreground border border-border">
+                    r{coverLetter.revision}
+                  </span>
+                )}
               </div>
 
               {coverLetter ? (
@@ -197,6 +207,27 @@ export function ApplicationDeliverables({
                   No targeted cover letter generated yet.
                 </p>
               )}
+
+              {/* Same independence as the resume snapshot, and the same shared timestamp. */}
+              {submittedCoverLetter ? (
+                <p className="text-micro text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 pt-0.5">
+                  <CheckCircle2 size={12} className="shrink-0" />
+                  <span className="truncate">
+                    Cover letter submitted{submittedCoverLetter.revision > 0 && submittedCoverLetter.applicationId ? ` as r${submittedCoverLetter.revision}` : ''}
+                    {submittedAt ? ` on ${new Date(submittedAt).toLocaleDateString()}` : ''}
+                  </span>
+                </p>
+              ) : onSubmitCoverLetter && coverLetter ? (
+                <button
+                  type="button"
+                  onClick={onSubmitCoverLetter}
+                  disabled={isSubmitting}
+                  className="text-micro text-muted-foreground hover:text-foreground flex items-center gap-1.5 pt-0.5 transition-colors disabled:opacity-50"
+                >
+                  <Send size={12} className="shrink-0" />
+                  <span>{isSubmitting ? 'Marking…' : 'Mark letter as submitted'}</span>
+                </button>
+              ) : null}
             </div>
           </div>
 

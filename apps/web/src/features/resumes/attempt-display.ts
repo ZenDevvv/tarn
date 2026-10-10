@@ -1,4 +1,4 @@
-import type { ResumeWithDetailsDTO } from '@tracker/types';
+import type { CoverLetterDTO, ResumeWithDetailsDTO } from '@tracker/types';
 
 /**
  * Revision labels are only meaningful within an application. A resume carries a revision
@@ -46,4 +46,16 @@ export function groupResumesByApplication(resumes: ResumeWithDetailsDTO[]): Resu
     key,
     resumes: key === null ? bucket : [...bucket].sort((a, b) => a.revision - b.revision),
   }));
+}
+/**
+ * Cover letters carry the same lineage shape as resumes, so the display rules are shared.
+ * A standalone letter (no application) has no lineage and shows nothing.
+ */
+export function describeLetterAttempt(letter: CoverLetterDTO): AttemptDisplay {
+  const hasLineage = Boolean(letter.applicationId) && letter.revision > 0;
+  return {
+    showRevision: hasLineage,
+    revisionLabel: hasLineage ? `r${letter.revision}` : null,
+    isCanonical: Boolean(letter.isCanonical),
+  };
 }
