@@ -71,9 +71,19 @@ body { padding: 0; }
 }
 .entry {
   margin-bottom: 8px;
+  break-inside: avoid-page;
+  page-break-inside: avoid;
 }
 .entry:last-child {
   margin-bottom: 0;
+}
+.section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.cert-row {
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 .entry-header {
   display: flex;
@@ -110,6 +120,8 @@ body { padding: 0; }
   font-size: 10.5pt;
   color: #000000;
   text-align: justify;
+  orphans: 2;
+  widows: 2;
 }
 .shared-stack {
   margin: 0 0 6px;
@@ -309,8 +321,11 @@ export function buildResumeHtml(payload: any): string {
 
   // 5. Skills
   // Kicker is data-driven: a self-describing first category (e.g. "Clinical Competencies",
-  // "Core Competencies") becomes the section label; generic buckets fall back to a neutral label.
-  const GENERIC_SKILL_CATEGORIES = /^(general|core|skills|other|misc|key)/i;
+  // "Teaching Competencies") becomes the section label; generic buckets fall back to a neutral label.
+  // Bucket-style names ("Leadership", "Management", "Technical") describe one group of skills rather
+  // than the whole section, so they must not head a section that also renders other categories.
+  const GENERIC_SKILL_CATEGORIES =
+    /^(general|core|skills|other|misc|key|leadership|management|technical|tools|software|systems|professional|competenc)/i;
   const firstSkillCategory = Object.keys(skills)[0];
   const skillsKicker =
     firstSkillCategory && !GENERIC_SKILL_CATEGORIES.test(firstSkillCategory)
