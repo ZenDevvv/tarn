@@ -441,3 +441,24 @@ describe('Pagination CSS (spec-resume-fidelity.md C3)', () => {
     expect(html).toContain('widows: 2');
   });
 });
+
+describe('Left-aligned body text (spec-resume-fidelity.md C7)', () => {
+  const payload = {
+    basics: { name: 'Maria Santos', email: 'maria@rn.org' },
+    experience: [
+      { company: 'Mercy General Hospital', role: 'Registered Nurse', date_range: '2020 - Present', bullets: ['Triaged 30+ emergency patients per shift.'] },
+    ],
+    education: [],
+    summary: 'Experienced ICU nurse with a background in critical care and telemetry.',
+    skills: { General: ['Triage'] },
+  };
+
+  it('never justifies bullets or the summary', () => {
+    const html = buildResumeHtml(payload);
+
+    // Justified text in a ~6in measure produces uneven word spacing that hurts skim-readability
+    // with no ATS benefit.
+    expect(html).not.toContain('text-align: justify');
+    expect(html).toContain('text-align: left');
+  });
+});

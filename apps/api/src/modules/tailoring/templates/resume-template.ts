@@ -119,7 +119,7 @@ body { padding: 0; }
   margin: 0 0 2.5px;
   font-size: 10.5pt;
   color: #000000;
-  text-align: justify;
+  text-align: left;
   orphans: 2;
   widows: 2;
 }
@@ -159,7 +159,7 @@ body { padding: 0; }
   margin: 0;
   font-size: 10.5pt;
   line-height: 1.4;
-  text-align: justify;
+  text-align: left;
 }
 .cert-row {
   display: flex;
