@@ -168,6 +168,9 @@ model Application {
   /// The resume actually sent to this employer, frozen at submission. Unlike resumeId (which
   /// advances on every regeneration) this never moves, so interview prep stays accurate.
   submittedResumeId String?
+  /// The cover letter actually sent, when the submission included one.
+  submittedCoverLetterId String?
+  /// One submission event carries both documents, so the timestamp is shared.
   submittedAt       DateTime?
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
@@ -178,12 +181,13 @@ model Application {
   status           ApplicationStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
   resume           Resume?           @relation("PrimaryResume", fields: [resumeId], references: [id], onDelete: SetNull)
   submittedResume  Resume?           @relation("SubmittedResume", fields: [submittedResumeId], references: [id], onDelete: SetNull)
+  submittedCoverLetter CoverLetter?  @relation("SubmittedCoverLetter", fields: [submittedCoverLetterId], references: [id], onDelete: SetNull)
   generatedResumes Resume[]         @relation("ResumeApplication")
   timelineEvents   TimelineEvent[]
   followUps      FollowUp[]
   interviews     Interview[]
   contacts       Contact[]
-  coverLetters   CoverLetter[]
+  coverLetters   CoverLetter[] @relation("ApplicationCoverLetters")
 
   @@index([userId])
   @@index([userId, statusId])
@@ -399,14 +403,25 @@ model CoverLetter {
   fileUrl       String?
   matchScore    Int?
   echoedPhrases String[] @default([])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  /// Attempt number within an application: r1, r2, r3... Computed, never user-typed.
+  revision Int     @default(1)
+  /// The previous attempt this one came from. Editing forks a revision rather than overwriting,
+  /// which is what makes a submitted letter immutable after the fact.
+  parentCoverLetterId String?
+  /// The attempt the user chose to keep. At most one per application.
+  isCanonical Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application       Application? @relation("ApplicationCoverLetters", fields: [applicationId], references: [id], onDelete: SetNull)
+  parentCoverLetter CoverLetter? @relation("CoverLetterRevisions", fields: [parentCoverLetterId], references: [id], onDelete: SetNull)
+  revisions         CoverLetter[] @relation("CoverLetterRevisions")
+  submittedBy       Application[] @relation("SubmittedCoverLetter")
 
   @@index([userId])
   @@index([applicationId])
+  @@index([userId, applicationId, revision])
   @@map("cover_letters")
 }
 
