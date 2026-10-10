@@ -29,6 +29,65 @@ describe('Applications API Integration Tests', () => {
     userBCookie = resB.headers['set-cookie'];
   });
 
+  it('POST /api/v1/applications/:id/submitted-resume snapshots what was sent', async () => {
+    const { prisma } = await import('@tracker/database');
+    const me = await request(app).get('/api/v1/auth/me').set('Cookie', userACookie);
+    const userId = me.body.data.user.id;
+
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userACookie)
+      .send({ companyName: 'Submit Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const targetId = appRes.body.data.id;
+
+    const mine = await prisma.resume.create({
+      data: { userId, name: 'Attempt r1', applicationId: targetId, revision: 1 },
+    });
+    const otherApp = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userACookie)
+      .send({ companyName: 'Elsewhere Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const foreign = await prisma.resume.create({
+      data: { userId, name: 'Other app attempt', applicationId: otherApp.body.data.id, revision: 1 },
+    });
+
+    // A resume belonging to a different application cannot be submitted here.
+    const bad = await request(app)
+      .post(`/api/v1/applications/${targetId}/submitted-resume`)
+      .set('Cookie', userACookie)
+      .send({ resumeId: foreign.id });
+    expect(bad.status).toBe(400);
+
+    const ok = await request(app)
+      .post(`/api/v1/applications/${targetId}/submitted-resume`)
+      .set('Cookie', userACookie)
+      .send({ resumeId: mine.id });
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.submittedResumeId).toBe(mine.id);
+    expect(ok.body.data.submittedAt).toBeTruthy();
+    expect(ok.body.data.submittedResume).toBeDefined();
+    expect(ok.body.data.submittedResume.id).toBe(mine.id);
+
+    // Omitting resumeId falls back to the application's current resume.
+    const fallbackApp = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userACookie)
+      .send({ companyName: 'Fallback Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const fallback = await prisma.resume.create({
+      data: { userId, name: 'Fallback r1', applicationId: fallbackApp.body.data.id, revision: 1 },
+    });
+    await prisma.application.update({
+      where: { id: fallbackApp.body.data.id },
+      data: { resumeId: fallback.id },
+    });
+    const fb = await request(app)
+      .post(`/api/v1/applications/${fallbackApp.body.data.id}/submitted-resume`)
+      .set('Cookie', userACookie)
+      .send({});
+    expect(fb.status).toBe(200);
+    expect(fb.body.data.submittedResumeId).toBe(fallback.id);
+  });
+
   it('POST /api/v1/applications creates an application with company, job, and timeline event', async () => {
     const res = await request(app)
       .post('/api/v1/applications')
