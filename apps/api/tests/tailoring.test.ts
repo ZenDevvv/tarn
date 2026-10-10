@@ -1244,4 +1244,49 @@ Zen Andrei Obrero
 
     await prisma.generationUsage.deleteMany({ where: { userId } });
   });
+  it('gives an edit fork a fresh revision even when the letter was already superseded', async () => {
+    // Regression: forking from the edited row rather than the head produced two siblings both
+    // numbered r2 whenever a letter was regenerated after the one being edited was written.
+    const { prisma } = await import('@tracker/database');
+    const appRes = await request(app)
+      .post('/api/v1/applications')
+      .set('Cookie', userCookie)
+      .send({ companyName: 'Sibling Co', position: 'Backend Developer', description: 'TypeScript role.' });
+    const sibAppId = appRes.body.data.id;
+
+    const gen = async (markdown: string) => {
+      const aiSpy = vi.spyOn(tailoringService, 'callGeminiSynthesis').mockResolvedValueOnce({
+        resume: { ...mockResumePayload, certifications: [] },
+        coverLetterMarkdown: markdown,
+      });
+      const res = await request(app)
+        .post(`/api/v1/tailoring/applications/${sibAppId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ targetArtifact: 'cover_letter', overrideWarnings: true });
+      aiSpy.mockRestore();
+      expect(res.status).toBe(200);
+      return res.body.data.coverLetter.id as string;
+    };
+
+    const first = await gen('FIRST LETTER');
+    await gen('SECOND LETTER'); // supersedes first
+
+    // Edit the superseded letter: the fork must follow the head, not the edited row.
+    const edit = await request(app)
+      .patch(`/api/v1/cover-letters/${first}`)
+      .set('Cookie', userCookie)
+      .send({ content: 'EDITED FIRST' });
+    expect(edit.status).toBe(200);
+    expect(edit.body.data.revision).toBe(3);
+
+    const all = await prisma.coverLetter.findMany({
+      where: { applicationId: sibAppId },
+      orderBy: { revision: 'asc' },
+    });
+    expect(all.map((l) => l.revision)).toEqual([1, 2, 3]);
+    // No duplicate revision numbers anywhere in the chain.
+    expect(new Set(all.map((l) => l.revision)).size).toBe(all.length);
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
 });

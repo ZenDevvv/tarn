@@ -144,6 +144,15 @@ export const coverLetterService = {
     // Editing forks a revision rather than mutating in place. This is what makes a submitted
     // letter immutable: once a letter is marked as sent, no later edit can change its content.
     // See spec-cover-letter-revisions.md C3.
+    // Fork from the current head, not from the row being edited. Regeneration and editing are
+    // two independent ways to produce a new attempt, so both can follow the same parent — taking
+    // `existing.revision + 1` would give two siblings the same number whenever a letter was
+    // regenerated after the one being edited was written.
+    const head = await prisma.coverLetter.findFirst({
+      where: { userId, applicationId: existing.applicationId },
+      orderBy: [{ revision: 'desc' }, { createdAt: 'desc' }],
+    });
+
     const updated = await prisma.coverLetter.create({
       data: {
         userId,
@@ -158,8 +167,8 @@ export const coverLetterService = {
         // tailoring engine built from those echoed JD phrases.
         matchScore: existing.matchScore,
         echoedPhrases: existing.echoedPhrases,
-        revision: existing.revision + 1,
-        parentCoverLetterId: existing.id,
+        revision: (head?.revision ?? existing.revision) + 1,
+        parentCoverLetterId: head?.id ?? existing.id,
         isCanonical: false,
       },
     });
