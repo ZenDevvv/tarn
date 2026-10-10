@@ -19,4 +19,5 @@ resumeRouter.get('/:id', resumeController.getById);
 resumeRouter.post('/', validateBody(createResumeSchema), resumeController.create);
 resumeRouter.patch('/:id', validateBody(updateResumeSchema), resumeController.update);
 resumeRouter.post('/:id/default', resumeController.setDefault);
+resumeRouter.post('/:id/canonical', resumeController.setCanonical);
 resumeRouter.delete('/:id', resumeController.delete);

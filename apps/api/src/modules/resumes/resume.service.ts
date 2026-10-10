@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { resumeRepository } from './resume.repository';
+import { resumeRepository, CANONICAL_REQUIRES_APPLICATION } from './resume.repository';
 import { CreateResumeInput, UpdateResumeInput, ResumeFiltersInput, UploadResumeFileInput } from '@tracker/validation';
 import { ResumeWithDetailsDTO } from '@tracker/types';
-import { NotFoundError } from '../../middleware/error-handler';
+import { NotFoundError, BadRequestError } from '../../middleware/error-handler';
 
 // Root directory for uploads: apps/api/uploads/resumes
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads', 'resumes');
@@ -28,6 +28,19 @@ export const resumeService = {
 
   async updateResume(userId: string, id: string, input: UpdateResumeInput): Promise<ResumeWithDetailsDTO> {
     const updated = await resumeRepository.update(userId, id, input);
+    if (!updated) {
+      throw new NotFoundError('Resume not found');
+    }
+    return updated;
+  },
+
+  async setCanonicalResume(userId: string, id: string): Promise<ResumeWithDetailsDTO> {
+    const updated = await resumeRepository.setCanonical(userId, id);
+    if (updated === CANONICAL_REQUIRES_APPLICATION) {
+      throw new BadRequestError(
+        'Only a tailored attempt can be marked canonical. Manual uploads are not tied to an application.'
+      );
+    }
     if (!updated) {
       throw new NotFoundError('Resume not found');
     }
