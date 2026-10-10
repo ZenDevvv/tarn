@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CoverLetterWithDetailsDTO } from '@tracker/types';
 import { resolveDocumentUrl } from '../api/resume-api';
+import { describeLetterAttempt } from '../attempt-display';
 import {
   FileText,
   Download,
@@ -29,6 +30,7 @@ export function CoverLetterCard({
   onDelete,
 }: CoverLetterCardProps) {
   const [iframeError, setIframeError] = useState(false);
+  const attempt = describeLetterAttempt(coverLetter);
   const resolvedUrl = coverLetter.fileUrl ? resolveDocumentUrl(coverLetter.fileUrl) : null;
   const isPdf = Boolean(resolvedUrl && (coverLetter.fileUrl?.toLowerCase().includes('.pdf') || coverLetter.fileUrl?.includes('uploads/cover-letters')));
 
@@ -96,6 +98,22 @@ export function CoverLetterCard({
           <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold bg-background/90 text-foreground border border-border/80 shadow-xs backdrop-blur-xs">
             COVER LETTER
           </span>
+          {attempt.showRevision && attempt.revisionLabel ? (
+            <span
+              className="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-muted text-muted-foreground border border-border backdrop-blur-xs"
+              title="Revision in this application's lineage"
+            >
+              {attempt.revisionLabel.toUpperCase()}
+            </span>
+          ) : null}
+          {attempt.isCanonical ? (
+            <span
+              className="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 backdrop-blur-xs"
+              title="Letter you chose to keep"
+            >
+              KEPT
+            </span>
+          ) : null}
           {coverLetter.matchScore ? (
             <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-primary/15 text-primary border border-primary/20 backdrop-blur-xs">
               {coverLetter.matchScore}% MATCH

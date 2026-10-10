@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { ResumeWithDetailsDTO } from '@tracker/types';
-import { describeResumeAttempt, groupResumesByApplication } from './attempt-display';
+import {
+  describeResumeAttempt,
+  describeLetterAttempt,
+  groupResumesByApplication,
+} from './attempt-display';
 
 const base = {
   id: 'r1',
@@ -85,5 +89,23 @@ describe('groupResumesByApplication', () => {
 
   it('returns an empty list for no input', () => {
     expect(groupResumesByApplication([])).toEqual([]);
+  });
+});
+describe('describeLetterAttempt', () => {
+  const letter = (over: Record<string, unknown>) =>
+    ({ id: 'l1', name: 'Letter', content: 'x', echoedPhrases: [], ...over }) as any;
+
+  it('labels a letter tied to an application with its revision', () => {
+    const label = describeLetterAttempt(letter({ applicationId: 'a1', revision: 2, isCanonical: false }));
+    expect(label).toEqual({ showRevision: true, revisionLabel: 'r2', isCanonical: false });
+  });
+
+  it('marks the canonical letter', () => {
+    expect(describeLetterAttempt(letter({ applicationId: 'a1', revision: 1, isCanonical: true })).isCanonical).toBe(true);
+  });
+
+  it('shows nothing for a standalone letter', () => {
+    const label = describeLetterAttempt(letter({ applicationId: null, revision: 1 }));
+    expect(label.showRevision).toBe(false);
   });
 });

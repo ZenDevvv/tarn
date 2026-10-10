@@ -31,7 +31,9 @@ export const coverLetterService = {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      // Newest revision first, tie-broken by time: the UI treats index 0 as "current",
+      // and a second edit must fork from the revision the first edit produced.
+      orderBy: [{ revision: 'desc' }, { createdAt: 'desc' }],
     });
 
     return letters.map((cl) => ({
@@ -93,7 +95,9 @@ export const coverLetterService = {
   async listForApplication(userId: string, applicationId: string): Promise<CoverLetterDTO[]> {
     const letters = await prisma.coverLetter.findMany({
       where: { userId, applicationId },
-      orderBy: { createdAt: 'desc' },
+      // Newest revision first, tie-broken by time: the UI treats index 0 as "current",
+      // and a second edit must fork from the revision the first edit produced.
+      orderBy: [{ revision: 'desc' }, { createdAt: 'desc' }],
     });
     return letters.map((cl) => ({
       id: cl.id,
