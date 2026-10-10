@@ -873,4 +873,63 @@ Zen Andrei Obrero
       await prisma.generationUsage.deleteMany({ where: { userId } });
     }
   });
+  it('passes additionalInstructions through to the synthesis prompt', async () => {
+    const geminiJson = JSON.stringify({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: mockCoverLetter,
+    });
+
+    let capturedPrompt = '';
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementationOnce(async (_url: any, init: any) => {
+      capturedPrompt = JSON.parse(init.body).contents[0].parts[0].text;
+      return {
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: geminiJson }] } }] }),
+      };
+    }) as any;
+
+    const res = await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({
+        targetArtifact: 'resume',
+        overrideWarnings: true,
+        additionalInstructions: 'Lead with my publications and mention UK visa sponsorship.',
+      });
+
+    fetchSpy.mockRestore();
+
+    expect(res.status).toBe(200);
+    expect(capturedPrompt).toContain('Lead with my publications');
+    expect(capturedPrompt).toContain('UK visa sponsorship');
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
+
+  it('omits the additional-instructions block when none are supplied', async () => {
+    const geminiJson = JSON.stringify({
+      resume: { ...mockResumePayload, certifications: [] },
+      coverLetterMarkdown: mockCoverLetter,
+    });
+
+    let capturedPrompt = '';
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementationOnce(async (_url: any, init: any) => {
+      capturedPrompt = JSON.parse(init.body).contents[0].parts[0].text;
+      return {
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: geminiJson }] } }] }),
+      };
+    }) as any;
+
+    await request(app)
+      .post(`/api/v1/tailoring/applications/${applicationId}/generate`)
+      .set('Cookie', userCookie)
+      .send({ targetArtifact: 'resume', overrideWarnings: true });
+
+    fetchSpy.mockRestore();
+
+    expect(capturedPrompt).not.toContain('ADDITIONAL CANDIDATE INSTRUCTIONS');
+
+    await prisma.generationUsage.deleteMany({ where: { userId } });
+  });
 });
