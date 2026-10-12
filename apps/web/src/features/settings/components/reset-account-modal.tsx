@@ -121,9 +121,9 @@ export function ResetAccountModal({
           onSuccess();
         } else {
           onClose();
-          if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+          if (typeof window !== 'undefined') {
             try {
-              window.location.reload();
+              window.location.href = '/dashboard';
             } catch {
               // Ignore in JSDOM / non-browser test runners
             }
@@ -195,7 +195,7 @@ export function ResetAccountModal({
                 id="reset-modal-description"
                 className="text-small text-muted-foreground max-w-[320px] leading-relaxed"
               >
-                All personal records cleared. Reloading your workspace...
+                All personal records cleared. Redirecting to dashboard...
               </p>
             </div>
           </div>

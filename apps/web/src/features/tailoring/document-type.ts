@@ -32,9 +32,11 @@ export const DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
 ];
 
 export function buildGenerateInput(
-  documentType: DocumentType,
   targetArtifact: GenerateTailoringInput['targetArtifact'],
-  overrideWarnings: boolean
+  overrideWarnings: boolean,
+  documentType?: DocumentType
 ): GenerateTailoringInput {
-  return { targetArtifact, documentType, overrideWarnings };
+  return documentType
+    ? { targetArtifact, documentType, overrideWarnings }
+    : { targetArtifact, overrideWarnings };
 }

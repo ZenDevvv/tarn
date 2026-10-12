@@ -292,6 +292,44 @@ describe('JD Analyzer & Tailoring Validator Service Tests', () => {
       expect(evalResult.matchedKeywords).toContain('BLS');
       expect(evalResult.matchedKeywords).toContain('ACLS');
     });
+
+    describe('Automated Document Type Detection', () => {
+      it('detects federal document type for USAJobs or federal agency postings', () => {
+        const federalJd = `
+          Position: Supervisory IT Specialist (GS-2210-14)
+          Agency: Department of Veterans Affairs
+          Open period: 10/10/2026 to 10/24/2026
+          Apply on USAJobs.gov.
+          Requirements: Security Clearance: Secret. General Schedule qualifications apply.
+        `;
+        expect(JdAnalyzerService.detectDocumentType(federalJd, 'Supervisory IT Specialist', 'Department of Veterans Affairs')).toBe('federal');
+      });
+
+      it('detects cv document type for academic, faculty, and research positions', () => {
+        const academicJd = `
+          The Department of Biology invites applications for a Tenure-Track Assistant Professor position.
+          Candidates must submit a Curriculum Vitae, statement of research, and peer-reviewed publications list.
+        `;
+        expect(JdAnalyzerService.detectDocumentType(academicJd, 'Assistant Professor', 'State University')).toBe('cv');
+      });
+
+      it('defaults to resume for standard private-sector positions', () => {
+        const techJd = `
+          We are looking for a Senior React Engineer at Stripe.
+          Build delightful UI experiences and scale high-throughput payment components.
+        `;
+        expect(JdAnalyzerService.detectDocumentType(techJd, 'Senior React Engineer', 'Stripe')).toBe('resume');
+      });
+
+      it('includes detected documentType in JdAnalyzerService.analyze()', () => {
+        const federalJd = `
+          Position: IT Specialist (GS-13)
+          Department of Defense. Apply via USAJobs.
+        `;
+        const result = JdAnalyzerService.analyze(federalJd, mockProfile, 'IT Specialist', 'Department of Defense');
+        expect(result.documentType).toBe('federal');
+      });
+    });
   });
 });
 

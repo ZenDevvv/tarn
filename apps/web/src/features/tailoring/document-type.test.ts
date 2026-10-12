@@ -13,8 +13,8 @@ describe('Tailoring document type selector', () => {
     });
   });
 
-  it('sends documentType alongside the other generation inputs', () => {
-    const input = buildGenerateInput('federal', 'package', true);
+  it('sends documentType alongside the other generation inputs when provided', () => {
+    const input = buildGenerateInput('package', true, 'federal');
 
     expect(input).toEqual({
       targetArtifact: 'package',
@@ -23,7 +23,12 @@ describe('Tailoring document type selector', () => {
     });
   });
 
-  it('defaults to resume so existing callers are unchanged', () => {
-    expect(buildGenerateInput('resume', 'resume', false).documentType).toBe('resume');
+  it('omits documentType when not specified so the backend resolves automatically', () => {
+    const input = buildGenerateInput('resume', false);
+    expect(input).toEqual({
+      targetArtifact: 'resume',
+      overrideWarnings: false,
+    });
+    expect(input.documentType).toBeUndefined();
   });
 });

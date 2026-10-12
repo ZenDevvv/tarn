@@ -202,9 +202,9 @@ describe('Settings Feature - Unit Tests', () => {
       expect(validStatuses).toContain('success');
     });
 
-    it('simulates successful reset state machine: idle -> loading -> success -> reload callback', async () => {
+    it('simulates successful reset state machine: idle -> loading -> success -> dashboard redirect callback', async () => {
       let state: ResetModalStatus = 'idle';
-      let reloaded = false;
+      let redirectedToDashboard = false;
 
       const mockOnConfirm = async () => {
         state = 'loading';
@@ -212,7 +212,7 @@ describe('Settings Feature - Unit Tests', () => {
       };
 
       const mockOnSuccess = () => {
-        reloaded = true;
+        redirectedToDashboard = true;
       };
 
       expect(state).toBe('idle');
@@ -228,7 +228,7 @@ describe('Settings Feature - Unit Tests', () => {
 
       // Finish animation window completes (700ms)
       mockOnSuccess();
-      expect(reloaded).toBe(true);
+      expect(redirectedToDashboard).toBe(true);
     });
 
     it('simulates error state recovery: loading -> idle with error on failure', async () => {

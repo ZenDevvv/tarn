@@ -1,4 +1,4 @@
-import { rateLimit, Options } from 'express-rate-limit';
+import { rateLimit, Options, ipKeyGenerator } from 'express-rate-limit';
 import { env } from '../config/env';
 
 export interface AuthLimiterConfig {
@@ -71,7 +71,7 @@ export const apiLimiter = rateLimit({
 export const tailoringLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 10,
-  keyGenerator: (req) => req.user?.id || req.ip || 'anonymous',
+  keyGenerator: (req) => req.user?.id || (req.ip ? ipKeyGenerator(req.ip) : 'anonymous'),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => env.NODE_ENV === 'test',

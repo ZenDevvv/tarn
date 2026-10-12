@@ -80,6 +80,34 @@ export class JdAnalyzerService {
   }
 
   /**
+   * Automatically infer the required document type (federal resume, academic CV,
+   * or standard private-sector resume) from JD text, role, and company.
+   */
+  public static detectDocumentType(
+    jdText: string,
+    role: string = '',
+    company: string = ''
+  ): 'resume' | 'cv' | 'federal' {
+    const combined = `${role} ${company} ${jdText}`.toLowerCase();
+
+    // Federal markers: USAJobs, GS series/grades, federal agencies, civil service
+    const federalRegex =
+      /\b(usajobs|opm\.gov|general schedule|federal resume|gs[- ]\d{1,2}|series \d{4}|civil service|federal agency|federal government|department of (?:veterans affairs|defense|homeland security|energy|state|justice|treasury|agriculture|interior|commerce|labor|transportation|education|housing))\b/i;
+    if (federalRegex.test(combined)) {
+      return 'federal';
+    }
+
+    // Academic CV markers: curriculum vitae, CV requested, tenure-track, faculty, postdoctoral
+    const cvRegex =
+      /\b(curriculum vitae|\bc\.v\.?\b|tenure[- ]track|postdoctoral|post[- ]doctoral|assistant professor|associate professor|adjunct professor|faculty (?:position|appointment|opening)|peer[- ]reviewed publications|statement of research)\b/i;
+    if (cvRegex.test(combined)) {
+      return 'cv';
+    }
+
+    return 'resume';
+  }
+
+  /**
    * Frequency-based n-gram extraction for high-impact keywords/phrases
    */
   public static extractKeywordsFromText(
@@ -389,6 +417,7 @@ export class JdAnalyzerService {
       role: role || '',
       company: company || '',
       scoreBreakdown,
+      documentType: this.detectDocumentType(jdText, role, company),
     };
   }
 

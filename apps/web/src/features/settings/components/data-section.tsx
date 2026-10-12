@@ -41,9 +41,9 @@ export function DataSection({ settings, onExport, onReset, isResetting }: DataSe
   const handleResetSuccess = () => {
     setIsResetModalOpen(false);
     setResetSuccess(true);
-    if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+    if (typeof window !== 'undefined') {
       try {
-        window.location.reload();
+        window.location.href = '/dashboard';
       } catch {
         // Fallback for test/jsdom environments
       }

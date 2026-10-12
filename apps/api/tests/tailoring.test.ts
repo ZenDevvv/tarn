@@ -868,6 +868,37 @@ Zen Andrei Obrero
       expect(federalPrompt).toMatch(/salary|hours per week|supervisor/i);
       expect(resumePrompt).not.toMatch(/federal/i);
 
+      // Automated fallback: when documentType is omitted on a federal JD, it auto-detects federal
+      const federalAppRes = await request(app)
+        .post('/api/v1/applications')
+        .set('Cookie', userCookie)
+        .send({
+          companyName: 'Department of Veterans Affairs',
+          position: 'Supervisory IT Specialist',
+          status: 'APPLIED',
+          description:
+            'Position: Supervisory IT Specialist (GS-14). Apply on USAJobs.gov. General Schedule rules apply.',
+        });
+      const federalAppId = federalAppRes.body.data.id;
+
+      let autoFederalPrompt = '';
+      const autoSpy = vi.spyOn(global, 'fetch').mockImplementationOnce(async (_url: any, init: any) => {
+        autoFederalPrompt = JSON.parse(init.body).contents[0].parts[0].text;
+        return {
+          ok: true,
+          json: async () => ({ candidates: [{ content: { parts: [{ text: geminiJson }] } }] }),
+        };
+      }) as any;
+
+      await request(app)
+        .post(`/api/v1/tailoring/applications/${federalAppId}/generate`)
+        .set('Cookie', userCookie)
+        .send({ targetArtifact: 'resume', overrideWarnings: true });
+      autoSpy.mockRestore();
+
+      expect(autoFederalPrompt).toMatch(/federal/i);
+      expect(autoFederalPrompt).toMatch(/salary|hours per week|supervisor/i);
+
       await prisma.generationUsage.deleteMany({ where: { userId } });
     } finally {
       await request(app)
