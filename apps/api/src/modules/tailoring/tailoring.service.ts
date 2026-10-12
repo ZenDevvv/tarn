@@ -171,6 +171,7 @@ export const tailoringService = {
     const company = input.company || application.company?.name || 'Target Company';
 
     const analysis = JdAnalyzerService.analyze(jdText, profile, role, company);
+    const resolvedDocumentType = input.documentType ?? analysis.documentType ?? 'resume';
 
     // 2. Platform Gemini key check (Hard error - NO silent fallback)
     const apiKey = process.env.GEMINI_API_KEY;
@@ -190,7 +191,7 @@ export const tailoringService = {
         role,
         company,
         apiKey,
-        input.documentType,
+        resolvedDocumentType,
         input.additionalInstructions
       );
     } catch (err: any) {

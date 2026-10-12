@@ -622,7 +622,7 @@ export function ApplicationForm({
                 id="form-salary-min"
                 type="number"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="50000"
                 value={salaryMin}
                 onChange={(e) => setSalaryMin(e.target.value)}
@@ -637,7 +637,7 @@ export function ApplicationForm({
                 id="form-salary-max"
                 type="number"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="80000"
                 value={salaryMax}
                 onChange={(e) => setSalaryMax(e.target.value)}

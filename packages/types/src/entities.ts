@@ -605,6 +605,7 @@ export interface JdAnalysisResultDTO {
   fidelityWarnings?: string[];
   scoreBreakdown?: AtsScoreBreakdownDTO;
   scoreLift?: ScoreLiftReportDTO;
+  documentType?: 'resume' | 'cv' | 'federal';
 }
 
 export interface GenerationQuotaDTO {
